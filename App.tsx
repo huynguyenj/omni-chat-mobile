@@ -1,20 +1,18 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useAuthStore } from './src/features/auth/store/auth-store';
+import AuthNavigator from './src/navigations/AuthNavigator';
+import RoleNavigator from './src/navigations/RoleNavigator';
+
 
 export default function App() {
+    const accessToken = useAuthStore((s) => s.accessToken)
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <NavigationContainer>
+         { !accessToken ? <AuthNavigator/> : <RoleNavigator/>  }
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
