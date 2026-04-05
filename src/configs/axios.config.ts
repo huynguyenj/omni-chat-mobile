@@ -1,5 +1,6 @@
-const BASE_URL = ''
-import axios, { type AxiosInstance } from 'axios'
+import { ENV } from './env'
+export const BASE_URL = ENV.apiURL
+import axios, { AxiosError, type AxiosInstance } from 'axios'
 export const apiPrivate: AxiosInstance = axios.create({
   baseURL: BASE_URL
 })
@@ -19,4 +20,7 @@ apiPrivate.interceptors.request.use((config) => {
 
 apiPrivate.interceptors.response.use((response) => {
   return response.data
+}, (error: AxiosError) => {
+  // const message = error.response?.data
+  return Promise.reject()
 })

@@ -17,6 +17,7 @@
     "@react-navigation/native-stack": "^7.14.10",
     "axios": "^1.13.2",
     "expo": "~54.0.33",
+    "expo-constants": "~18.0.13",
     "expo-status-bar": "~3.0.9",
     "lucide-react-native": "^1.7.0",
     "react": "19.1.0",
@@ -32,7 +33,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "babel-plugin-module-resolver": "^5.0.3",
     "babel-preset-expo": "^55.0.15",
+    "dotenv": "^17.4.0",
     "typescript": "~5.9.2"
   },
   "private": true

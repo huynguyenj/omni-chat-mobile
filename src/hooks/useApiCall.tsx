@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ApiResponseStructure } from '../types/api.response'
-import { apiPrivate, apiPublic } from '../configs/axios.config'
+import { ApiResponseStructure } from '@/types/api.response'
+import { apiPrivate, apiPublic } from '@configs/axios.config'
 
 type UseApiCallType = {
   apiUrl: string
