@@ -1,0 +1,35 @@
+import 'dotenv/config'
+
+export default {
+  expo: {
+      name: 'omni',
+      slug: 'omni',
+      version: '1.0.0',
+      orientation: 'portrait',
+      icon: './assets/logo.jpg',
+      userInterfaceStyle: 'light',
+      newArchEnabled: true,
+      splash: {
+          image: './assets/splash.png',
+          resizeMode: 'contain',
+          backgroundColor: '#ffffff'
+      },
+      ios: {
+          supportsTablet: true
+      },
+      android: {
+          adaptiveIcon: {
+              foregroundImage: './assets/adaptive-icon.png',
+              backgroundColor: '#ffffff'
+            },
+          edgeToEdgeEnabled: true,
+          predictiveBackGestureEnabled: false,
+      },
+      web: {
+              favicon: './assets/logo.jpg'
+      },
+      extra: {
+            apiURL:  process.env.EXPO_API_URL
+      }
+  }
+}

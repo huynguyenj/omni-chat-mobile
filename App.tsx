@@ -1,8 +1,8 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/features/auth/store/auth-store';
-import AuthNavigator from './src/navigations/AuthNavigator';
-import RoleNavigator from './src/navigations/RoleNavigator';
+import AuthNavigator from './src/navigation/AuthNavigator';
+import RoleNavigator from './src/navigation/RoleNavigator';
 
 
 export default function App() {

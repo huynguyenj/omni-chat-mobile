@@ -1,19 +1,19 @@
 import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, LayoutDashboard, MessageSquare, Newspaper, Package, ShoppingCart, Truck, Users } from "lucide-react-native";
 import { TAB_LIST_ITEMS_TYPES } from "../types/route-type";
-import StaffManagement from "../screens/manager/StaffManagement";
-import KeywordManagement from "../screens/manager/KeywordManagement";
-import ProductManagement from "../screens/manager/ProductManagement";
-import StorageManagement from "../screens/manager/StorageManagement";
-import ClaimManagement from "../screens/manager/ClaimManagement";
-import AlertManagement from "../screens/manager/AlertManagement";
-import ShipperManagement from "../screens/manager/ShipperManagement";
-import OrderManagement from "../screens/manager/OrderManagement";
-import DashboardScreen from "../screens/admin/DashboardScreen";
-import RevenueScreen from "../screens/admin/RevenueScreen";
-import ManageStaffScreen from "../screens/admin/ManageStaffScreen";
-import ChatScreen from "../screens/staff/ChatScreen";
-import ClaimScreen from "../screens/staff/ClaimScreen";
-import TaskScreen from "../screens/staff/TaskScreen";
+import StaffManagement from "@screens/manager/StaffManagement";
+import KeywordManagement from "@screens/manager/KeywordManagement";
+import ProductManagement from "@screens/manager/ProductManagement";
+import StorageManagement from "@screens/manager/StorageManagement";
+import ClaimManagement from "@screens/manager/ClaimManagement";
+import AlertManagement from "@screens/manager/AlertManagement";
+import ShipperManagement from "@screens/manager/ShipperManagement";
+import OrderManagement from "@screens/manager/OrderManagement";
+import DashboardScreen from "@screens/admin/DashboardScreen";
+import RevenueScreen from "@screens/admin/RevenueScreen";
+import ManageStaffScreen from "@screens/admin/ManageStaffScreen";
+import ChatScreen from "@screens/staff/ChatScreen";
+import ClaimScreen from "@screens/staff/ClaimScreen";
+import TaskScreen from "@screens/staff/TaskScreen";
 
 const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
