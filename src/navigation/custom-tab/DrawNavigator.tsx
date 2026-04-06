@@ -3,11 +3,9 @@ import { View, Text, StyleSheet } from 'react-native'
 import React, { ComponentType } from 'react'
 import { LucideIcon } from 'lucide-react-native';
 import { createDrawerNavigator, DrawerContentComponentProps, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
-import { TAB_LIST_ITEMS_TYPES } from '../types/route-type';
+import { TAB_LIST_ITEMS_TYPES } from '../../types/route-type';
 
 const Drawer = createDrawerNavigator();
-
-
 
 function CustomDrawerContent(props: DrawerContentComponentProps) {
   return (

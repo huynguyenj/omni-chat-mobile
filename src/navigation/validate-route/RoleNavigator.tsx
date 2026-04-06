@@ -1,9 +1,9 @@
 import React from 'react'
-import { useAuthStore } from '../features/auth/store/auth-store'
-import AdminNavigator from './AdminNavigator'
-import ManagerNavigator from './ManagerNavigator'
-import StaffNavigator from './StaffNavigator'
-import AuthNavigator from './AuthNavigator'
+import { useAuthStore } from '../../features/auth/store/auth-store'
+import AdminNavigator from '../role-navigator/AdminNavigator'
+import ManagerNavigator from '../role-navigator/ManagerNavigator'
+import StaffNavigator from '../role-navigator/StaffNavigator'
+import AuthNavigator from '../AuthNavigator'
 
 export default function RoleNavigator() {
   const role = useAuthStore((s) => s.role)
