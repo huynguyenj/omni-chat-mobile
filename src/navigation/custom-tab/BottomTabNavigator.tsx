@@ -3,20 +3,14 @@ import React, { ComponentType } from 'react'
 import { LucideIcon } from 'lucide-react-native';
 import { BottomTabBarButtonProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { TAB_LIST_ITEMS_TYPES } from '@/types/route-type';
 
 const Tab = createBottomTabNavigator();
-
-type TAB_LIST_ITEMS_TYPES = {
-  route: string;
-  label: string;
-  icon: LucideIcon;
-  screen: ComponentType<any>;
-};
 
 type TabButtonProps = BottomTabBarButtonProps & { item: TAB_LIST_ITEMS_TYPES };
 
 function TabButton(props: TabButtonProps) {
-  const { accessibilityState, item, onPress,  } = props
+  const {  item, onPress,  } = props
    const focused = props['aria-selected'];
   return (
     <TouchableOpacity

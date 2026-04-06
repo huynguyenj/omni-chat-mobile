@@ -6,7 +6,7 @@ type ButtonProps = TouchableOpacityProps & {
    content?: string
    icon?: {
       iconName: LucideIcon
-      iconDirection: 'left' | 'right'
+      iconDirection: 'left' | 'right' | 'center'
    }
    variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'default'
 }
@@ -26,6 +26,13 @@ export default function Button({ content, icon, variant='default', style, ...res
             />
       }
       { content && <Text style={[styles.content, variant !== 'outline' && { color: 'white' } ]}>{content}</Text> }
+       { icon && icon.iconDirection === 'center' && 
+            <icon.iconName 
+                  size={20} 
+                  strokeWidth={2} 
+                  color={variant !== 'outline' ? 'white' : 'black'}
+            />
+      }
       { icon && icon.iconDirection === 'right' && 
             <icon.iconName 
                   size={20} 
@@ -58,7 +65,7 @@ const styles = StyleSheet.create({
             backgroundColor: '#BA1A1A',
       },
       outline: {
-            borderWidth: 5,
+            borderWidth: 1,
             borderColor: '#94979F'
       },
       content: {
