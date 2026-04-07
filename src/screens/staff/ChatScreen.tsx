@@ -1,10 +1,13 @@
-import { View, Text } from 'react-native'
 import React from 'react'
+import { ChatProvider } from '@/features/chat/context/ChatProvider'
+import MessageTabs from '@/features/chat/components/MessageTabs'
+import ListMessageSection from '@/features/chat/components/ListMessageSection'
 
 export default function ChatScreen() {
   return (
-    <View>
-      <Text>ChatScreen</Text>
-    </View>
+    <ChatProvider>
+      <MessageTabs/>
+      <ListMessageSection/>
+    </ChatProvider>
   )
 }

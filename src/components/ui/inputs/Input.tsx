@@ -16,14 +16,14 @@ export default function Input({ label, error, labelTextColor='#979BA2', icon, st
   return (
       <View style={style.container}>
       {label && <Text style={[style.label, { color: '#6F7379'}]}>{label}</Text>}
-      <View style={style.inputBox}>
+      <View style={[style.inputBox, styleCustom]}>
             <View style={style.inputInner}>
                   {icon && icon.iconDirection === 'left' && 
                     <View style={style.iconLeft}>
                           <icon.iconName size={22} strokeWidth={3} color={labelTextColor}/> 
                     </View>
                   }
-                        <TextInput style={[style.inputText, styleCustom]} placeholderTextColor={labelTextColor} {...rest} ></TextInput>
+                        <TextInput style={style.inputText} placeholderTextColor={labelTextColor} {...rest} ></TextInput>
                   {icon && icon.iconDirection === 'right' && 
                      <View style={style.iconRight}>
                         <icon.iconName size={22} strokeWidth={3} color={labelTextColor}/> 
