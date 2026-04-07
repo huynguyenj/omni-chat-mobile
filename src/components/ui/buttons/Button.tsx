@@ -53,7 +53,6 @@ const styles = StyleSheet.create({
             paddingVertical: 10,
             borderRadius: 12,
             width: '100%',
-            height: 60
       },
       primary: {
             backgroundColor: '#002E5E',
