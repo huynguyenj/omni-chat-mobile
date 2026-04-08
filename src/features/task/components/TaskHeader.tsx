@@ -15,12 +15,12 @@ const styles = StyleSheet.create({
             flex: 0.1
       },
       title: {
-            fontSize: 24,
+            fontSize: 22,
             color: '#003366',
             fontWeight: 700
       },
       subtitle: {
-            fontSize: 16,
+            fontSize: 15,
             color: '#5A5E65',
             fontWeight: 600,
             width: '80%',

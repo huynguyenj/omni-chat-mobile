@@ -16,7 +16,8 @@ export default function ClaimScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 0.9,
     paddingHorizontal: 20,
+    paddingVertical: 10,
   }
 })

@@ -4,6 +4,8 @@ import * as signalr from '@microsoft/signalr'
 
 export const signalrConnection = (hubPath: string) => {
   const accessToken = useAuthStore.getState().accessToken
+  console.log(ENV.apiURL);
+    
   const connection = new signalr.HubConnectionBuilder()
     .withUrl(ENV.apiURL+`/${hubPath}`,
       {

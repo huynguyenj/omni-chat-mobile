@@ -1,9 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import React, { ComponentType } from 'react'
-import { LucideIcon } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native'
+import React from 'react'
 import { BottomTabBarButtonProps, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TAB_LIST_ITEMS_TYPES } from '@/types/route-type';
+import CustomerHeader from '@/components/functional/CustomerHeader';
 
 const Tab = createBottomTabNavigator();
 
@@ -38,7 +38,7 @@ export default function BottomTabNavigator({ routeList }: {routeList: TAB_LIST_I
     <SafeAreaView style={styles.safeArea}>
       <Tab.Navigator
               screenOptions={{
-                headerShown: false,
+                header: (props) => <CustomerHeader {...props}/>,
                 tabBarStyle: styles.tabBar,
                 tabBarItemStyle: styles.tabBarItem,  
               }}
@@ -63,7 +63,7 @@ export default function BottomTabNavigator({ routeList }: {routeList: TAB_LIST_I
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: 'transparent',
   },
   tabBar: {
     height: 90,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     elevation: 8,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
   },
   tabBarItem: {
@@ -112,4 +112,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
   },
+
 });

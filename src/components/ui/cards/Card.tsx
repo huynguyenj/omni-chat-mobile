@@ -23,13 +23,13 @@ const styles = StyleSheet.create({
    default: {
       backgroundColor: '#ffffff',
       elevation: 8,
-      shadowOffset: { width: 0, height: 5 },
-      shadowOpacity: 0.05,
-      shadowRadius: 6
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2
       
    },
    lightGrey: {
-      backgroundColor: '#e6e9ed'
+      backgroundColor: '#F2F4F7'
    }
 })
 

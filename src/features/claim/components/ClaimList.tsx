@@ -102,8 +102,8 @@ export default function ClaimList() {
 
 const styles = StyleSheet.create({
       container: {
-            flex: 0.65,
-            marginTop: 10
+            flex: 0.75,
+            marginTop: 10,
       },
       cardTitle: {
             color: '#5A5E65',

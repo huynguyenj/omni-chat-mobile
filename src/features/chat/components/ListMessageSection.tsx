@@ -5,6 +5,11 @@ import { formatTime } from '@/utils/format'
 import { truncateText } from '@/utils/text-resolver'
 import Input from '@/components/ui/inputs/Input'
 import { Search } from 'lucide-react-native'
+import { useNavigation } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
+import useGetAwaitedMessage from '../hooks/useGetAwaitedMessage'
+
 
 export const dummyMessages: ResolveMessageType[] = [
   {
@@ -81,10 +86,22 @@ export const dummyMessages: ResolveMessageType[] = [
   },
 ]
 
+type NavigationProp = NativeStackNavigationProp<
+  ChatStackParamList,
+  'ChatScreen'
+>
 
 export function ChatItem({ item }: { item: ResolveMessageType }) {
+  const navigation = useNavigation<NavigationProp>()
+  const handleNavigate = () => {
+    navigation.navigate('ChatDetail', { id: item.conversationId })
+  }
   return (
-    <TouchableOpacity style={styles.chatItemContainer} activeOpacity={0.7}>
+    <TouchableOpacity 
+        style={styles.chatItemContainer} 
+        activeOpacity={0.7}
+        onPress={() => handleNavigate()}
+      >
       
       <Image 
         source={item.avartarUrl? { uri: item.avartarUrl } : require('@assets/avatar-sample.jpg')} 
@@ -124,6 +141,7 @@ export function ChatItem({ item }: { item: ResolveMessageType }) {
 }
 
 export default function ListMessageSection() {
+  const { resolveMessageTab } = useGetAwaitedMessage()
   return (
     <View style={styles.container}>
       <Input
@@ -134,7 +152,7 @@ export default function ListMessageSection() {
         placeholder='Tìm kiếm tên khách hàng...'
       />
       <FlatList
-        data={dummyMessages}
+        data={resolveMessageTab}
         keyExtractor={(item) => item.conversationId}
         renderItem={({ item }) => <ChatItem item={item} />}
         showsVerticalScrollIndicator={false}
@@ -147,14 +165,15 @@ export default function ListMessageSection() {
 const styles = StyleSheet.create({
   container: {
      flex: 0.8,
-     paddingHorizontal: 18
+     paddingHorizontal: 18,
+     backgroundColor: '#F2F4F7'
   },
-  searcInput: {
+  searchInput: {
 
   },
   chatItemContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 18,
     borderRadius: 18,

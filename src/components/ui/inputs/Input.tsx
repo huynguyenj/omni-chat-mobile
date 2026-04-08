@@ -1,5 +1,5 @@
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native'
-import React from 'react'
+import React, { forwardRef } from 'react'
 import { LucideIcon } from 'lucide-react-native'
 
 type InputType = TextInputProps & {
@@ -12,30 +12,42 @@ type InputType = TextInputProps & {
       }
 }
 
-export default function Input({ label, error, labelTextColor='#979BA2', icon, style: styleCustom, ...rest }: InputType) {
-  return (
+const Input = forwardRef<TextInput, InputType>(
+  ({ label, error, labelTextColor = '#979BA2', icon, style: styleCustom, ...rest }, ref) => {
+    return (
       <View style={style.container}>
-      {label && <Text style={[style.label, { color: '#6F7379'}]}>{label}</Text>}
-      <View style={[style.inputBox, styleCustom]}>
-            <View style={style.inputInner}>
-                  {icon && icon.iconDirection === 'left' && 
-                    <View style={style.iconLeft}>
-                          <icon.iconName size={22} strokeWidth={3} color={labelTextColor}/> 
-                    </View>
-                  }
-                        <TextInput style={style.inputText} placeholderTextColor={labelTextColor} {...rest} ></TextInput>
-                  {icon && icon.iconDirection === 'right' && 
-                     <View style={style.iconRight}>
-                        <icon.iconName size={22} strokeWidth={3} color={labelTextColor}/> 
-                     </View>
-                  }
-            </View>
-      </View>
-            {error && <Text style={style.errorText}>{error}</Text>}
-      </View>
-  )
-}
+        {label && <Text style={[style.label, { color: '#6F7379' }]}>{label}</Text>}
 
+        <View style={[style.inputBox, styleCustom]}>
+          <View style={style.inputInner}>
+            {icon && icon.iconDirection === 'left' && (
+              <View style={style.iconLeft}>
+                <icon.iconName size={22} strokeWidth={3} color={labelTextColor} />
+              </View>
+            )}
+
+            <TextInput
+              ref={ref} // 🔥 QUAN TRỌNG
+              style={style.inputText}
+              placeholderTextColor={labelTextColor}
+              {...rest}
+            />
+
+            {icon && icon.iconDirection === 'right' && (
+              <View style={style.iconRight}>
+                <icon.iconName size={22} strokeWidth={3} color={labelTextColor} />
+              </View>
+            )}
+          </View>
+        </View>
+
+        {error && <Text style={style.errorText}>{error}</Text>}
+      </View>
+    )
+  }
+)
+
+export default Input
 const style = StyleSheet.create({
       container: {
             flexDirection: 'column',
