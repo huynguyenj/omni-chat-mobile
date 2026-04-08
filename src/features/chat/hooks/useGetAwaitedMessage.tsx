@@ -4,30 +4,30 @@ import useContextValid from '@/hooks/useContextValid'
 import SelectionMessageContext from '../context/ChatProvider'
 import { signalrConnection } from '../config/signalr'
 import { ResolveMessageType } from '../types/message-type'
+import useApiCall from '@/hooks/useApiCall'
+import { useAuthStore } from '@/features/auth/store/auth-store'
 
-// import SelectionMessageContext from '../context/SelectionMessageProvider'
 
-export default function useGetAwaitedMessage(staffId: string | null) {
+export default function useGetAwaitedMessage() {
   const [resolveMessageTab, setResolveMessageTab] = useState<ResolveMessageType[]>([])
   const context = useContextValid(SelectionMessageContext)
+  const staffId = useAuthStore((s) => s.staffId)
   const connectionRef = useRef<signalr.HubConnection | null>(null)
-
+  const { execute, loading } = useApiCall<ResolveMessageType[]>()
+  
   useEffect(() => {
     const fetchResolveMessage = async () => {
-      // if (!staffId) {
-      //   toast.warning('Hãy đăng nhập để thực hiện chức năng')
-      //   return
-      // }
-      // try {
-      //   const apiData = await chatApi.getSidebarConversationList(staffId, context?.providerName)
-      //   console.log(apiData)
-      //   setResolveMessageTab(apiData.data)
-      // } catch (error) {
-      //   console.log(error)
-      // }
+      const apiData = await execute({
+        apiUrl: `/support-conversations/staff/${staffId}/pending?providerName=${context.providerName}`,
+        method: 'get',
+        type: 'private'
+      })
+      const { data, error } = apiData
+      setResolveMessageTab(data)
     }
     fetchResolveMessage()
   }, [staffId, context?.providerName])
+
 
   //set up signalr
   useEffect(() => {
@@ -43,7 +43,8 @@ export default function useGetAwaitedMessage(staffId: string | null) {
       newConnection.start().then(() => {
         console.log('connected')
         newConnection.on('SidebarUpdated', (data: ResolveMessageType) => {
-          console.log(data)
+          console.log('Data sidebar: ', data);
+          
           setResolveMessageTab(prev => {
             //Get the exited one that in previous awaited array
             const existingIndex = prev.findIndex((m) => m.conversationId === data.conversationId)
@@ -54,11 +55,14 @@ export default function useGetAwaitedMessage(staffId: string | null) {
               updatedExistingMessages[existingIndex] = {
                 ...updatedExistingMessages[existingIndex],
                 lastMessage: data.lastMessage,
-                updateDate: data.updateDate
+                updateDate: data.updateDate,
+                unreadMessageCount: data.unreadMessageCount
               }
               // Get the updated object by splice method
               const [updatedItem] = updatedExistingMessages.splice(existingIndex, 1)
               // Put the updated message to top
+              console.log('Updated message: ', updatedItem);
+              
               return [updatedItem, ...updatedExistingMessages]
             }
             return [data, ...prev]
@@ -73,5 +77,6 @@ export default function useGetAwaitedMessage(staffId: string | null) {
       connectionRef.current = null
     }
   }, [context?.providerName])
+  
   return { resolveMessageTab }
 }

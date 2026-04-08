@@ -250,7 +250,8 @@ export default function TaskList() {
 }
 const styles = StyleSheet.create({
       container: {
-            flex: 0.75,
+            flex: 0.85,
+            marginTop: 14
       },
       filterContainer: {
             flexDirection: 'row',
@@ -283,7 +284,8 @@ const styles = StyleSheet.create({
       cardContainer: {
             gap: 10,
             marginTop: 12,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            backgroundColor: '#F2F4F7'
       },
       cardHeader: {
             flexDirection: 'row',
