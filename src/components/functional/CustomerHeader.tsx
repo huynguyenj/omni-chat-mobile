@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 60,
     height: 60,
-    borderRadius: '100%' 
+    borderRadius: 150 
   },
   headerText: {
     fontSize: 14,
@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   headerBtn: {
     width: 40,
     height: 40,
-    borderRadius: '100%'
+    borderRadius: 150
   }
 });

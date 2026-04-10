@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
             right: -22,
             overflow: 'hidden',
             bottom: -16,
-            borderRadius: '100%',
+            borderRadius: 200,
             width: 120,
             height: 100,
             alignContent:'center',
