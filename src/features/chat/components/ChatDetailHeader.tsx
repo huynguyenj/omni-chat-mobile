@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
       avatarImage: {
         width: 50,
         height: 50,
-        borderRadius: '100%'
+        borderRadius: 100
       },
       customerText: {
         fontSize: 14,
@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
       infoBtn: {
         width: 40,
         height: 40,
-        borderRadius: '100%'
+        borderRadius: 100
       }
 })
