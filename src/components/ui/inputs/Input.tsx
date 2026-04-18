@@ -27,7 +27,7 @@ const Input = forwardRef<TextInput, InputType>(
             )}
 
             <TextInput
-              ref={ref} // 🔥 QUAN TRỌNG
+              ref={ref} 
               style={style.inputText}
               placeholderTextColor={labelTextColor}
               {...rest}

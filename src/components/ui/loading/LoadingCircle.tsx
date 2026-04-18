@@ -20,26 +20,35 @@ export default function LoadingCircle ({ size = 50, color = '#3498db', strokeWid
   });
 
   return (
-    <View style={{ width: size, height: size }}>
-      <Animated.View
-        style={[
-          styles.circle,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: color,
-            borderTopColor: 'transparent',
-            transform: [{ rotate }],
-          },
-        ]}
-      />
+    <View style={styles.container}>
+      <View style={{ width: size, height: size }}>
+        <Animated.View
+          style={[
+            styles.circle,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              borderWidth: strokeWidth,
+              borderColor: color,
+              borderTopColor: 'transparent',
+              transform: [{ rotate }],
+            },
+          ]}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 5
+  },
   circle: {
     justifyContent: 'center',
     alignItems: 'center',

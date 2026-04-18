@@ -63,7 +63,7 @@ export default function BottomTabNavigator({ routeList }: {routeList: TAB_LIST_I
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#ffffff',
   },
   tabBar: {
     height: 90,
