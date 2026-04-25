@@ -8,6 +8,7 @@ import { formatDate } from '@/utils/format';
 import usePagination from '@/hooks/usePagination';
 import LoadingCircle from '@/components/ui/loading/LoadingCircle';
 import { PaginationStructure } from '@/types/api.response';
+import NoDataCard from '@/components/ui/cards/NodataCard';
 
 
 const Item = ({ claim }:{ claim: ClaimType }) => {
@@ -42,9 +43,10 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
   const renderItem = ({ item }: { item: ClaimType }) => {
       return <Item claim={item}/>
   }
+//   if (loading) return <LoadingCircle/>
   return (
     <View style={styles.container}>
-              { listClaims && 
+              { listClaims &&  listClaims.items.length > 0 ?
                   <>
                   <Card>
                         <Text style={styles.cardTitle}>Số lượng đơn</Text>
@@ -61,7 +63,9 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
                               ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
                         />
                   </>
-                                 }
+                  :
+                  <NoDataCard/>
+                  }
     </View>
   )
 }
@@ -69,7 +73,7 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
 const styles = StyleSheet.create({
       container: {
             flex: 0.75,
-            marginTop: 10,
+            marginTop: 5,
       },
       cardTitle: {
             color: '#5A5E65',
@@ -112,6 +116,8 @@ const styles = StyleSheet.create({
       contentTextCard: {
             fontSize: 13,
             marginTop: 5,
+            fontWeight: 500,
+            marginLeft: 15
       }
 
 })
