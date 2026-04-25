@@ -29,9 +29,6 @@ export default function useGetOrderHistory() {
     params.append('pageSize', '5')
 
     const apiUrl = `/orders/delivered/count?${params.toString()}`
-
-    console.log(apiUrl)
-
             
       const apiData = await execute({
             apiUrl: apiUrl,
@@ -53,5 +50,20 @@ export default function useGetOrderHistory() {
     }
     fetchOrderHistory()
   }, [startDate, toDate, currentPage])
-  return { setStartDate, setToDate, startDate, toDate, orderHistory, setCurrentPage, currentPage, loading }
+
+  const handleRefreshOrderHistory = async () => {
+    setStartDate(null)
+    setToDate(null)
+    setOrderHistory(undefined)
+    setCurrentPage(1)
+     const apiData = await execute({
+            apiUrl:  `/orders/delivered/count?pageNumber=1&pageSize=5`,
+            method: 'get',
+            type: 'private'
+      })
+       const { data, error } = apiData
+       if (error) return
+       setOrderHistory(data)
+  }
+  return { setStartDate, setToDate, startDate, toDate, orderHistory, setCurrentPage, currentPage, loading, handleRefreshOrderHistory }
 }

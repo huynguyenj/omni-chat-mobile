@@ -3,13 +3,22 @@ import React from 'react'
 import ClaimHeader from '@/features/claim/components/ClaimHeader'
 import ClaimList from '@/features/claim/components/ClaimList'
 import ClaimCreate from '@/features/claim/components/ClaimCreate'
+import useGetClaimList from '@/features/claim/hooks/useGetClaimList'
 
 export default function ClaimScreen() {
+  const { listClaims, loading, setCurrentPage, currentPage, handleRefreshListClaims } = useGetClaimList()
   return (
     <View style={styles.container}>
       <ClaimHeader/>
-      <ClaimList/>
-      <ClaimCreate/>
+      <ClaimList
+        listClaims={listClaims}
+        loading={loading}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPage={listClaims?.meta.total_pages ?? 1}
+        onRefresh={handleRefreshListClaims}
+      />
+      <ClaimCreate onRefresh={handleRefreshListClaims}/>
     </View>
   )
 }

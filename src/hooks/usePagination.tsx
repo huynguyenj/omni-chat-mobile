@@ -12,7 +12,7 @@ export default function usePagination({ currentPage, loading, setPage, totalPage
   const [refreshing, setRefreshing] = useState(false)
   const loadMore = () => {
       if (loading || !hasMore) return
-      if (currentPage >= totalPage) {
+      if (currentPage === totalPage) {            
             setHasMore(false)
             return
       }
@@ -24,10 +24,11 @@ export default function usePagination({ currentPage, loading, setPage, totalPage
       
       setRefreshing(true)
       setPage(1)
-      setHasMore(true)
+      if (currentPage < totalPage) {
+          setHasMore(true)
+      }
 
-      setPage(0) // force change
-      setTimeout(() => setPage(1), 0)
+      setPage(1)
 
   }
 

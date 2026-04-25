@@ -9,8 +9,8 @@ import OrderHistoryItem from './OrderHistoryItem'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 export default function OrderHistoryContent() {
-   const { currentPage, loading, orderHistory, setCurrentPage, setStartDate, setToDate, startDate, toDate } = useGetOrderHistory()
-    const { loadMore, refresh, refreshing } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: orderHistory?.orders.meta.total_pages ?? 1 })
+   const { currentPage, loading, orderHistory, setCurrentPage, setStartDate, setToDate, startDate, toDate, handleRefreshOrderHistory } = useGetOrderHistory()
+    const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: orderHistory?.orders.meta.total_pages ?? 1 })
     
   return (
     <View style={styles.wrapper}>
@@ -41,8 +41,8 @@ export default function OrderHistoryContent() {
                               )}
                               onEndReached={loadMore}
                               onEndReachedThreshold={0.1}
-                              refreshing={refreshing}
-                              onRefresh={refresh}
+                              refreshing={loading}
+                              onRefresh={handleRefreshOrderHistory}
                               ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
                         />
                      }
