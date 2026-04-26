@@ -65,7 +65,7 @@ const style = StyleSheet.create({
             paddingRight: 15,
             backgroundColor: '#E0E3E6',
             borderRadius: 10,
-            height: 65,
+            height: 60,
       },
       iconLeft: {
             paddingLeft: 20
@@ -77,15 +77,14 @@ const style = StyleSheet.create({
             flexDirection: 'row',
             gap: 8,
             height: '100%',
-            width: '95%',
+            width: '100%' ,
             alignItems:'center',
             justifyContent:'center',
       },
       inputText: {
             fontWeight: 600,
             fontSize: 12,
-            width: '100%',
-            height: '100%',
+            flex: 1
       },
       errorText: {
             color: '#BA1A1A',

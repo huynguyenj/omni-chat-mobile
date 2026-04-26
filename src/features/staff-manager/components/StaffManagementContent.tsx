@@ -51,7 +51,7 @@ export default function StaffManagementContent() {
 
 const styles = StyleSheet.create({
       container: {
-            flex: 0.9,
+            flex: 1,
             paddingHorizontal: 10,
             paddingVertical: 8
       },

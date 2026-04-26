@@ -8,7 +8,7 @@ export default function useGetListStaff() {
   const [currentPage, setCurrentPage] = useState(1)
   const [listStaffs, setListStaffs] = useState<PaginationStructure<StaffDetailType>>()
   const [sortBy, setSortBy] = useState('createdate')
-  const [sortType, setSortType] = useState('false')
+  const [sortType, setSortType] = useState('true')
   const [refreshKey, setRefreshKey] = useState(1)
   const { execute, loading } = useApiCall<PaginationStructure<StaffDetailType>>()
   useEffect(() => {
