@@ -9,6 +9,7 @@ export default function useGetClaimList() {
   const [listClaims, setListClaims] = useState<PaginationStructure<ClaimType>>()
   const { execute, loading } = useApiCall<PaginationStructure<ClaimType>>()
   const [currentPage, setCurrentPage] = useState(1)
+  const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
     if (!staffId) {
       // toast.error('Hãy đăng nhập để lấy danh sách đơn!')
@@ -34,22 +35,12 @@ export default function useGetClaimList() {
       // if (error) toast.error('Xảy ra lỗi khi lấy danh sách!')
     }
     fetchListClaims()
-  }, [currentPage])
+  }, [currentPage, refreshKey])
 
 
    const handleRefreshListClaims = async () => {
-       if (currentPage === 1) {
-        setListClaims(undefined) // clear trước data để tránh trùng data khi refresh lại trang 1
-      }
       setCurrentPage(1)
-      const apiData = await execute({
-        apiUrl: `/claims/staff/${staffId}?pageIndex=1&pageSize=${5}`,
-        method: 'get',
-        type: 'private'
-      })
-      const { data, error } = apiData
-      setListClaims(data)
-      // if (error) toast.error('Xảy ra lỗi khi lấy danh sách!')
+      setRefreshKey(prevKey => prevKey + 1)
     }
   return { listClaims, loading, setCurrentPage, currentPage, handleRefreshListClaims }
 }

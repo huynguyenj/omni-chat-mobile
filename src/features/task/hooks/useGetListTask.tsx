@@ -13,6 +13,7 @@ export default function useGetListTasks() {
   const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilter] = useState<SearchTaskType>({ page: currentPage, pageSize: 10 })
   const [listTasks, setListTasks] = useState<PaginationStructure<TaskListType>>()
+  const [refreshKey, setRefreshKey] = useState(1)
 
   function getDateRange(value: string): { fromDate: Date, toDate: Date } {
     const days = RANGE_DATE_MAP[value]
@@ -81,7 +82,7 @@ export default function useGetListTasks() {
       })
     }
     fetchTasks()
-  }, [filters, staffId])
+  }, [filters, staffId, refreshKey])
   const handleRefreshTaskList = async () => {
       setCurrentPage(1)
       const resetFilter = { ...filters }
@@ -91,13 +92,7 @@ export default function useGetListTasks() {
       resetFilter.page = 1
       resetFilter.taskName = null
       setFilter(resetFilter)
-      const apiData = await execute({
-        apiUrl: `/staff/${staffId}/tasks`,
-        method: 'post',
-        type: 'private',
-        body: filters
-      })
-      setListTasks(apiData.data)
+      setRefreshKey(prevKey => prevKey + 1)
   }
   return { handleFilterByDate, handleFilterByType, loading, setFilter, listTasks, handleRefreshTaskList, currentPage, setCurrentPage }
 }

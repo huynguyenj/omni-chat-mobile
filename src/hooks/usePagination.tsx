@@ -10,9 +10,13 @@ type UsePaginationProps = {
 export default function usePagination({ currentPage, loading, setPage, totalPage }: UsePaginationProps) {
   const [hasMore, setHasMore] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+
   const loadMore = () => {
       if (loading || !hasMore) return
-      if (currentPage === totalPage) {            
+      
+      if (currentPage === totalPage) {      
+            console.log('In condition');
+                  
             setHasMore(false)
             return
       }
@@ -32,8 +36,14 @@ export default function usePagination({ currentPage, loading, setPage, totalPage
 
   }
 
+  
   useEffect(() => {
       if (!loading) setRefreshing(false)
   }, [loading])
+
+  useEffect(() => {
+    if (currentPage == totalPage) return
+    setHasMore(true)
+  }, [currentPage])
   return { loadMore, refresh, refreshing }
 }

@@ -4,13 +4,9 @@ import { BottomTabHeaderProps } from '@react-navigation/bottom-tabs';
 import Button from '../ui/buttons/Button';
 import { LogOut } from 'lucide-react-native';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { translateRole } from '@/const/role-translate';
 
-const translateRole: Record<string, string> = {
-  Staff: 'Nhân viên',
-  Admin: 'Quản trị viên',
-  Manager: 'Quản lí',
-  Shipper: 'Nhân viên giao hàng'
-}
+
 
 export default function CustomerHeader(props: BottomTabHeaderProps) {
   const removeAuth = useAuthStore((s) => s.removeAuthInfo)

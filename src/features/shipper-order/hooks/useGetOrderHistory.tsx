@@ -10,6 +10,7 @@ export default function useGetOrderHistory() {
   const { execute, loading } = useApiCall<OrderHistoryType>()
   const [orderHistory, setOrderHistory] = useState<OrderHistoryType>()
   const [currentPage, setCurrentPage] = useState(1)
+  const [refreshKey, setRefreshKey] = useState(1)
   const { staffId } = useAuthStore()
   useEffect(() => {
     const fetchOrderHistory = async () => {      
@@ -49,21 +50,14 @@ export default function useGetOrderHistory() {
        })
     }
     fetchOrderHistory()
-  }, [startDate, toDate, currentPage])
+  }, [startDate, toDate, currentPage, refreshKey])
 
   const handleRefreshOrderHistory = async () => {
     setStartDate(null)
     setToDate(null)
     setOrderHistory(undefined)
     setCurrentPage(1)
-     const apiData = await execute({
-            apiUrl:  `/orders/delivered/count?pageNumber=1&pageSize=5`,
-            method: 'get',
-            type: 'private'
-      })
-       const { data, error } = apiData
-       if (error) return
-       setOrderHistory(data)
+    setRefreshKey(prevKey => prevKey + 1)
   }
   return { setStartDate, setToDate, startDate, toDate, orderHistory, setCurrentPage, currentPage, loading, handleRefreshOrderHistory }
 }
