@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   btn: {
     width: 50,
     height: 50,
-    borderRadius: '100%'
+    borderRadius: 100
   },
   messageWrapper: {
     marginVertical: 4,

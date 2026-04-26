@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
 import useGetAwaitedMessage from '../hooks/useGetAwaitedMessage'
+import NoDataCard from '@/components/ui/cards/NodataCard'
 
 
 export const dummyMessages: ResolveMessageType[] = [
@@ -151,6 +152,7 @@ export default function ListMessageSection() {
         }}
         placeholder='Tìm kiếm tên khách hàng...'
       />
+      { resolveMessageTab.length > 0 ?
       <FlatList
         data={resolveMessageTab}
         keyExtractor={(item) => item.conversationId}
@@ -158,6 +160,9 @@ export default function ListMessageSection() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 16 }}
       />
+      :
+      <NoDataCard title='Chưa có tin nhắn mới' description='Hiện tại bạn chưa có khách hàng nào được phân công'/>
+      }
     </View>
   )
 }
@@ -184,7 +189,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 60,
     height: 60,
-    borderRadius: '100%',
+    borderRadius: 150,
   },
 
   content: {

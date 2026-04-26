@@ -5,3 +5,13 @@ export type ApiResponseStructure<T> = {
   is_success: true
   data: T
 }
+
+export type PaginationStructure<T> = {
+  items: T[]
+  meta: {
+    total_pages: number
+    total_items: number
+    current_page: number
+    page_size: number
+  }
+}

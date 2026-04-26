@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, LayoutDashboard, MessageSquare, Newspaper, Package, ShoppingCart, Truck, Users } from "lucide-react-native";
+import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, History, LayoutDashboard, MessageSquare, Newspaper, Package, ShoppingCart, Truck, Users } from "lucide-react-native";
 import { TAB_LIST_ITEMS_TYPES } from "../types/route-type";
 import StaffManagement from "@screens/manager/StaffManagement";
 import KeywordManagement from "@screens/manager/KeywordManagement";
@@ -14,6 +14,8 @@ import ManageStaffScreen from "@screens/admin/ManageStaffScreen";
 import ChatScreen from "@screens/staff/ChatScreen";
 import ClaimScreen from "@screens/staff/ClaimScreen";
 import TaskScreen from "@screens/staff/TaskScreen";
+import OrderScreen from "@/screens/shipper/OrderScreen";
+import OrderHistoryOrder from "@/screens/shipper/OrderHistoryOrder";
 
 const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
@@ -38,4 +40,9 @@ const staffTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Task History', label: 'Task History', icon: ClipboardClock, screen: TaskScreen }
 ]
 
-export { managerTabs, adminTabs, staffTabs }
+const shipperTabs: TAB_LIST_ITEMS_TYPES[] = [
+  { route: 'shipper/order', label: 'Đơn hàng', icon: Truck, screen: OrderScreen },
+  { route: 'shipper/order-history', label: 'Lịch sử', icon: History, screen: OrderHistoryOrder }
+]
+
+export { managerTabs, adminTabs, staffTabs, shipperTabs }
