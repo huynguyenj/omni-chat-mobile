@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '../store/auth-store'
 import useApiCall from '@/hooks/useApiCall'
 import { LoginResponseType } from '../types/login-types'
+import type { ApiResponseStructure } from '@/types/api.response'
 
 const LoginFormSchema = z.object({
       username: z.string(),
@@ -16,6 +17,24 @@ export default function useLogin() {
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormType>({ resolver: zodResolver(LoginFormSchema) })
   const addAuthStore = useAuthStore((s) => s.setAccessToken)
   const { execute, loading } = useApiCall<LoginResponseType>()
+  const resolveLoginPayload = (
+    raw: LoginResponseType | ApiResponseStructure<LoginResponseType>
+  ): LoginResponseType | null => {
+    const maybeWrapper = raw as ApiResponseStructure<LoginResponseType>
+    if (maybeWrapper && typeof maybeWrapper === 'object' && 'data' in maybeWrapper) {
+      const wrapped = maybeWrapper.data
+      if (wrapped?.accessToken && wrapped?.accountId && wrapped?.staffId && wrapped?.role) {
+        return wrapped
+      }
+    }
+
+    const plain = raw as LoginResponseType
+    if (plain?.accessToken && plain?.accountId && plain?.staffId && plain?.role) {
+      return plain
+    }
+    return null
+  }
+
   const onSubmit = async (formData: LoginFormType) => {      
       const apiData = await execute({
             apiUrl: '/auth/login',
@@ -25,9 +44,9 @@ export default function useLogin() {
       })
       const { data, error } = apiData
       if (error) return
-      console.log(data);
-      
-      addAuthStore(data.accessToken, data.accountId, data.staffId, data.role)
+      const payload = resolveLoginPayload(data as LoginResponseType | ApiResponseStructure<LoginResponseType>)
+      if (!payload) return
+      addAuthStore(payload.accessToken, payload.accountId, payload.staffId, payload.role)
 }
   return { control, handleSubmit, onSubmit, errors, loading }
 }

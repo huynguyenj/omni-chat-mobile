@@ -7,10 +7,16 @@ import AuthNavigator from '../AuthNavigator'
 
 export default function RoleNavigator() {
   const role = useAuthStore((s) => s.role)
-  switch (role) {
-      case 'Admin': return <AdminNavigator/>
-      case 'Manager': return <ManagerNavigator/>
-      case 'Staff': return <StaffNavigator/>
-      default: return <AuthNavigator/>
+  const normalizedRole = role?.trim().toLowerCase()
+
+  switch (normalizedRole) {
+    case 'admin':
+      return <AdminNavigator />
+    case 'manager':
+      return <ManagerNavigator />
+    case 'staff':
+      return <StaffNavigator />
+    default:
+      return <AuthNavigator />
   }
 }
