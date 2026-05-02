@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, History, LayoutDashboard, MessageSquare, Newspaper, Package, ShoppingCart, Truck, Users } from "lucide-react-native";
+import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, History, LayoutDashboard, MessageSquare, MessageSquareText, Newspaper, Package, ReceiptText, ShoppingCart, Truck, Users, Wallet } from "lucide-react-native";
 import { TAB_LIST_ITEMS_TYPES } from "../types/route-type";
 import StaffManagement from "@screens/manager/StaffManagement";
 import KeywordManagement from "@screens/manager/KeywordManagement";
@@ -16,16 +16,22 @@ import ClaimScreen from "@screens/staff/ClaimScreen";
 import TaskScreen from "@screens/staff/TaskScreen";
 import OrderScreen from "@/screens/shipper/OrderScreen";
 import OrderHistoryOrder from "@/screens/shipper/OrderHistoryOrder";
+import ChatTemplateManagement from "@/screens/manager/ChatTemplateManagement";
+import InvoiceManagement from "@/screens/manager/InvoiceManagement";
+import WalletManagement from "@/screens/manager/WalletManagement";
 
 const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
   { route: 'Keywords',   label: 'Keywords',   icon: Hash,          screen: KeywordManagement },
   { route: 'Sản phẩm',  label: 'Sản phẩm',  icon: ShoppingCart,  screen: ProductManagement },
   { route: 'Kho hàng',  label: 'Kho hàng',  icon: Archive,       screen: StorageManagement },
+  { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
   { route: 'Claim',      label: 'Claim',      icon: FileText,      screen: ClaimManagement },
   { route: 'Cảnh báo',  label: 'Cảnh báo',  icon: AlertTriangle, screen: AlertManagement },
   { route: 'Shipper',    label: 'Shipper',    icon: Truck,         screen: ShipperManagement },
   { route: 'Đơn hàng',  label: 'Đơn hàng',  icon: Package,       screen: OrderManagement },
+  { route: 'Phiếu thanh toán', label: "Phiếu thanh toán", icon: ReceiptText, screen: InvoiceManagement },
+  { route: 'Ví tiến', label: 'Ví tiền', icon: Wallet, screen: WalletManagement }
 ];
 
 const adminTabs: TAB_LIST_ITEMS_TYPES[] = [
