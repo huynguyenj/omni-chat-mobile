@@ -4,6 +4,7 @@ import React, { ComponentType } from 'react'
 import { LucideIcon } from 'lucide-react-native';
 import { createDrawerNavigator, DrawerContentComponentProps, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { TAB_LIST_ITEMS_TYPES } from '../../types/route-type';
+import LogoutButton from '@/components/functional/LogoutButton';
 
 const Drawer = createDrawerNavigator();
 
@@ -33,6 +34,11 @@ export default function DrawerNavigator({ routeList }: {routeList: TAB_LIST_ITEM
               headerShown: true,
               headerStyle: styles.header,
               headerTitleStyle: styles.headerTitle,
+               headerRight: () => (
+              <View style={{ marginRight: 12 }}>
+                <LogoutButton />
+              </View>
+              ),
               drawerStyle: styles.drawer,
               drawerActiveTintColor: '#3B6399',
               drawerInactiveTintColor: '#4a5568',
@@ -52,7 +58,7 @@ export default function DrawerNavigator({ routeList }: {routeList: TAB_LIST_ITEM
           }}
           >
             {routeList.map((manager, index) => (
-              <Drawer.Screen name={manager.route} component={manager.screen}/>
+              <Drawer.Screen key={index} name={manager.route} component={manager.screen}/>
             ))}
           </Drawer.Navigator>
   )

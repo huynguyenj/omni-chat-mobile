@@ -65,7 +65,7 @@ export default function TaskList() {
             <Text style={styles.filterTitle}>Loại:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity
-                              onPress={() => handelTypeSelected('All')}
+                              onPress={() => handelTypeSelected('')}
                               style={[styles.filterBtn, !typeSelected && styles.filterBtnSelected]}
                         >
                               <Text style={[styles.filterBtnText, !typeSelected && styles.filterBtnTextSelected]}>Tất cả</Text>
@@ -85,7 +85,7 @@ export default function TaskList() {
             <Text style={styles.filterTitle}>Thời gian:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity
-                              onPress={() => handelTimeSelected('All')}
+                              onPress={() => handelTimeSelected('')}
                               style={[styles.filterBtn, !timeSelected  && styles.filterBtnSelected]}
                         >
                               <Text style={[styles.filterBtnText, !timeSelected && styles.filterBtnTextSelected]}>Tất cả</Text>

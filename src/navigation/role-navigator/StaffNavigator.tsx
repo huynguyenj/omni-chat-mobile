@@ -3,10 +3,12 @@ import BottomTabNavigator from '../custom-tab/BottomTabNavigator'
 import { staffTabs } from '../role-route'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import ChatDetail from '@/screens/staff/ChatDetail'
+import OrderSectionScreen from '@/screens/staff/OrderSectionScreen'
 
 export type ChatStackParamList = {
   ChatScreen: undefined
   ChatDetail: { id: string }
+  OrderSectionScreen: { customerId: string }
 }
 
 const Stack = createNativeStackNavigator<ChatStackParamList>()
@@ -29,6 +31,13 @@ export default function StaffNavigator() {
                        }}
                        name='ChatDetail' 
                        component={ChatDetail}/>
+                  <Stack.Screen
+                        options={{
+                              headerShown: false
+                        }}
+                        name='OrderSectionScreen'
+                        component={OrderSectionScreen}
+                  />
            </Stack.Navigator>
   )
 }

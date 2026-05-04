@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 20,
     marginTop: 15,
-    marginBottom: 25
+    marginBottom: 25,
+    width: '100%'
   }
 })

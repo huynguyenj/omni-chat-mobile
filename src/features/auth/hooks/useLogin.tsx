@@ -14,7 +14,7 @@ type LoginFormType = z.infer<typeof LoginFormSchema>
 
 export default function useLogin() {
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormType>({ resolver: zodResolver(LoginFormSchema) })
-  const addAuthStore = useAuthStore((s) => s.setAccessToken)
+  const addAuthStore = useAuthStore((s) => s.setAuthInfo)
   const { execute, loading } = useApiCall<LoginResponseType>()
   const onSubmit = async (formData: LoginFormType) => {      
       const apiData = await execute({
@@ -26,8 +26,7 @@ export default function useLogin() {
       const { data, error } = apiData
       if (error) return
       console.log(data);
-      
-      addAuthStore(data.accessToken, data.accountId, data.staffId, data.role)
+      addAuthStore(data.accessToken, data.refreshToken, data.accountId, data.staffId, data.role, data.staffName, data.avatarUrl )
 }
   return { control, handleSubmit, onSubmit, errors, loading }
 }

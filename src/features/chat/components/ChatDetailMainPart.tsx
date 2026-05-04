@@ -1,17 +1,25 @@
-import { View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, TextInput } from 'react-native'
+import { View, Text, StyleSheet, FlatList, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import Button from '@/components/ui/buttons/Button'
 import Input from '@/components/ui/inputs/Input'
-import { Annoyed, Send } from 'lucide-react-native'
+import { Annoyed, Ellipsis, History, Link, Send, ShoppingCart } from 'lucide-react-native'
 import { ConversationDetail, MessageType, SenderMessage } from '../types/message-type'
 import useConnectChatTwoWay from '../hooks/useConnectChatTwoWay'
 import { useAuthStore } from '@/features/auth/store/auth-store'
 import useContextValid from '@/hooks/useContextValid'
 import SelectionMessageContext from '../context/ChatProvider'
+import { useNavigation } from '@react-navigation/native'
+import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 type ChatDetailMainPartProp = {
       conversation: ConversationDetail
 }
+
+type NavigationProp = NativeStackNavigationProp<
+  ChatStackParamList,
+  'OrderSectionScreen'
+>
 
 export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPartProp }) {
   const staffId = useAuthStore((s) => s.staffId)
@@ -21,6 +29,8 @@ export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPar
   const flatListRef = useRef<FlatList>(null)
   const [text, setText] = useState('')
 
+  const [isSettingOpen, setIsSettingOpen] = useState(false)
+  const navigation = useNavigation<NavigationProp>()
   const handleSendMessage = async () => {
       
       setText('')
@@ -51,9 +61,24 @@ export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPar
       
   }
 
-//   useEffect(() => {
-//       flatListRef.current?.scrollToEnd({ animated: true })
-//   }, [messages])
+  useEffect(() => {
+      flatListRef.current?.scrollToEnd({ animated: true })
+  }, [messages])
+  const handleOpenSetting = () => {
+    setIsSettingOpen(prevState => !prevState)
+  }
+
+ const handleLinkProductMessage = () => {
+      setText('https://omni-chat-web.vercel.app/product')
+  }
+
+  const handleLinkCustomerFormMessage = () => {
+    setText(`https://omni-chat-web.vercel.app/customer/${props.conversation.activeCustomerId}`)
+  }
+
+  const handleNavigate = () => {
+    navigation.navigate('OrderSectionScreen', { customerId: props.conversation.activeCustomerId })
+  }
   return (
       <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
@@ -100,6 +125,19 @@ export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPar
                      </>   
             </View>
             <View style={styles.inputContainer}>
+            <View style={styles.settingContainer}>
+              <TouchableOpacity onPress={handleOpenSetting}>
+                <Ellipsis size={25}/>
+              </TouchableOpacity>
+              { isSettingOpen &&
+                <View style={styles.settingSection}>
+                      <Button variant='outline' style={styles.btnSettings} icon={{ iconName: Link, iconDirection: 'left' }} content='Lấy link thông tin sản phẩm' onPress={handleLinkProductMessage}/>
+                      <Button variant='outline' style={styles.btnSettings} icon={{ iconName: Link, iconDirection: 'left' }} content='Lấy link điền thông tin' onPress={handleLinkCustomerFormMessage}/>
+                      <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ShoppingCart, iconDirection: 'left' }} content='Tạo đơn hàng' onPress={handleNavigate}/>
+                      <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng'/>
+                </View>
+              }
+            </View>
             <Input
                   placeholder='Tin nhắn...'
                   style={styles.input}
@@ -135,11 +173,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 5,
     gap: 10,
   },
   input: {
     height: 50,
-    width: 320
+    width: 270
   },
   btn: {
     width: 50,
@@ -187,5 +226,26 @@ const styles = StyleSheet.create({
     fontWeight: 600,
     fontSize: 14,
     marginVertical: 15
+  },
+  settingContainer: {
+    position: 'relative'
+
+  },
+  settingSection: {
+    position: 'absolute',
+    backgroundColor: '#ececec',
+    width: 300,
+    top: -250,
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 10
+  },
+  btnSettings: {
+    justifyContent:'flex-start',
+    borderRadius: 0,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderWidth: 0,
+    
   }
 })

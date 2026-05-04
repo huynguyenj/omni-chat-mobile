@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
             backgroundColor: '#3366CC'
       },
       gray: {
-            backgroundColor: '#5c5470'
+            backgroundColor: '#E6E8EB'
       }
 })
 
