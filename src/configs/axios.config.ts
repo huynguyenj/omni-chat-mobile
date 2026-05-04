@@ -9,7 +9,7 @@ export const apiPublic: AxiosInstance = axios.create({
 })
 
 apiPublic.interceptors.response.use((response) => {
-  return response
+  return response.data
 })
 
 

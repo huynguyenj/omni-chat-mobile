@@ -17,18 +17,17 @@ export default function ModalCustom({ children, style, onClose, isOpen }: ModalC
            onRequestClose={onClose}
          >
            {/* Backdrop — tap outside to close */}
-           {/* <TouchableWithoutFeedback onPress={onClose}> */}
-             <View style={styles.backdrop}>
-                 <KeyboardAvoidingView
+           <TouchableWithoutFeedback onPress={onClose}>
+             <View style={styles.backdrop}></View>
+            </TouchableWithoutFeedback>
+            <KeyboardAvoidingView
                   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                 style={{ width: '100%' }}
+                 style={styles.centerContainer}
              >
-                  <View style={styles.modalContainer}>
+                  <View style={[styles.modalContainer, style]}>
                     {children}
                   </View>
               </KeyboardAvoidingView>
-             </View>
-           {/* </TouchableWithoutFeedback> */}
          </Modal>
   )
 }
@@ -41,8 +40,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    alignItems: 'center',
-    justifyContent:'center'
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',   
+    alignItems: 'center'
   },
   modalContainer: {
     backgroundColor: '#ffffff',    
@@ -50,6 +52,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     zIndex: 100,
+    width: '90%',               
+    maxHeight: '70%',
   },
 
 })

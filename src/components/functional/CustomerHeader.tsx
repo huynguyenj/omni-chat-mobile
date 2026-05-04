@@ -4,9 +4,13 @@ import { BottomTabHeaderProps } from '@react-navigation/bottom-tabs';
 import Button from '../ui/buttons/Button';
 import { LogOut } from 'lucide-react-native';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { translateRole } from '@/const/role-translate';
+
+
 
 export default function CustomerHeader(props: BottomTabHeaderProps) {
   const removeAuth = useAuthStore((s) => s.removeAuthInfo)
+  const { role } = useAuthStore()
   const handleLogout = () => {  
     removeAuth()
   }
@@ -14,7 +18,7 @@ export default function CustomerHeader(props: BottomTabHeaderProps) {
     <View style={styles.headerContainer}>
       <View style={styles.leftContainer}>
         <Image style={styles.logoImage} source={require('@assets/logo.jpg')}/>
-        <Text style={styles.headerText}>{props.route.name}</Text>
+        <Text style={styles.headerText}>{translateRole[role ?? '']}</Text>
       </View>
       <Button
         style={styles.headerBtn}

@@ -1,79 +1,27 @@
 import { View, Text, StyleSheet, FlatList } from 'react-native'
-import React from 'react'
+import React, { Dispatch, SetStateAction } from 'react'
 import Card from '@/components/ui/cards/Card'
 import Tag from '@/components/ui/tags/Tag';
+import { ClaimType } from '../types/claim-type';
+import { CLAIM_STATUS, CLAIM_TYPE, tagClaimColor } from '../const/claim-type';
+import { formatDate } from '@/utils/format';
+import usePagination from '@/hooks/usePagination';
+import LoadingCircle from '@/components/ui/loading/LoadingCircle';
+import { PaginationStructure } from '@/types/api.response';
+import NoDataCard from '@/components/ui/cards/NodataCard';
 
-interface Claim {
-  id: string;
-  type: string;
-  description: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  reviewedAt?: string;
-}
 
-const LIST_CLAIM: Claim[] = [
-  {
-    id: '1',
-    type: 'Nghỉ phép',
-    description: 'Xin nghỉ phép 2 ngày để đi du lịch',
-    reason: 'Đã lên kế hoạch từ trước',
-    status: 'approved',
-    createdAt: '2025-11-20',
-    reviewedAt: '2025-11-21'
-  },
-  {
-    id: '2',
-    type: 'Nghỉ ốm',
-    description: 'Xin nghỉ ốm 1 ngày',
-    reason: 'Bị cảm nặng',
-    status: 'pending',
-    createdAt: '2025-11-24'
-  },
-   {
-    id: '3',
-    type: 'Nghỉ ốm',
-    description: 'Xin nghỉ ốm 1 ngày',
-    reason: 'Bị cảm nặng',
-    status: 'pending',
-    createdAt: '2025-11-24'
-  },
-   {
-    id: '4',
-    type: 'Nghỉ ốm',
-    description: 'Xin nghỉ ốm 1 ngày',
-    reason: 'Bị cảm nặng',
-    status: 'pending',
-    createdAt: '2025-11-24'
-  },
-   {
-    id: '5',
-    type: 'Nghỉ ốm',
-    description: 'Xin nghỉ ốm 1 ngày',
-    reason: 'Bị cảm nặng',
-    status: 'pending',
-    createdAt: '2025-11-24'
-  }
-]
-
-const tagColor: Record<Claim['status'], 'default' | 'success' | 'danger'> = {
-      pending: 'default',
-      approved: 'success',
-      rejected: 'default'
-}
-
-const Item = ({ claim }:{ claim: Claim }) => {
+const Item = ({ claim }:{ claim: ClaimType }) => {
       return (
             <Card variant='lightGrey' key={claim.id} style={{ marginVertical: 10 }}>
                   <View style={styles.itemHeader}>
                         <View style={styles.itemTitleContainer}>
-                              <Text style={styles.itemTitle}>{claim.type}</Text>
-                                    <Tag variant={tagColor[claim.status]}>
-                                          <Text style={styles.itemTagText}>{claim.status}</Text>
+                              <Text style={styles.itemTitle}>{CLAIM_TYPE[claim.claimType]}</Text>
+                                    <Tag variant={tagClaimColor[claim.status]}>
+                                          <Text style={styles.itemTagText}>{CLAIM_STATUS[claim.status]}</Text>
                                     </Tag>
                         </View>
-                              <Text style={styles.dateText}>{claim.createdAt}</Text>
+                              <Text style={styles.dateText}>{formatDate(claim.submitDate)}</Text>
                         </View>
                         <Text style={styles.contentTextCard}>Lí do: {claim.reason}</Text>
                         <Text style={styles.contentTextCard}>Mô tả: {claim.description}</Text>
@@ -81,21 +29,43 @@ const Item = ({ claim }:{ claim: Claim }) => {
       )
 }
 
-export default function ClaimList() {
-  const renderItem = ({ item }: { item: Claim }) => {
+type ClaimListProps = {
+   currentPage: number
+   setCurrentPage: Dispatch<SetStateAction<number>>
+   loading: boolean
+   totalPage: number
+   listClaims?: PaginationStructure<ClaimType>
+   onRefresh: () => void
+}
+
+export default function ClaimList({ currentPage, loading, setCurrentPage, totalPage, listClaims, onRefresh }: ClaimListProps) {
+  const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: totalPage })
+  const renderItem = ({ item }: { item: ClaimType }) => {
       return <Item claim={item}/>
   }
+//   if (loading) return <LoadingCircle/>
   return (
     <View style={styles.container}>
-            <Card>
-                  <Text style={styles.cardTitle}>Số lượng đơn</Text>
-                  <Text style={styles.cardContent}>{LIST_CLAIM.length}</Text>
-            </Card>
-            <FlatList
-                  data={LIST_CLAIM}
-                  renderItem={renderItem}
-                  style={styles.scrollListContainer}
-            />
+              { listClaims &&  listClaims.items.length > 0 ?
+                  <>
+                  <Card>
+                        <Text style={styles.cardTitle}>Số lượng đơn</Text>
+                        <Text style={styles.cardContent}>{listClaims?.items.length ?? 0}</Text>
+                  </Card>
+                        <FlatList
+                              data={listClaims.items}
+                              keyExtractor={(item) => item.id}
+                              renderItem={renderItem}
+                              onEndReached={loadMore}
+                              onEndReachedThreshold={0.1}
+                              refreshing={loading}
+                              onRefresh={onRefresh}
+                              ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
+                        />
+                  </>
+                  :
+                  <NoDataCard/>
+                  }
     </View>
   )
 }
@@ -103,7 +73,7 @@ export default function ClaimList() {
 const styles = StyleSheet.create({
       container: {
             flex: 0.75,
-            marginTop: 10,
+            marginTop: 5,
       },
       cardTitle: {
             color: '#5A5E65',
@@ -146,6 +116,8 @@ const styles = StyleSheet.create({
       contentTextCard: {
             fontSize: 13,
             marginTop: 5,
+            fontWeight: 500,
+            marginLeft: 15
       }
 
 })

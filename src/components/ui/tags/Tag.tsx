@@ -3,7 +3,7 @@ import React, { PropsWithChildren } from 'react'
 
 type TagProps = PropsWithChildren & {
    style?: StyleProp<ViewStyle>
-   variant?: 'success' | 'danger' | 'warning' | 'default',
+   variant?: 'success' | 'danger' | 'warning' | 'default' | 'gray',
 }
 
 export default function Tag({ variant='default', children, style }: TagProps) {
@@ -33,6 +33,9 @@ const styles = StyleSheet.create({
       },
       default: {
             backgroundColor: '#3366CC'
+      },
+      gray: {
+            backgroundColor: '#5c5470'
       }
 })
 
@@ -40,5 +43,6 @@ const variants = {
       success: styles.success,
       danger: styles.danger,
       warning: styles.warning,
-      default: styles.default
+      default: styles.default,
+      gray: styles.gray
 }

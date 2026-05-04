@@ -15,6 +15,8 @@ const MyTheme = {
 
 export default function App() {
     const accessToken = useAuthStore((s) => s.accessToken)
+    console.log(accessToken);
+    
   return (
     <SafeAreaProvider>
       <NavigationContainer
