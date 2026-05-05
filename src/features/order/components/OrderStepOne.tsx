@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ScrollView } from 'react-native'
 import React from 'react'
 import useGetAllBrand from '../hooks/useGetAllBrand'
 import Select from '@/components/ui/select/Select'
@@ -15,23 +15,23 @@ export default function OrderStepOne() {
   return (
     <View style={styles.container}>
       <View style={styles.selectContainer}>
-
-            <Select
-                  value={productBrand}
-                  onChange={(value) => setProductBrand(value)}
-                  placeHolder='Hãng sữa'
-                  label='Tên hãng'
-                  style={styles.select}
-                  options={[{
-                        label: 'Tất cả',
-                        value: ''
-                  }, ...listBrand.map((brand) => {
-                        return {
-                              label: brand.name,
-                              value: brand.id
-                        }
-                  })]} 
-            />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <Select
+                        value={productBrand}
+                        onChange={(value) => setProductBrand(value)}
+                        placeHolder='Hãng sữa'
+                        label='Tên hãng'
+                        style={styles.select}
+                        options={[{
+                              label: 'Tất cả',
+                              value: ''
+                        }, ...listBrand.map((brand) => {
+                              return {
+                                    label: brand.name,
+                                    value: brand.id
+                              }
+                        })]} 
+                  />
             <Select
                   value={productPackagingType}
                   onChange={(value) => setProductPackageType(value)}
@@ -51,64 +51,63 @@ export default function OrderStepOne() {
                               label: 'Hộp giấy',
                               value: 'Carton'
                         },
-            ]} 
+                  ]} 
+                  />
+            <Select
+                  value={productVolume}
+                  onChange={(value) => setProductVolume(value)}
+                  placeHolder='Dung tích'
+                  label='Dung tích'
+                  style={styles.select}
+                  options={[
+                        {
+                              label: 'Tất cả',
+                              value: ''
+                        },
+                        {
+                              label: '180ml',
+                              value: '180'
+                        },
+                        {
+                              label: '490ml',
+                              value: '490'
+                        },
+                        {
+                              label: '880ml',
+                              value: '880'
+                        },
+                        {
+                              label: '1760ml',
+                              value: '1760'
+                        }
+                  ]} 
             />
-      </View>
-      <View style={styles.selectContainer}>
-      <Select
-         value={productVolume}
-         onChange={(value) => setProductVolume(value)}
-         placeHolder='Dung tích'
-         label='Dung tích'
-         style={styles.select}
-         options={[
-            {
-                  label: 'Tất cả',
-                  value: ''
-            },
-            {
-                  label: '180ml',
-                  value: '180'
-            },
-            {
-                  label: '490ml',
-                  value: '490'
-            },
-            {
-                  label: '880ml',
-                  value: '880'
-            },
-             {
-                  label: '1760ml',
-                  value: '1760'
-            }
-      ]} 
-      />
-      <Select
-         value={productKind}
-         onChange={(value) => setProductKind(value)}
-         placeHolder='Loại'
-         label='Loại'
-         style={styles.select}
-         options={[
-            {
-                  label: 'Tất cả',
-                  value: ''
-            },
-            {
-                  label: 'Sữa chua',
-                  value: 'Yogurt'
-            },
-            {
-                  label: 'Có đường',
-                  value: 'Sugar'
-            },
-            {
-                  label: 'Không đường',
-                  value: 'NoSugar'
-            },
-      ]} 
-      />
+            <Select
+                  value={productKind}
+                  onChange={(value) => setProductKind(value)}
+                  placeHolder='Loại'
+                  label='Loại'
+                  style={styles.select}
+                  options={[
+                        {
+                              label: 'Tất cả',
+                              value: ''
+                        },
+                        {
+                              label: 'Sữa chua',
+                              value: 'Yogurt'
+                        },
+                        {
+                              label: 'Có đường',
+                              value: 'Sugar'
+                        },
+                        {
+                              label: 'Không đường',
+                              value: 'NoSugar'
+                        },
+                  ]} 
+            />
+            </ScrollView>
       </View>
       <Text style={styles.productText}>Danh sách sản phấm</Text>
       <View style={styles.listContainer}>
@@ -129,11 +128,14 @@ const styles = StyleSheet.create({
       selectContainer: {
             flexDirection: 'row',
             gap: 10,
-            marginVertical: 5
+            marginVertical: 5,
+            minHeight: 100,
+            maxHeight: 250,
       },
       select: {
-            height: 55,
-            width: 182
+            height: 50,
+            width: 182,
+            marginRight: 5
       },
       productText: {
             color: '#003366',
@@ -144,7 +146,8 @@ const styles = StyleSheet.create({
             marginBottom: 10  
       },
       listContainer: {
-            flex: 0.9
+            flex: 0.9,
+            marginBottom: 10,
       },
       btn: {
             height: 50

@@ -6,7 +6,7 @@ import OrderStepOne from './OrderStepOne'
 import OrderStepTwo from './OrderStepTwo'
 import OrderStepThree from './OrderStepThree'
 
-export default function OrderMainContent() {
+export default function OrderMainContent({ activeCustomerId }: { activeCustomerId: string }) {
   const { currentStep, handleNextStep, handlePreviousStep } = useContextValid(OrderContext)
   const getCurrentPercentWidth = (currentStep: number) => {
     const totalStep = 3
@@ -22,24 +22,24 @@ export default function OrderMainContent() {
         </View>
 
         <View style={[styles.stepContainer]}>
-          <View style={[styles.numberContainer, currentStep === 1 && styles.numberContainerChosen]}>
-            <Text style={[styles.textNumber, currentStep === 1 && styles.numberTextChosen]}>1</Text>
+          <View style={[styles.numberContainer, currentStep >= 1 && styles.numberContainerChosen]}>
+            <Text style={[styles.textNumber, currentStep >= 1 && styles.numberTextChosen]}>1</Text>
           </View>
           <Text style={[styles.text, currentStep === 1 && styles.textChosen ]}>Sản phẩm</Text>
         </View>
 
         <View style={[styles.stepContainer]}>
-          <View style={[styles.numberContainer, currentStep === 2 && styles.numberContainerChosen]}>
-            <Text style={[styles.textNumber, currentStep === 2 && styles.numberTextChosen]}>2</Text>
+          <View style={[styles.numberContainer, currentStep >= 2 && styles.numberContainerChosen]}>
+            <Text style={[styles.textNumber, currentStep >= 2 && styles.numberTextChosen]}>2</Text>
           </View>
           <Text style={[styles.text, currentStep === 2 && styles.textChosen]}>Chọn lô</Text>
         </View>
 
         <View style={[styles.stepContainer]}>
-          <View style={[styles.numberContainer, currentStep === 3 && styles.numberContainerChosen]}>
-            <Text style={[styles.textNumber, currentStep === 3 && styles.numberTextChosen]}>3</Text>
+          <View style={[styles.numberContainer, currentStep >= 3 && styles.numberContainerChosen]}>
+            <Text style={[styles.textNumber, currentStep >= 3 && styles.numberTextChosen]}>3</Text>
           </View>
-          <Text style={[styles.text, currentStep === 3 && styles.textChosen]}>Xác nhận</Text>
+          <Text style={[styles.text, currentStep >= 3 && styles.textChosen]}>Xác nhận</Text>
         </View>
       </View>
       {/*Body */}
@@ -51,7 +51,7 @@ export default function OrderMainContent() {
           <OrderStepTwo/>
         }
         { currentStep === 3 &&
-          <OrderStepThree/>
+          <OrderStepThree activeCustomerId={activeCustomerId}/>
         }
       </View>
     </View>

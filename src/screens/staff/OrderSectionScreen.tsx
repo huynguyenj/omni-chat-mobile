@@ -15,7 +15,7 @@ export default function OrderSectionScreen({ route }: { route: OrderScreenRouteP
     <OrderProvider>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <OrderMainContent/>
+          <OrderMainContent activeCustomerId={customerId}/>
         </View>
       </SafeAreaView>
     </OrderProvider>

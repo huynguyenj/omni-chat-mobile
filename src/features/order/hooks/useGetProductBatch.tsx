@@ -19,6 +19,7 @@ export default function useGetListBatchByProductId({ productId }: { productId?: 
         type: 'private'
       })
       const { data } = apiData
+      
       setListBatch(prev => {
             if (currentPage == 1) return data
             return {
@@ -33,9 +34,10 @@ export default function useGetListBatchByProductId({ productId }: { productId?: 
       setCurrentPage(1)
       setRefreshKey(prevKey => prevKey + 1)
     }
-  const handleNewestFilter = (value: boolean) => {
+  const handleNewestFilter = () => {
       setCurrentPage(1)
-      setNewFilter(value)
+      setNewFilter(prevState => !prevState)
   }
-  return { loading, listBatch, setCurrentPage, currentPage, setNewFilter, handleRefreshListProductBatch, handleNewestFilter }
+  
+  return { loading, listBatch, setCurrentPage, currentPage, newFilter, setNewFilter, handleRefreshListProductBatch, handleNewestFilter }
 }
