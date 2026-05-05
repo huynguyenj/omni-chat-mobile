@@ -8,6 +8,7 @@ import useGetClaimList from '@/features/claim/hooks/useGetClaimList'
 export default function ClaimScreen() {
   const { listClaims, loading, setCurrentPage, currentPage, handleRefreshListClaims } = useGetClaimList()
   return (
+    
     <View style={styles.container}>
       <ClaimHeader/>
       <ClaimList

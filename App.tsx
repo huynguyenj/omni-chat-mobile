@@ -3,7 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/features/auth/store/auth-store';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import RoleNavigator from './src/navigation/validate-route/RoleNavigator';
-
+import Toast from 'react-native-toast-message';
 const MyTheme = {
   ...DefaultTheme,
   colors: {
@@ -24,6 +24,7 @@ export default function App() {
       >
          { !accessToken ? <AuthNavigator/> : <RoleNavigator/>  }
       </NavigationContainer>
+       <Toast />
     </SafeAreaProvider>
   );
 }

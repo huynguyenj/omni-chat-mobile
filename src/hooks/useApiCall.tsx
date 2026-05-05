@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { apiPrivate, apiPublic } from '@/configs/axios.config'
 import { ApiResponseStructure } from '@/types/api.response'
-import { apiPrivate, apiPublic } from '@configs/axios.config'
+import { useState } from 'react'
 
 type UseApiCallType = {
   apiUrl: string
@@ -40,19 +40,21 @@ export default function useApiCall<T>() {
   const execute = async ({ apiUrl, type, method, body }: UseApiCallType) => {
     let data
     let errorResponse
+    let success
     try {
       setLoading(true)
       const response = await apiMethodSelect({ apiUrl, type, method, body })
       data = response.data as T
+      success = true
       errorResponse = null
     } catch (error) {
-      console.log(error)
       data = null as unknown as T
-      errorResponse = 'error'
+      success = false
+      errorResponse = error as string
     } finally {
       setLoading(false)
     }
-    return { data, error: errorResponse }
+    return { data, error: errorResponse, success }
   }
   return { execute, loading }
 }
