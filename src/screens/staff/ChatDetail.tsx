@@ -25,6 +25,7 @@ export default function ChatDetail({ route }: { route: ChatDetailRouteProp }) {
               { conversationDetail ?
               <>
                 <ChatDetailHeader
+                  conversationId={id}
                   customerImageUrl={conversationDetail.avartarUrl}
                   customerName={conversationDetail.customerName}
                 />
