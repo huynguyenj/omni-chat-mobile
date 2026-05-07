@@ -3,7 +3,7 @@ import React, { PropsWithChildren } from 'react'
 
 type CardProps = PropsWithChildren & {
    style?: StyleProp<ViewStyle>
-   variant?: 'default' | 'lightGrey' 
+   variant?: 'default' | 'lightGrey'| 'primary' | 'success' | 'warning' 
 }
 
 export default function Card({ children, style, variant='default' }: CardProps) {
@@ -31,10 +31,22 @@ const styles = StyleSheet.create({
    },
    lightGrey: {
       backgroundColor: '#F2F4F7'
+   },
+   primary: {
+      backgroundColor: '#003366'
+   },
+   success: {
+      backgroundColor: '#2ECC71'
+   },
+   warning: {
+      backgroundColor: '#FF9800'
    }
 })
 
 const variants = {
    default: styles.default,
-   lightGrey: styles.lightGrey
+   lightGrey: styles.lightGrey,
+   primary: styles.primary,
+   success: styles.success,
+   warning: styles.warning
 }

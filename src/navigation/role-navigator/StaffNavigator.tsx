@@ -5,12 +5,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import ChatDetail from '@/screens/staff/ChatDetail'
 import OrderSectionScreen from '@/screens/staff/OrderSectionScreen'
 import CustomerInfoScreen from '@/screens/staff/CustomerInfoScreen'
+import ConversationTaskScreen from '@/screens/staff/ConversationTaskScreen'
 
 export type ChatStackParamList = {
   ChatScreen: undefined
   ChatDetail: { id: string }
   OrderSectionScreen: { customerId: string }
   CustomerInfoScreen: { conversationId: string }
+  ConversationTaskScreen: { conversationId: string }
 }
 
 const Stack = createNativeStackNavigator<ChatStackParamList>()
@@ -45,6 +47,11 @@ export default function StaffNavigator() {
                              headerShown: false
                        }}
                        name='CustomerInfoScreen' component={CustomerInfoScreen}/>
+                   <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='ConversationTaskScreen' component={ConversationTaskScreen}/>
            </Stack.Navigator>
   )
 }

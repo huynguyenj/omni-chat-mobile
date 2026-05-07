@@ -15,14 +15,18 @@ type ChatDetailHeaderProps = {
 
 type NavigationProp = NativeStackNavigationProp<
   ChatStackParamList,
-  'CustomerInfoScreen'
+  'CustomerInfoScreen' 
+  | 'ConversationTaskScreen'
 >
 
 export default function ChatDetailHeader({ conversationId, customerImageUrl, customerName }: ChatDetailHeaderProps) {
     const navigation = useNavigation<NavigationProp>()
     const [isSettingOpen, setIsSettingOpen] = useState(false)
-    const handleNavigate = () => {
+    const handleNavigateCustomerInfoScreen= () => {
       navigation.navigate('CustomerInfoScreen', { conversationId: conversationId  })
+    }
+    const handleNavigateConversationTasks = () => {
+      navigation.navigate('ConversationTaskScreen', { conversationId: conversationId })
     }
     const handleOpenSetting = () => {
       setIsSettingOpen(prevState => !prevState)
@@ -45,9 +49,10 @@ export default function ChatDetailHeader({ conversationId, customerImageUrl, cus
       </View>
       { isSettingOpen &&
         <View style={styles.settingSection}>
-                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ListTodo, iconDirection: 'left' }} content='Xem nhiệm vụ' />
-                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: UserRoundSearch, iconDirection: 'left' }} content='Thông tin khách hàng' onPress={handleNavigate}/>
+                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ListTodo, iconDirection: 'left' }} content='Xem nhiệm vụ' onPress={handleNavigateConversationTasks}/>
+                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: UserRoundSearch, iconDirection: 'left' }} content='Thông tin khách hàng' onPress={handleNavigateCustomerInfoScreen}/>
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử hỗ trợ'/>
+                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng' />
           </View>
       }
     </>
