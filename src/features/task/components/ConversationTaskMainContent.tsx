@@ -27,15 +27,15 @@ export default function ConversationTaskMainContent({ conversationId }: Conversa
                         <Card variant='primary'>
                               <Text style={styles.cardTitle}>Tổng số nhiệm vụ</Text>
                               <View style={styles.cardMainTextContainer}>
-                                    <Text style={styles.cardMainText}>{conversationTasks.length > 0 ? String(conversationTasks.length).padStart(2, '0') : conversationTasks.length}</Text>
+                                    <Text style={styles.cardMainText}>{conversationTasks.length < 10 ? String(conversationTasks.length).padStart(2, '0') : conversationTasks.length}</Text>
                                     <Text style={styles.cardSubText}>nhiệm vụ cần hoàn thành</Text>
                               </View>
                         </Card>
                         <View style={styles.listContainer}>
                               <ScrollView>
                               {conversationTasks.map((task) => (
-                                    <TouchableOpacity delayLongPress={400} disabled={task.status !== 'InProgress' ? true : false} onLongPress={() => handleUpdateTask(task.id)}>
-                                          <Card key={task.id} style={[styles.taskCard, task.status === 'Done' && styles.completedCard]}>
+                                    <TouchableOpacity key={task.id} delayLongPress={400} disabled={task.status !== 'InProgress' ? true : false} onLongPress={() => handleUpdateTask(task.id)}>
+                                          <Card style={[styles.taskCard, task.status === 'Done' && styles.completedCard]}>
                                           <View style={styles.taskContentContainer}>
                                                 <View>
                                                       <Text style={styles.taskContentTitle}>{task.intentTypeName}</Text>

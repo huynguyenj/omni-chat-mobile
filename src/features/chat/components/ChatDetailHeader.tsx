@@ -9,6 +9,7 @@ import { History } from 'lucide-react-native/icons'
 
 type ChatDetailHeaderProps = {
   conversationId: string
+  activeCustomerId: string
   customerName: string
   customerImageUrl: string | undefined
 }
@@ -17,9 +18,10 @@ type NavigationProp = NativeStackNavigationProp<
   ChatStackParamList,
   'CustomerInfoScreen' 
   | 'ConversationTaskScreen'
+  | 'TicketScreen'
 >
 
-export default function ChatDetailHeader({ conversationId, customerImageUrl, customerName }: ChatDetailHeaderProps) {
+export default function ChatDetailHeader({ conversationId, activeCustomerId, customerImageUrl, customerName }: ChatDetailHeaderProps) {
     const navigation = useNavigation<NavigationProp>()
     const [isSettingOpen, setIsSettingOpen] = useState(false)
     const handleNavigateCustomerInfoScreen= () => {
@@ -27,6 +29,9 @@ export default function ChatDetailHeader({ conversationId, customerImageUrl, cus
     }
     const handleNavigateConversationTasks = () => {
       navigation.navigate('ConversationTaskScreen', { conversationId: conversationId })
+    }
+    const handleNavigateTicketScreen = () => {
+      navigation.navigate('TicketScreen', { customerId: activeCustomerId })
     }
     const handleOpenSetting = () => {
       setIsSettingOpen(prevState => !prevState)
@@ -51,7 +56,7 @@ export default function ChatDetailHeader({ conversationId, customerImageUrl, cus
         <View style={styles.settingSection}>
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ListTodo, iconDirection: 'left' }} content='Xem nhiệm vụ' onPress={handleNavigateConversationTasks}/>
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: UserRoundSearch, iconDirection: 'left' }} content='Thông tin khách hàng' onPress={handleNavigateCustomerInfoScreen}/>
-                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử hỗ trợ'/>
+                <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử hỗ trợ' onPress={handleNavigateTicketScreen}/>
                  <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng' />
           </View>
       }
