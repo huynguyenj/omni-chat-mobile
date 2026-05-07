@@ -1,10 +1,16 @@
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import useGetCustomerInfo from '../hooks/useGetCustomerInfo'
 import Card from '@/components/ui/cards/Card'
-import { Calendar, DollarSign, Mail, MapPin, Phone, ShoppingCart } from 'lucide-react-native'
+import { Calendar, DollarSign, Mail, MapPin, Pencil, Phone, ShoppingCart } from 'lucide-react-native'
 import { formatDate } from '@/utils/format'
 import CustomerMainContentSkeleton from './ui/skeleton/CustomerMainContentSkeleton'
+import ModalCustom from '@/components/ui/modal/ModalCustom'
+import Button from '@/components/ui/buttons/Button'
+import Input from '@/components/ui/inputs/Input'
+import useUpdateCustomerInfo from '../hooks/useUpdateCustomerInfo'
+import { Controller } from 'react-hook-form'
+import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 type CustomerInfoMainContentProps = {
       conversationId: string
@@ -25,7 +31,19 @@ function InfoRow({ icon: Icon, text }: InfoRowProps) {
 }
 
 export default function CustomerInfoMainContent({ conversationId }: CustomerInfoMainContentProps) {
-  const { customerInfo, loading, setIsRefetch } = useGetCustomerInfo({ conversationId: conversationId })  
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const { customerInfo, loading, setIsRefetch } = useGetCustomerInfo({ conversationId: conversationId })
+  const { control, errors, handleSubmit, loading: updateLoading, onSubmit, reset } = useUpdateCustomerInfo({ customerId: customerInfo?.id, setIsRefetch: setIsRefetch })
+  const handleOpenEdit = () => {
+    setIsEditOpen(prevState => !prevState)
+    reset({
+      customerName: customerInfo?.customerName,
+      address: customerInfo?.address,
+      avatarUrl: customerInfo?.avatarUrl,
+      email: customerInfo?.email,
+      phoneNumber: customerInfo?.customerPhone
+    })
+  }  
   return (
     <ScrollView contentContainerStyle={styles.container}>
       { loading ? 
@@ -34,17 +52,18 @@ export default function CustomerInfoMainContent({ conversationId }: CustomerInfo
       <>
       
             <Card style={styles.headerCard}>
-            <View style={styles.headerRow}>
-            <Image
-                  source={customerInfo?.avatarUrl ?  { uri: customerInfo.avatarUrl } : require('@assets/avatar-sample.jpg') }
-                  style={styles.avatar}
-            />
+              <View style={styles.headerRow}>
+                <Image
+                      source={customerInfo?.avatarUrl ?  { uri: customerInfo.avatarUrl } : require('@assets/avatar-sample.jpg') }
+                      style={styles.avatar}
+                />
 
-            <View style={styles.headerInfo}>
-                  <Text style={styles.name}>{customerInfo?.customerName}</Text>
-                  <Text style={styles.provider}>{customerInfo?.providerName}</Text>
-            </View>
-            </View>
+                <View style={styles.headerInfo}>
+                      <Text style={styles.name}>{customerInfo?.customerName}</Text>
+                      <Text style={styles.provider}>{customerInfo?.providerName}</Text>
+                </View>
+              </View>
+                <Button style={styles.editBtn} icon={{ iconName: Pencil, iconDirection: 'center' }} onPress={handleOpenEdit}/>
             </Card>
 
           <View style={styles.highlightContainer}>
@@ -70,6 +89,103 @@ export default function CustomerInfoMainContent({ conversationId }: CustomerInfo
             </Card>
       </>
        }
+       <ModalCustom isOpen={isEditOpen} onClose={handleOpenEdit}>
+          <Text style={styles.modalTitle}>Cập nhật thông tin khách hàng</Text>
+          <View>
+            <Controller
+                control={control}
+                name='customerName'
+                render={({ field: { onBlur, value, onChange } }) => (
+                        <Input 
+                          label='Tên khách hàng' 
+                          placeholder='Nguyen Van A' 
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          error={errors.customerName?.message}/>             
+                )
+                }
+            />
+            <Controller
+                control={control}
+                name='address'
+                render={({ field: { onBlur, value, onChange } }) => (
+                        <Input 
+                          label='Địa chỉ' 
+                          placeholder='Thành phố Hồ Chí Minh' 
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          error={errors.address?.message}/>             
+                )
+                }
+            />
+            <Controller
+                control={control}
+                name='email'
+                render={({ field: { onBlur, value, onChange } }) => (
+                        <Input 
+                          label='Email' 
+                          placeholder='nguyenvana@gmail.com' 
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          error={errors.email?.message}/>             
+                )
+                }
+            />
+            <Controller
+                control={control}
+                name='phoneNumber'
+                render={({ field: { onBlur, value, onChange } }) => (
+                        <Input 
+                          label='Số điện thoại' 
+                          placeholder='0961152578' 
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          error={errors.phoneNumber?.message}/>             
+                )
+                }
+            />
+             <Controller
+                control={control}
+                name='avatarUrl'
+                render={({ field: { onBlur, value, onChange } }) => (
+                        <Input 
+                          label='Link ảnh' 
+                          placeholder='https://image.jpg' 
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                        />             
+                )
+                }
+            />
+          </View>
+          <View style={styles.actions}>
+              {updateLoading?
+                  <LoadingCircle/>
+                  :
+                  <>
+                        <Button
+                              content="Hủy"
+                              variant="outline"
+                              style={styles.actionBtn}
+                              onPress={handleOpenEdit}
+                        />
+
+                        <Button
+                              content="Lưu"
+                              variant="secondary"
+                              icon={{ iconName: Pencil, iconDirection: 'left' }}
+                              style={styles.actionBtn}
+                              onPress={handleSubmit(onSubmit)}
+                        />
+                  </>
+              }
+            </View>
+       </ModalCustom>
     </ScrollView>
   )
 }
@@ -82,6 +198,9 @@ const styles = StyleSheet.create({
 
   headerCard: {
     paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
 
   headerRow: {
@@ -155,4 +274,24 @@ const styles = StyleSheet.create({
     color: '#374151',
     flex: 1,
   },
+  editBtn: {
+    width: 40,
+    aspectRatio: 1,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight:600,
+    marginVertical: 10,
+    textAlign: 'center'
+  },
+    actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+
+  actionBtn: {
+    flex: 1,
+  },
+
 })
