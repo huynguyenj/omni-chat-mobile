@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '../store/auth-store'
 import useApiCall from '@/hooks/useApiCall'
 import { LoginResponseType } from '../types/login-types'
+import Toast from 'react-native-toast-message'
 
 const LoginFormSchema = z.object({
       username: z.string(),
@@ -24,8 +25,12 @@ export default function useLogin() {
             body: formData
       })
       const { data, error } = apiData
-      if (error) return
-      console.log(data);
+      if (error) {
+            Toast.show({
+                  type: 'error',
+                  text1: error
+            })
+      }
       addAuthStore(data.accessToken, data.refreshToken, data.accountId, data.staffId, data.role, data.staffName, data.avatarUrl )
 }
   return { control, handleSubmit, onSubmit, errors, loading }

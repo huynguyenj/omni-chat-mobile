@@ -55,7 +55,7 @@ const style = StyleSheet.create({
       },
       label: {
             fontWeight: 700,
-            fontSize: 13
+            fontSize: 12
       },
       inputBox: {
             flexDirection: 'column',
