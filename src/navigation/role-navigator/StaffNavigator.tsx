@@ -7,6 +7,7 @@ import OrderSectionScreen from '@/screens/staff/OrderSectionScreen'
 import CustomerInfoScreen from '@/screens/staff/CustomerInfoScreen'
 import ConversationTaskScreen from '@/screens/staff/ConversationTaskScreen'
 import TicketScreen from '@/screens/staff/TicketScreen'
+import CustomerOrderScreen from '@/screens/staff/CustomerOrderScreen'
 
 export type ChatStackParamList = {
   ChatScreen: undefined
@@ -15,6 +16,7 @@ export type ChatStackParamList = {
   CustomerInfoScreen: { conversationId: string }
   ConversationTaskScreen: { conversationId: string }
   TicketScreen: { customerId: string }
+  CustomerOrderScreen: { customerId: string }
 }
 
 const Stack = createNativeStackNavigator<ChatStackParamList>()
@@ -59,6 +61,11 @@ export default function StaffNavigator() {
                              headerShown: false
                        }}
                        name='TicketScreen' component={TicketScreen}/>
+                  <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='CustomerOrderScreen' component={CustomerOrderScreen}/>
            </Stack.Navigator>
   )
 }

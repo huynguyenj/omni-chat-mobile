@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet, FlatList } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { ResolveMessageType } from '../types/message-type'
 import { formatTime } from '@/utils/format'
 import { truncateText } from '@/utils/text-resolver'
@@ -10,6 +10,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
 import useGetAwaitedMessage from '../hooks/useGetAwaitedMessage'
 import NoDataCard from '@/components/ui/cards/NodataCard'
+import useCompleteConversation from '../hooks/useCompleteConveration'
+import ModalCustom from '@/components/ui/modal/ModalCustom'
+import Button from '@/components/ui/buttons/Button'
 
 type NavigationProp = NativeStackNavigationProp<
   ChatStackParamList,
@@ -18,6 +21,11 @@ type NavigationProp = NativeStackNavigationProp<
 
 export function ChatItem({ item }: { item: ResolveMessageType }) {
   const navigation = useNavigation<NavigationProp>()
+  const { handleCompleteConversation, loading } = useCompleteConversation()
+  const [alert, setAlert] = useState(false)
+  const handleOpenAlert = () => {
+    setAlert(prevState => !prevState)
+  }
   const handleNavigate = () => {
     navigation.navigate('ChatDetail', { id: item.conversationId })
   }
@@ -26,6 +34,8 @@ export function ChatItem({ item }: { item: ResolveMessageType }) {
         style={styles.chatItemContainer} 
         activeOpacity={0.7}
         onPress={() => handleNavigate()}
+        delayLongPress={300}
+        onLongPress={handleOpenAlert}
       >
       
       <Image 
@@ -61,12 +71,19 @@ export function ChatItem({ item }: { item: ResolveMessageType }) {
           )}
         </View>
       </View>
+      <ModalCustom isOpen={alert} onClose={handleOpenAlert}>
+          <Text style={styles.modalTitle}>Bạn có chắc hoàn thành cuộc trò chuyện với khách hàng {item.customerName}</Text>
+          <View style={styles.modalBtnContainer}>
+            <Button variant='outline' style={styles.modalBtn} content='Không' onPress={handleOpenAlert}/>
+            <Button style={styles.modalBtn} content='Có' onPress={() => handleCompleteConversation(item.conversationId)}/>
+          </View>
+      </ModalCustom>
     </TouchableOpacity>
   )
 }
 
 export default function ListMessageSection() {
-  const { resolveMessageTab } = useGetAwaitedMessage()
+  const { resolveMessageTab, handleRefresh, loading } = useGetAwaitedMessage()
   return (
     <View style={styles.container}>
       <Input
@@ -83,6 +100,8 @@ export default function ListMessageSection() {
         renderItem={({ item }) => <ChatItem item={item} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 16 }}
+        onRefresh={handleRefresh}
+        refreshing={loading}
       />
       :
       <NoDataCard title='Chưa có tin nhắn mới' description='Hiện tại bạn chưa có khách hàng nào được phân công'/>
@@ -173,4 +192,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
+  modalBtnContainer: {
+    flexDirection: 'row',
+    gap: 5,
+    marginVertical: 10,
+    justifyContent: 'center'
+  },
+  modalTitle: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 500
+  },
+  modalBtn: {
+    width: 160,
+  }
 })

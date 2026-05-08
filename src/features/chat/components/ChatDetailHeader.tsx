@@ -19,6 +19,7 @@ type NavigationProp = NativeStackNavigationProp<
   'CustomerInfoScreen' 
   | 'ConversationTaskScreen'
   | 'TicketScreen'
+  | 'CustomerOrderScreen'
 >
 
 export default function ChatDetailHeader({ conversationId, activeCustomerId, customerImageUrl, customerName }: ChatDetailHeaderProps) {
@@ -32,6 +33,9 @@ export default function ChatDetailHeader({ conversationId, activeCustomerId, cus
     }
     const handleNavigateTicketScreen = () => {
       navigation.navigate('TicketScreen', { customerId: activeCustomerId })
+    }
+    const handleNavigateCustomerOrderScreen = () => {
+      navigation.navigate('CustomerOrderScreen', { customerId: activeCustomerId })
     }
     const handleOpenSetting = () => {
       setIsSettingOpen(prevState => !prevState)
@@ -57,7 +61,7 @@ export default function ChatDetailHeader({ conversationId, activeCustomerId, cus
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ListTodo, iconDirection: 'left' }} content='Xem nhiệm vụ' onPress={handleNavigateConversationTasks}/>
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: UserRoundSearch, iconDirection: 'left' }} content='Thông tin khách hàng' onPress={handleNavigateCustomerInfoScreen}/>
                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử hỗ trợ' onPress={handleNavigateTicketScreen}/>
-                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng' />
+                 <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng' onPress={handleNavigateCustomerOrderScreen}/>
           </View>
       }
     </>

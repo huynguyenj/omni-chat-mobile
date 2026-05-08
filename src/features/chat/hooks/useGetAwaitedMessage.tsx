@@ -14,7 +14,7 @@ export default function useGetAwaitedMessage() {
   const staffId = useAuthStore((s) => s.staffId)
   const connectionRef = useRef<signalr.HubConnection | null>(null)
   const { execute, loading } = useApiCall<ResolveMessageType[]>()
-  
+  const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
     const fetchResolveMessage = async () => {
       const apiData = await execute({
@@ -26,7 +26,7 @@ export default function useGetAwaitedMessage() {
       setResolveMessageTab(data)
     }
     fetchResolveMessage()
-  }, [staffId, context?.providerName])
+  }, [staffId, context?.providerName, refreshKey])
 
 
   //set up signalr
@@ -78,5 +78,9 @@ export default function useGetAwaitedMessage() {
     }
   }, [context?.providerName])
   
-  return { resolveMessageTab }
+  const handleRefresh = () => {
+    setRefreshKey(prevKey => prevKey + 1)
+  }
+
+  return { resolveMessageTab, handleRefresh, loading }
 }

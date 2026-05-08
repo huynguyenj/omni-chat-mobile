@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     zIndex: 100,
     width: '90%',               
-    maxHeight: '70%',
+    maxHeight: '85%',
   },
 
 })
