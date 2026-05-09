@@ -24,6 +24,7 @@ import Input from '@/components/ui/inputs/Input'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 import ImagePicker from '@/components/ui/inputs/ImagePicker'
 import useDeleteProduct from '../hooks/useDeleteProduct'
+import ProductBatchItemSkeleton from './ui/skeleton/ProductBatchItemSkeleton'
 
 export default function ProductManagementItem({ item, onRefresh }: { item: ProductDetailType, onRefresh: () => void }) {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -195,14 +196,18 @@ export default function ProductManagementItem({ item, onRefresh }: { item: Produ
           
           <View style={styles.batchSection}>
             <Text style={styles.sectionTitle}>Danh sách lô hàng</Text>
-            <FlatList
-              data={productBatchList?.items}
-              renderItem={({ item }) => <ProductBatchItem item={item} />}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.1}
-              onRefresh={handleRefresh}
-              refreshing={loading}
-            />
+            { loading ?
+              <ProductBatchItemSkeleton/>
+              :
+              <FlatList
+                data={productBatchList?.items}
+                renderItem={({ item }) => <ProductBatchItem item={item} />}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.1}
+                onRefresh={handleRefresh}
+                refreshing={loading}
+              />
+            }
           </View>
       </ModalCustom>
       {/*Update product info */}

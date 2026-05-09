@@ -29,7 +29,6 @@ export default function useGetProductListManager() {
       if (filterPackageType) params.append('packagingType', filterPackageType)
       if (filterProductKind) params.append('productKind', filterProductKind)
       const apiUrl = `/products/get?${params.toString()}`
-    console.log(apiUrl);
     
       const apiData = await execute({
         apiUrl: apiUrl,

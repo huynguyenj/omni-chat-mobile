@@ -12,6 +12,8 @@ import { LIST_PRODUCT_CAPACITY, LIST_PRODUCT_KIND_FILTER, LIST_PRODUCT_PACKAGE_T
 import useGetAllBrand from '@/features/order/hooks/useGetAllBrand'
 import ProductManagementItem from './ProductManagementItem'
 import ProductCreation from './ProductCreation'
+import { OverviewProductManagementCardSkeleton } from './ui/skeleton/OverviewProductCardSkeleton'
+import { ProductManagementItemSkeleton } from './ui/skeleton/ProductManagementItemSkeleton'
 
 export default function ProductManagementContent() {
   const { currentPage, listProducts, loading, sortBy, sortType, filterBrand, filterCapacity, filterPackageType, filterProductKind, handleRefresh, setCurrentPage, setSearchText, handleFilterByBrand, handleFilterByCapacity, handleFilterByPackageType, handleFilterByProductKind, handleSortBy, handleSortType } = useGetProductListManager()
@@ -32,7 +34,11 @@ export default function ProductManagementContent() {
   const debounce = useDebounce(handleSearch, 500)
   return (
     <View style={styles.container}>
-      <OverviewProductManagementCard totalItems={listProducts?.items.length ?? 0}/>
+     { loading ?
+        <OverviewProductManagementCardSkeleton/>
+        :
+        <OverviewProductManagementCard totalItems={listProducts?.items.length ?? 0}/>
+      }
       <View style={styles.searchContainer}>
             <Input style={styles.searchInput} onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
             <Button style={styles.btn} icon={{ iconName: ListFilterPlus, iconDirection: 'center' }} onPress={handleSortOpen}/>
@@ -86,17 +92,23 @@ export default function ProductManagementContent() {
             </View>
       </ScrollView>
     </ModalCustom>
-    <View style={styles.listContainer}>
-      <FlatList
-            data={listProducts?.items}
-            renderItem={({ item }) => <ProductManagementItem item={item} onRefresh={handleRefresh}/>}
-            onEndReached={loadMore}
-            onRefresh={handleRefresh}
-            refreshing={loading}
-            onEndReachedThreshold={0.1}
-      />
-    </View>
-    <ProductCreation onRefresh={handleRefresh}/>
+    { loading ?
+      <ProductManagementItemSkeleton/>
+      :
+      <>
+            <View style={styles.listContainer}>
+            <FlatList
+                  data={listProducts?.items}
+                  renderItem={({ item }) => <ProductManagementItem item={item} onRefresh={handleRefresh}/>}
+                  onEndReached={loadMore}
+                  onRefresh={handleRefresh}
+                  refreshing={loading}
+                  onEndReachedThreshold={0.1}
+            />
+            </View>
+            <ProductCreation onRefresh={handleRefresh}/>
+      </>
+    }
     </View>
   )
 }
