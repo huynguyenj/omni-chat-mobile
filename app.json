@@ -25,6 +25,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker", { "photoPermission": "App sẽ truy cập vào thư viện ảnh của bạn để chia sẻ ảnh" }
+      ]
+    ]
   }
 }

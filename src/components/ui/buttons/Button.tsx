@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
             gap: 8,
             paddingVertical: 10,
             borderRadius: 12,
-            width: '100%',
       },
       primary: {
             backgroundColor: '#002E5E',

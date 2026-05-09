@@ -12,7 +12,7 @@ export default function OverviewCardStaff({ totalStaff = 0 }: SystemOverviewCard
       <Text style={styles.subTitle}>Tổng quan hệ thống</Text>
 
       <Text style={styles.mainText}>
-        {totalStaff} Nhân sự hoạt động
+        {totalStaff} nhân sự hoạt động
       </Text>
 
       {/* <View style={styles.badgeContainer}>
@@ -30,7 +30,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 20,
     paddingHorizontal: 16,
-    flex: 0.15,
     marginBottom: 5
   },
 
@@ -42,7 +41,7 @@ const styles = StyleSheet.create({
 
   mainText: {
     color: '#ffffff',
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     lineHeight: 32,
     marginBottom: 16

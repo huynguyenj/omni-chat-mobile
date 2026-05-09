@@ -46,10 +46,6 @@ export default function useGetListStaff() {
 
   
   const handleRefreshStaffList = async () => {
-      setListStaffs(undefined)
-      setSortBy('createdate')
-      setSortType('false')
-      setSearchText('')
       setCurrentPage(1)
       setRefreshKey(prevKey => prevKey + 1)
   }
