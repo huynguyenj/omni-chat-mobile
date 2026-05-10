@@ -44,7 +44,7 @@ export default function TaskList() {
 
     const handleSearch = (value: string) => {
     setFilter((prevVal) => {
-      return { ...prevVal, taskName: value }
+      return { ...prevVal, taskName: value, page: 1 }
     })
   }
 

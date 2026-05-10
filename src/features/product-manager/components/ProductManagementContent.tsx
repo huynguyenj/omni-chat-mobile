@@ -20,7 +20,7 @@ export default function ProductManagementContent() {
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: listProducts?.meta.total_pages ?? 1 })
   const { listBrand } = useGetAllBrand()
   const handleSearch = (text: string) => {
-      setCurrentPage(1)
+      handleRefresh()
       setSearchText(text)
   }
   const [isFilterOpen, setIsFilterOpen] = useState(false)

@@ -15,6 +15,7 @@ export default function KeywordContent() {
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: keyWordList?.meta.total_pages ?? 1 })
   
   const handleSearch = (text: string) => {
+      handleRefreshKeywordList()
       setSearchText(text)
     }
   const debounce = useDebounce(handleSearch, 500)
@@ -49,6 +50,6 @@ const styles = StyleSheet.create({
             paddingVertical: 8
       },
       listContainer: {
-            flex: 0.75,
+            flex: 0.85,
       },
 })

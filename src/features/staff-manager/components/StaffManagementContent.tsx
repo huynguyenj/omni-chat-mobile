@@ -23,6 +23,7 @@ export default function StaffManagementContent() {
 //   const { handleDelete, loading: loadingDelete, setStaffId } = useDeleteStaff({ onRefresh: handleRefreshStaffList, onCloseModalUpdate: setIsAlertOpen })
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: listStaffs?.meta.total_pages ?? 1 })
   const handleSearch = (text: string) => {
+    handleRefreshStaffList()
     setSearchText(text)
   }
   const debounce = useDebounce(handleSearch, 500)
