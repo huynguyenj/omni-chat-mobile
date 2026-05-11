@@ -8,6 +8,7 @@ export default function useGetConversationTask({ conversationId }: { conversatio
   const [conversationTasks, setConversationTasks] = useState<TaskType[]>()
   const { execute, loading } = useApiCall<TaskType[]>()
   const [isReFetch, setIsRefetch] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
     const fetchConversationTask = async () => {
       const apiData = await execute({
@@ -19,7 +20,7 @@ export default function useGetConversationTask({ conversationId }: { conversatio
       setConversationTasks(data)
     }
     fetchConversationTask()
-  }, [conversationId, isReFetch])
+  }, [conversationId, isReFetch, refreshKey])
 
   const handleUpdateTask = async (taskId: string) => {
     const apiData = await execute({
@@ -44,5 +45,9 @@ export default function useGetConversationTask({ conversationId }: { conversatio
       return
     }
   }
-  return { loading, conversationTasks, handleUpdateTask }
+
+  const handleRefresh = () => {
+     setRefreshKey(prevKey => prevKey + 1)
+  }
+  return { loading, conversationTasks, handleUpdateTask, handleRefresh }
 }

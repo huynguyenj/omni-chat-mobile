@@ -48,7 +48,6 @@ export default function useGetListTasks() {
     })
   }
 
-  console.log(filters);
   
   const handleFilterByType = (intentTypeId: string) => {
     setCurrentPage(1)
