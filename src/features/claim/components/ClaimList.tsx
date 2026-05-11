@@ -1,33 +1,14 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, StyleSheet, FlatList } from 'react-native'
 import React, { Dispatch, SetStateAction } from 'react'
-import Card from '@/components/ui/cards/Card'
-import Tag from '@/components/ui/tags/Tag';
 import { ClaimType } from '../types/claim-type';
-import { CLAIM_STATUS, CLAIM_TYPE, tagClaimColor } from '../const/claim-type';
-import { formatDate } from '@/utils/format';
 import usePagination from '@/hooks/usePagination';
 import LoadingCircle from '@/components/ui/loading/LoadingCircle';
 import { PaginationStructure } from '@/types/api.response';
 import NoDataCard from '@/components/ui/cards/NodataCard';
-
-
-const Item = ({ claim }:{ claim: ClaimType }) => {
-      return (
-            <Card variant='lightGrey' key={claim.id} style={{ marginVertical: 10 }}>
-                  <View style={styles.itemHeader}>
-                        <View style={styles.itemTitleContainer}>
-                              <Text style={styles.itemTitle}>{CLAIM_TYPE[claim.claimType]}</Text>
-                                    <Tag variant={tagClaimColor[claim.status]}>
-                                          <Text style={styles.itemTagText}>{CLAIM_STATUS[claim.status]}</Text>
-                                    </Tag>
-                        </View>
-                              <Text style={styles.dateText}>{formatDate(claim.submitDate)}</Text>
-                        </View>
-                        <Text style={styles.contentTextCard}>Lí do: {claim.reason}</Text>
-                        <Text style={styles.contentTextCard}>Mô tả: {claim.description}</Text>
-                  </Card>
-      )
-}
+import ClaimItem from './ClaimItem';
+import OverviewCardClaim from './OverviewCardClaim';
+import ClaimItemSkeleton from './ui/skeleton/ClaimItemSkeleton';
+import OverviewCardClaimSkeleton from './ui/skeleton/OverviewClaimCardSkeleton';
 
 type ClaimListProps = {
    currentPage: number
@@ -40,22 +21,25 @@ type ClaimListProps = {
 
 export default function ClaimList({ currentPage, loading, setCurrentPage, totalPage, listClaims, onRefresh }: ClaimListProps) {
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: totalPage })
-  const renderItem = ({ item }: { item: ClaimType }) => {
-      return <Item claim={item}/>
-  }
-//   if (loading) return <LoadingCircle/>
   return (
     <View style={styles.container}>
-              { listClaims &&  listClaims.items.length > 0 ?
+      { loading ?
+            <OverviewCardClaimSkeleton/>
+            :
+            <OverviewCardClaim totalItem={listClaims?.meta.total_items ?? 0}/>
+      }
+        { loading ? 
+            Array.from({ length: 3 }).map((_, i) => (
+                  <ClaimItemSkeleton key={i}/>
+            ))
+            :
+            <>
+                  { listClaims &&  listClaims.items.length > 0 ?
                   <>
-                  <Card>
-                        <Text style={styles.cardTitle}>Số lượng đơn</Text>
-                        <Text style={styles.cardContent}>{listClaims?.items.length ?? 0}</Text>
-                  </Card>
                         <FlatList
                               data={listClaims.items}
                               keyExtractor={(item) => item.id}
-                              renderItem={renderItem}
+                              renderItem={({ item }) => <ClaimItem claim={item}/>}
                               onEndReached={loadMore}
                               onEndReachedThreshold={0.1}
                               refreshing={loading}
@@ -66,6 +50,8 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
                   :
                   <NoDataCard/>
                   }
+            </>
+        }
     </View>
   )
 }

@@ -64,6 +64,7 @@ export default function LoginScreen() {
           variant='primary'
           onPress={handleSubmit(onSubmit)}
           disabled={loading}
+          style={{ width: '100%', height: 50 }}
         />
       }
     </View>
