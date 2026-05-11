@@ -10,6 +10,7 @@ import ChatTemplateItem from './ChatTemplateItem'
 import ChatTemplateCreation from './ChatTemplateCreation'
 import OverviewChatTemplateCardSkeleton from './ui/ChatTemplateOverviewSkeleton'
 import ChatTemplateItemSkeleton from './ui/ChatTemplateItemSkeleton'
+import NoDataCard from '@/components/ui/cards/NodataCard'
 
 export default function ChatTemplateMainContent() {
   const { currentPage, handleRefresh, listChatTemplate, loading, setCurrentPage, setSearchText } = useGetChatTemplate()
@@ -28,19 +29,25 @@ export default function ChatTemplateMainContent() {
       }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên, mã...'/>
       <View style={styles.listContainer}>
-         { loading ?
+         { loading  ?
                Array.from({ length: 3 }).map((_, i) => (
                   <ChatTemplateItemSkeleton key={i}/>
             )) 
             :
-            <FlatList
-               data={listChatTemplate?.items}
-               renderItem={({ item }) => <ChatTemplateItem item={item} onRefresh={handleRefresh}/>}
-               onEndReached={loadMore}
-               onEndReachedThreshold={0.1}
-               onRefresh={handleRefresh}
-               refreshing={loading}
-            />
+            <>
+            { listChatTemplate && listChatTemplate.items.length > 0 ?
+                  <FlatList
+                  data={listChatTemplate?.items}
+                  renderItem={({ item }) => <ChatTemplateItem item={item} onRefresh={handleRefresh}/>}
+                  onEndReached={loadMore}
+                  onEndReachedThreshold={0.1}
+                  onRefresh={handleRefresh}
+                  refreshing={loading}
+                  />
+            :
+                  <NoDataCard title='Không có dữ liệu' description='Dữ liệu từ khóa mẫu không có'/>
+            }  
+            </>
          }
       </View>
       <ChatTemplateCreation onRefresh={handleRefresh}/>
@@ -55,5 +62,6 @@ const styles = StyleSheet.create({
             paddingVertical: 8
       },
       listContainer: {
+            flex: 0.85
       },
 })
