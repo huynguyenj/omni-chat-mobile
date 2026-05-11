@@ -14,6 +14,7 @@ import ProductManagementItem from './ProductManagementItem'
 import ProductCreation from './ProductCreation'
 import { OverviewProductManagementCardSkeleton } from './ui/skeleton/OverviewProductCardSkeleton'
 import { ProductManagementItemSkeleton } from './ui/skeleton/ProductManagementItemSkeleton'
+import NoDataCard from '@/components/ui/cards/NodataCard'
 
 export default function ProductManagementContent() {
   const { currentPage, listProducts, loading, sortBy, sortType, filterBrand, filterCapacity, filterPackageType, filterProductKind, handleRefresh, setCurrentPage, setSearchText, handleFilterByBrand, handleFilterByCapacity, handleFilterByPackageType, handleFilterByProductKind, handleSortBy, handleSortType } = useGetProductListManager()
@@ -92,11 +93,12 @@ export default function ProductManagementContent() {
             </View>
       </ScrollView>
     </ModalCustom>
+    <View style={styles.listContainer}>
     { loading ?
       <ProductManagementItemSkeleton/>
       :
       <>
-            <View style={styles.listContainer}>
+        { listProducts && listProducts.items.length > 0 ?
             <FlatList
                   data={listProducts?.items}
                   renderItem={({ item }) => <ProductManagementItem item={item} onRefresh={handleRefresh}/>}
@@ -105,10 +107,13 @@ export default function ProductManagementContent() {
                   refreshing={loading}
                   onEndReachedThreshold={0.1}
             />
-            </View>
-            <ProductCreation onRefresh={handleRefresh}/>
+           :
+           <NoDataCard title='Không có sản phẩm' description='Không có bất kì sản phẩm nào tồn tại'/>
+        }
       </>
     }
+    </View>
+      <ProductCreation onRefresh={handleRefresh}/>
     </View>
   )
 }
@@ -120,7 +125,7 @@ const styles = StyleSheet.create({
             paddingVertical: 8
       },
       listContainer: {
-            flex: 0.75,
+            flex: 0.85,
       },
       searchContainer: {
             flexDirection: 'row',
