@@ -26,12 +26,12 @@ const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Sản phẩm',  label: 'Sản phẩm',  icon: ShoppingCart,  screen: ProductManagement },
   { route: 'Kho hàng',  label: 'Kho hàng',  icon: Archive,       screen: StorageManagement },
   { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
-  { route: 'Claim',      label: 'Claim',      icon: FileText,      screen: ClaimManagement },
+  { route: 'Claim',      label: 'Yêu cầu',    icon: FileText,      screen: ClaimManagement },
   { route: 'Cảnh báo',  label: 'Cảnh báo',  icon: AlertTriangle, screen: AlertManagement },
-  { route: 'Shipper',    label: 'Shipper',    icon: Truck,         screen: ShipperManagement },
+  { route: 'Shipper',    label: 'Vận chuyển', icon: Truck,         screen: ShipperManagement },
   { route: 'Đơn hàng',  label: 'Đơn hàng',  icon: Package,       screen: OrderManagement },
   { route: 'Phiếu thanh toán', label: "Phiếu thanh toán", icon: ReceiptText, screen: InvoiceManagement },
-  { route: 'Ví tiến', label: 'Ví tiền', icon: Wallet, screen: WalletManagement }
+  { route: 'Ví tiền', label: 'Ví tiền', icon: Wallet, screen: WalletManagement }
 ];
 
 const adminTabs: TAB_LIST_ITEMS_TYPES[] = [

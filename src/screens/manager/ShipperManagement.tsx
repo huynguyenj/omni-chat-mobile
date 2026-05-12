@@ -1,10 +1,11 @@
-import { View, Text } from 'react-native'
 import React from 'react'
+import { View } from 'react-native'
+import ShippersTransportScreen from '@/features/manager/components/ShippersTransportScreen'
 
 export default function ShipperManagement() {
   return (
-    <View>
-      <Text>ShipperManagement</Text>
+    <View style={{ flex: 1 }}>
+      <ShippersTransportScreen />
     </View>
   )
 }
