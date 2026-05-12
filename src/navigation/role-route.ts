@@ -6,7 +6,7 @@ import ProductManagement from "@screens/manager/ProductManagement";
 import StorageManagement from "@screens/manager/StorageManagement";
 import ClaimManagement from "@screens/manager/ClaimManagement";
 import AlertManagement from "@screens/manager/AlertManagement";
-import ShipperManagement from "@screens/manager/ShipperManagement";
+import ShippersTransportScreen from '@/features/manager/components/ShippersTransportScreen'
 import OrderManagement from "@screens/manager/OrderManagement";
 import DashboardScreen from "@screens/admin/DashboardScreen";
 import RevenueScreen from "@screens/admin/RevenueScreen";
@@ -28,7 +28,7 @@ const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
   { route: 'Claim',      label: 'Yêu cầu',    icon: FileText,      screen: ClaimManagement },
   { route: 'Cảnh báo',  label: 'Cảnh báo',  icon: AlertTriangle, screen: AlertManagement },
-  { route: 'Shipper',    label: 'Vận chuyển', icon: Truck,         screen: ShipperManagement },
+  { route: 'Shipper',    label: 'Vận chuyển', icon: Truck,         screen: ShippersTransportScreen },
   { route: 'Đơn hàng',  label: 'Đơn hàng',  icon: Package,       screen: OrderManagement },
   { route: 'Phiếu thanh toán', label: "Phiếu thanh toán", icon: ReceiptText, screen: InvoiceManagement },
   { route: 'Ví tiền', label: 'Ví tiền', icon: Wallet, screen: WalletManagement }

@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -27,20 +26,29 @@ import {
 } from '../utils/managerOrdersNormalize'
 import { shipperActivityPill } from '../utils/managerShipperNormalize'
 
-const SHIPPER_PAGE = 8
-const ORDER_PAGE = 8
+const SHIPPER_PAGE_SIZE = 9
+const ORDER_PENDING_PAGE_SIZE = 9
 
-const ORDER_STATUS_OPTIONS = ['Draft', 'Confirmed', 'Completed', 'Cancelled'] as const
+/** Giống màn Đơn hàng + Confirmed (web vận chuyển). */
+const TRANSPORT_ORDER_STATUS_FILTERS: { value: string | null; label: string }[] = [
+  { value: null, label: 'Tất cả' },
+  { value: 'Draft', label: 'Nháp' },
+  { value: 'Pending', label: 'Chờ xử lý' },
+  { value: 'Confirmed', label: 'Đã xác nhận' },
+  { value: 'Shipped', label: 'Đã gửi' },
+  { value: 'Completed', label: 'Hoàn tất' },
+  { value: 'Cancelled', label: 'Đã hủy' },
+  { value: 'PendingReturn', label: 'Chờ trả' },
+  { value: 'Returned', label: 'Đã trả' },
+  { value: 'ReturnedDefective', label: 'Trả lỗi' }
+]
 
 type MainTab = 'orders' | 'shippers'
 
 export default function ShippersTransportScreen() {
   const [mainTab, setMainTab] = useState<MainTab>('orders')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-
-  /** Một trạng thái hoặc `null` = tất cả (không gửi filter). */
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string | null>('Confirmed')
+  /** Mặc định Pending — đúng tab «Đơn chờ giao»; có thể đổi «Tất cả». */
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string | null>('Pending')
 
   const [shippers, setShippers] = useState<ManagerShipperApiItem[]>([])
   const [shipperMeta, setShipperMeta] = useState({ total_pages: 1, current_page: 1 })
@@ -56,46 +64,46 @@ export default function ShippersTransportScreen() {
   const [orderRefreshing, setOrderRefreshing] = useState(false)
   const [orderError, setOrderError] = useState<string | null>(null)
 
-  const [assignOrderId, setAssignOrderId] = useState<string | null>(null)
-  const [assignSubmitting, setAssignSubmitting] = useState(false)
+  const [selectedShipperByOrder, setSelectedShipperByOrder] = useState<Record<string, string>>({})
+  const [pickShipperOrderId, setPickShipperOrderId] = useState<string | null>(null)
 
-  const [detailOrderId, setDetailOrderId] = useState<string | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [detail, setDetail] = useState<ManagerOrderDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
-  const [cancelSubmitting, setCancelSubmitting] = useState(false)
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search.trim()), 500)
-    return () => clearTimeout(t)
-  }, [search])
-
-  const orderQueryStatuses = useMemo(
-    () => (orderStatusFilter ? [orderStatusFilter] : undefined),
-    [orderStatusFilter]
-  )
+  const [actionLoading, setActionLoading] = useState(false)
 
   const fetchShippersPage = useCallback(async (page: number, reset: boolean) => {
-    const res = await ManagerShipperApi.getShippers({ pageIndex: page, pageSize: SHIPPER_PAGE })
+    const res = await ManagerShipperApi.getShippers({ pageIndex: page, pageSize: SHIPPER_PAGE_SIZE })
     const m = res.meta
     setShipperMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? page })
     setShippers((prev) => (reset ? res.items : [...prev, ...res.items]))
   }, [])
 
+  const orderStatusesParam = useMemo(
+    () => (orderStatusFilter ? [orderStatusFilter] : undefined),
+    [orderStatusFilter]
+  )
+
   const fetchOrdersPage = useCallback(
-    async (page: number, reset: boolean) => {
+    async (pageNumber: number, reset: boolean) => {
       const res = await ManagerOrderApi.getOrders({
-        page,
-        pageSize: ORDER_PAGE,
-        search: debouncedSearch || undefined,
-        orderStatuses: orderQueryStatuses
+        pageNumber,
+        pageSize: ORDER_PENDING_PAGE_SIZE,
+        orderStatuses: orderStatusesParam,
+        sortBy: 'orderdate',
+        descending: true
       })
       const m = res.meta
-      setOrderMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? page })
+      setOrderMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
       setOrders((prev) => (reset ? res.items : [...prev, ...res.items]))
     },
-    [debouncedSearch, orderQueryStatuses]
+    [orderStatusesParam]
   )
+
+  const selectOrderStatus = (v: string | null) => {
+    setOrderStatusFilter(v)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -130,7 +138,7 @@ export default function ShippersTransportScreen() {
         await fetchOrdersPage(1, true)
       } catch (e) {
         if (!cancelled) {
-          const msg = typeof e === 'string' ? e : 'Không tải được đơn hàng.'
+          const msg = typeof e === 'string' ? e : 'Không tải đơn.'
           setOrderError(msg)
           Toast.show({ type: 'error', text1: msg })
         }
@@ -143,18 +151,41 @@ export default function ShippersTransportScreen() {
     }
   }, [fetchOrdersPage])
 
+  const reloadShippers = useCallback(async () => {
+    setShippers([])
+    await fetchShippersPage(1, true)
+  }, [fetchShippersPage])
+
+  const reloadOrders = useCallback(async () => {
+    setOrders([])
+    await fetchOrdersPage(1, true)
+  }, [fetchOrdersPage])
+
   const onRefreshShippers = useCallback(async () => {
     setShipperRefreshing(true)
     setShipperError(null)
     try {
-      await fetchShippersPage(1, true)
+      await reloadShippers()
     } catch (e) {
       const msg = typeof e === 'string' ? e : 'Làm mới shipper thất bại.'
       Toast.show({ type: 'error', text1: msg })
     } finally {
       setShipperRefreshing(false)
     }
-  }, [fetchShippersPage])
+  }, [reloadShippers])
+
+  const onRefreshOrders = useCallback(async () => {
+    setOrderRefreshing(true)
+    setOrderError(null)
+    try {
+      await reloadOrders()
+    } catch (e) {
+      const msg = typeof e === 'string' ? e : 'Làm mới đơn thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setOrderRefreshing(false)
+    }
+  }, [reloadOrders])
 
   const onLoadMoreShippers = useCallback(async () => {
     if (shipperLoading || shipperLoadingMore || shipperRefreshing) return
@@ -163,26 +194,12 @@ export default function ShippersTransportScreen() {
     setShipperLoadingMore(true)
     try {
       await fetchShippersPage(next, false)
-    } catch (e) {
-      const msg = typeof e === 'string' ? e : 'Không tải thêm shipper.'
-      Toast.show({ type: 'error', text1: msg })
+    } catch {
+      Toast.show({ type: 'error', text1: 'Không tải thêm shipper.' })
     } finally {
       setShipperLoadingMore(false)
     }
   }, [shipperLoading, shipperLoadingMore, shipperRefreshing, shipperMeta, fetchShippersPage])
-
-  const onRefreshOrders = useCallback(async () => {
-    setOrderRefreshing(true)
-    setOrderError(null)
-    try {
-      await fetchOrdersPage(1, true)
-    } catch (e) {
-      const msg = typeof e === 'string' ? e : 'Làm mới đơn thất bại.'
-      Toast.show({ type: 'error', text1: msg })
-    } finally {
-      setOrderRefreshing(false)
-    }
-  }, [fetchOrdersPage])
 
   const onLoadMoreOrders = useCallback(async () => {
     if (orderLoading || orderLoadingMore || orderRefreshing) return
@@ -191,42 +208,15 @@ export default function ShippersTransportScreen() {
     setOrderLoadingMore(true)
     try {
       await fetchOrdersPage(next, false)
-    } catch (e) {
-      const msg = typeof e === 'string' ? e : 'Không tải thêm đơn.'
-      Toast.show({ type: 'error', text1: msg })
+    } catch {
+      Toast.show({ type: 'error', text1: 'Không tải thêm đơn.' })
     } finally {
       setOrderLoadingMore(false)
     }
   }, [orderLoading, orderLoadingMore, orderRefreshing, orderMeta, fetchOrdersPage])
 
-  const selectOrderStatus = (value: string | null) => {
-    setOrderStatusFilter(value)
-  }
-
-  const openAssign = (orderId: string) => setAssignOrderId(orderId)
-
-  const closeAssign = () => {
-    if (!assignSubmitting) setAssignOrderId(null)
-  }
-
-  const confirmAssign = async (shipper: ManagerShipperApiItem) => {
-    if (!assignOrderId) return
-    setAssignSubmitting(true)
-    try {
-      await ManagerShipperApi.assignOrderToShipper(shipper.id, assignOrderId)
-      Toast.show({ type: 'success', text1: 'Đã gán shipper cho đơn.' })
-      setAssignOrderId(null)
-      await fetchOrdersPage(1, true)
-    } catch (e) {
-      const msg = typeof e === 'string' ? e : 'Gán shipper thất bại.'
-      Toast.show({ type: 'error', text1: msg })
-    } finally {
-      setAssignSubmitting(false)
-    }
-  }
-
   const openDetail = useCallback(async (orderId: string) => {
-    setDetailOrderId(orderId)
+    setDetailId(orderId)
     setDetail(null)
     setDetailError(null)
     setDetailLoading(true)
@@ -243,55 +233,68 @@ export default function ShippersTransportScreen() {
   }, [])
 
   const closeDetail = () => {
-    if (cancelSubmitting) return
-    setDetailOrderId(null)
+    if (actionLoading) return
+    setDetailId(null)
     setDetail(null)
     setDetailError(null)
   }
 
-  const reloadDetailIfOpen = async () => {
-    if (!detailOrderId) return
-    try {
-      const d = await ManagerOrderApi.getOrderById(detailOrderId)
-      setDetail(d)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  const confirmCancelOrder = () => {
+  const handleCancelOrder = () => {
     if (!detail || !canCancelOrder(detail)) return
-    Alert.alert('Hủy đơn hàng', `Hủy đơn ${detail.code || detail.id}?`, [
+    Alert.alert('Hủy đơn', `Hủy đơn ${detail.code || detail.id}?`, [
       { text: 'Không', style: 'cancel' },
       {
         text: 'Hủy đơn',
         style: 'destructive',
         onPress: async () => {
-          setCancelSubmitting(true)
+          setActionLoading(true)
           try {
             await ManagerOrderApi.cancelOrder(detail.id)
             Toast.show({ type: 'success', text1: 'Đã hủy đơn.' })
-            await fetchOrdersPage(1, true)
-            await reloadDetailIfOpen()
+            closeDetail()
+            await reloadOrders()
+            await reloadShippers()
           } catch (e) {
             const msg = typeof e === 'string' ? e : 'Hủy đơn thất bại.'
             Toast.show({ type: 'error', text1: msg })
           } finally {
-            setCancelSubmitting(false)
+            setActionLoading(false)
           }
         }
       }
     ])
   }
 
+  const assignOne = async (orderId: string) => {
+    const sid = selectedShipperByOrder[orderId]
+    if (!sid) {
+      Toast.show({ type: 'info', text1: 'Chọn shipper trước khi gán.' })
+      return
+    }
+    try {
+      await ManagerShipperApi.assignOrderToShipper(sid, orderId)
+      Toast.show({ type: 'success', text1: 'Đã gán shipper cho đơn.' })
+      setSelectedShipperByOrder((prev) => {
+        const n = { ...prev }
+        delete n[orderId]
+        return n
+      })
+      await reloadOrders()
+      await reloadShippers()
+    } catch (e) {
+      const msg = typeof e === 'string' ? e : 'Gán shipper thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    }
+  }
+
   const shipperListHeader = useMemo(
     () => (
-      <View style={styles.shipperListHeader}>
-        <Text style={styles.shipperListTitle}>Danh sách Shipper</Text>
-        <Text style={styles.shipperListSub}>Quản lý đội ngũ giao hàng</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Danh sách Shipper</Text>
+        <Text style={styles.sectionSub}>Trang {shipperMeta.current_page}/{shipperMeta.total_pages}</Text>
       </View>
     ),
-    []
+    [shipperMeta.current_page, shipperMeta.total_pages]
   )
 
   const renderShipper = ({ item }: { item: ManagerShipperApiItem }) => {
@@ -336,32 +339,42 @@ export default function ShippersTransportScreen() {
   const renderOrder = ({ item }: { item: ManagerOrderItem }) => {
     const st = orderStatusPill(item.status)
     const dv = deliveryStatusPill(item.deliveryStatus)
+    const sel = selectedShipperByOrder[item.id]
+    const selName = shippers.find((s) => s.id === sel)?.fullName
     return (
       <View style={styles.orderCard}>
-        <View style={styles.orderTop}>
-          <Text style={styles.orderCode}>{item.code || item.id}</Text>
-          <View style={styles.orderBadges}>
-            <View style={[styles.miniPill, { backgroundColor: st.bg }]}>
-              <Text style={[styles.miniPillText, { color: st.color }]}>{st.label}</Text>
+        <Pressable onPress={() => openDetail(item.id)}>
+          <View style={styles.orderTop}>
+            <Text style={styles.orderCode}>{item.code || item.id}</Text>
+          </View>
+          <View style={styles.orderStatusRow}>
+            <View style={styles.statusCol}>
+              <Text style={styles.orderStatusLabel}>Trạng thái đơn</Text>
+              <View style={[styles.miniPill, { backgroundColor: st.bg }]}>
+                <Text style={[styles.miniPillText, { color: st.color }]}>{st.label}</Text>
+              </View>
             </View>
-            <View style={[styles.miniPill, { backgroundColor: dv.bg }]}>
-              <Text style={[styles.miniPillText, { color: dv.color }]}>{dv.label}</Text>
+            <View style={styles.statusCol}>
+              <Text style={styles.orderStatusLabel}>Trạng thái giao</Text>
+              <View style={[styles.miniPill, { backgroundColor: dv.bg }]}>
+                <Text style={[styles.miniPillText, { color: dv.color }]}>{dv.label}</Text>
+              </View>
             </View>
           </View>
-        </View>
-        <Text style={styles.orderName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.orderCus} numberOfLines={1}>
-          {item.customerName}
-        </Text>
-        <Text style={styles.orderDate}>{formatDateTime(item.orderDate)}</Text>
-        <View style={styles.orderActions}>
-          <Pressable style={styles.btnGhost} onPress={() => openDetail(item.id)}>
-            <Text style={styles.btnGhostText}>Chi tiết</Text>
+          <Text style={styles.orderName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.orderCus} numberOfLines={1}>
+            {item.customerName}
+          </Text>
+          <Text style={styles.orderDate}>{formatDateTime(item.orderDate)}</Text>
+        </Pressable>
+        <View style={styles.assignRow}>
+          <Pressable style={styles.btnPick} onPress={() => setPickShipperOrderId(item.id)}>
+            <Text style={styles.btnPickText}>{selName ? selName : 'Chọn shipper'}</Text>
           </Pressable>
-          <Pressable style={styles.btnPrimarySm} onPress={() => openAssign(item.id)}>
-            <Text style={styles.btnPrimarySmText}>Gán shipper</Text>
+          <Pressable style={styles.btnPrimarySm} onPress={() => assignOne(item.id)}>
+            <Text style={styles.btnPrimarySmText}>Gán</Text>
           </Pressable>
         </View>
       </View>
@@ -377,123 +390,101 @@ export default function ShippersTransportScreen() {
           onPress={() => setMainTab('orders')}
           style={[styles.mainTab, styles.mainTabLeft, mainTab === 'orders' && styles.mainTabOn]}
         >
-          <Text style={[styles.mainTabText, mainTab === 'orders' && styles.mainTabTextOn]}>Đơn hàng</Text>
+          <Text style={[styles.mainTabText, mainTab === 'orders' && styles.mainTabTextOn]}>Đơn chờ giao</Text>
         </Pressable>
-        <Pressable
-          onPress={() => setMainTab('shippers')}
-          style={[styles.mainTab, mainTab === 'shippers' && styles.mainTabOn]}
-        >
+        <Pressable onPress={() => setMainTab('shippers')} style={[styles.mainTab, mainTab === 'shippers' && styles.mainTabOn]}>
           <Text style={[styles.mainTabText, mainTab === 'shippers' && styles.mainTabTextOn]}>Shipper</Text>
         </Pressable>
       </View>
 
-      <View style={styles.tabPanel}>
-        {mainTab === 'orders' ? (
-          <>
-            <TextInput
-              placeholder="Tìm đơn (mã, tên, SĐT…)"
-              placeholderTextColor="#9ca3af"
-              value={search}
-              onChangeText={setSearch}
-              style={styles.search}
-            />
-
-            <View style={styles.filterBlock}>
-              <Text style={styles.filterLabel}>Trạng thái đơn</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.chipRow}
-                contentContainerStyle={styles.chipScroll}
-              >
-                <Pressable
-                  onPress={() => selectOrderStatus(null)}
-                  style={[styles.chipSm, orderStatusFilter === null && styles.chipOn]}
-                >
-                  <Text style={[styles.chipSmText, orderStatusFilter === null && styles.chipTextOn]}>Tất cả</Text>
-                </Pressable>
-                {ORDER_STATUS_OPTIONS.map((s) => {
-                  const on = orderStatusFilter === s
-                  return (
-                    <Pressable key={s} onPress={() => selectOrderStatus(s)} style={[styles.chipSm, on && styles.chipOn]}>
-                      <Text style={[styles.chipSmText, on && styles.chipTextOn]}>{s}</Text>
-                    </Pressable>
-                  )
-                })}
-              </ScrollView>
-              {orderStatusFilter === null ? (
-                <Text style={styles.hintInline}>Tất cả đơn — có thể chậm hơn khi lọc.</Text>
-              ) : null}
+      {mainTab === 'orders' ? (
+        <View style={styles.ordersPane}>
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Trạng thái đơn</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
+              {TRANSPORT_ORDER_STATUS_FILTERS.map((f) => {
+                const on = orderStatusFilter === f.value
+                return (
+                  <Pressable
+                    key={String(f.value ?? 'all')}
+                    onPress={() => selectOrderStatus(f.value)}
+                    style={[styles.chip, on && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
+            {orderStatusFilter === null ? (
+              <Text style={styles.filterHint}>Tất cả đơn — có thể chậm hơn khi lọc đầy dữ liệu.</Text>
+            ) : null}
+          </View>
+          {orderError ? (
+            <View style={styles.errBox}>
+              <Text style={styles.errText}>{orderError}</Text>
+              <Pressable onPress={onRefreshOrders}>
+                <Text style={styles.link}>Thử lại</Text>
+              </Pressable>
             </View>
-            {orderError ? (
-              <View style={styles.errInline}>
-                <Text style={styles.errText}>{orderError}</Text>
-                <Pressable onPress={onRefreshOrders}>
-                  <Text style={styles.link}>Thử lại</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            {orderLoading && orders.length === 0 ? (
-              <ActivityIndicator style={{ marginVertical: 16 }} />
-            ) : (
-              <FlatList
-                style={styles.tabList}
-                data={orders}
-                keyExtractor={(o) => o.id}
-                renderItem={renderOrder}
-                contentContainerStyle={styles.listContent}
-                refreshControl={<RefreshControl refreshing={orderRefreshing} onRefresh={onRefreshOrders} />}
-                ListEmptyComponent={<Text style={styles.emptySm}>Không có đơn phù hợp.</Text>}
-                onEndReached={onLoadMoreOrders}
-                onEndReachedThreshold={0.35}
-                ListFooterComponent={
-                  orderMeta.current_page < orderMeta.total_pages ? (
-                    <View style={styles.footerPad}>{orderLoadingMore ? <ActivityIndicator /> : null}</View>
-                  ) : null
-                }
-              />
-            )}
-          </>
-        ) : (
-          <>
-            {shipperError ? (
-              <View style={styles.errInline}>
-                <Text style={styles.errText}>{shipperError}</Text>
-                <Pressable onPress={onRefreshShippers}>
-                  <Text style={styles.link}>Thử lại</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            {shipperLoading && shippers.length === 0 ? (
-              <ActivityIndicator style={{ marginVertical: 16 }} />
-            ) : (
-              <FlatList
-                style={styles.tabList}
-                data={shippers}
-                keyExtractor={(s) => s.id}
-                renderItem={renderShipper}
-                ListHeaderComponent={shipperListHeader}
-                contentContainerStyle={styles.listContent}
-                refreshControl={<RefreshControl refreshing={shipperRefreshing} onRefresh={onRefreshShippers} />}
-                ListEmptyComponent={<Text style={styles.emptySm}>Chưa có shipper.</Text>}
-                onEndReached={onLoadMoreShippers}
-                onEndReachedThreshold={0.35}
-                ListFooterComponent={
-                  shipperMeta.current_page < shipperMeta.total_pages ? (
-                    <View style={styles.footerPad}>{shipperLoadingMore ? <ActivityIndicator /> : null}</View>
-                  ) : null
-                }
-              />
-            )}
-          </>
-        )}
-      </View>
+          ) : null}
+          {orderLoading && orders.length === 0 ? (
+            <ActivityIndicator style={{ marginTop: 24 }} />
+          ) : (
+            <FlatList
+              style={styles.orderList}
+              data={orders}
+              keyExtractor={(o) => o.id}
+              renderItem={renderOrder}
+              contentContainerStyle={styles.listPad}
+              refreshControl={<RefreshControl refreshing={orderRefreshing} onRefresh={onRefreshOrders} />}
+              ListEmptyComponent={<Text style={styles.emptySm}>Không có đơn với bộ lọc đã chọn.</Text>}
+              onEndReached={onLoadMoreOrders}
+              onEndReachedThreshold={0.35}
+              ListFooterComponent={
+                orderMeta.current_page < orderMeta.total_pages ? (
+                  <View style={styles.footerPad}>{orderLoadingMore ? <ActivityIndicator /> : null}</View>
+                ) : null
+              }
+            />
+          )}
+        </View>
+      ) : (
+        <>
+          {shipperError ? (
+            <View style={styles.errBox}>
+              <Text style={styles.errText}>{shipperError}</Text>
+              <Pressable onPress={onRefreshShippers}>
+                <Text style={styles.link}>Thử lại</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {shipperLoading && shippers.length === 0 ? (
+            <ActivityIndicator style={{ marginTop: 24 }} />
+          ) : (
+            <FlatList
+              data={shippers}
+              keyExtractor={(s) => s.id}
+              renderItem={renderShipper}
+              ListHeaderComponent={shipperListHeader}
+              contentContainerStyle={styles.listPad}
+              refreshControl={<RefreshControl refreshing={shipperRefreshing} onRefresh={onRefreshShippers} />}
+              ListEmptyComponent={<Text style={styles.emptySm}>Chưa có shipper.</Text>}
+              onEndReached={onLoadMoreShippers}
+              onEndReachedThreshold={0.35}
+              ListFooterComponent={
+                shipperMeta.current_page < shipperMeta.total_pages ? (
+                  <View style={styles.footerPad}>{shipperLoadingMore ? <ActivityIndicator /> : null}</View>
+                ) : null
+              }
+            />
+          )}
+        </>
+      )}
 
-      <Modal visible={!!assignOrderId} transparent animationType="slide" onRequestClose={closeAssign}>
-        <Pressable style={styles.backdrop} onPress={closeAssign}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Modal visible={!!pickShipperOrderId} transparent animationType="fade" onRequestClose={() => setPickShipperOrderId(null)}>
+        <Pressable style={styles.backdrop} onPress={() => setPickShipperOrderId(null)}>
+          <Pressable style={styles.sheetSm} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sheetTitle}>Chọn shipper</Text>
-            <Text style={styles.sheetSub}>Đơn: {assignOrderId}</Text>
             <FlatList
               data={shippers}
               keyExtractor={(s) => s.id}
@@ -501,43 +492,44 @@ export default function ShippersTransportScreen() {
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.pickRow}
-                  disabled={assignSubmitting}
-                  onPress={() => confirmAssign(item)}
+                  onPress={() => {
+                    if (!pickShipperOrderId) return
+                    setSelectedShipperByOrder((prev) => ({ ...prev, [pickShipperOrderId]: item.id }))
+                    setPickShipperOrderId(null)
+                  }}
                 >
                   <Text style={styles.pickName}>{item.fullName}</Text>
-                  <Text style={styles.pickSub}>
+                  <Text style={styles.pickMeta}>
                     {shipperActivityPill(item).label}
                     {item.phone ? ` · ${item.phone}` : ''}
-                  </Text>
-                  <Text style={styles.pickMeta}>
-                    Đang giao: {item.deliveringCount} · Đã giao: {item.deliveredCount}
                   </Text>
                 </Pressable>
               )}
               ListEmptyComponent={<Text style={styles.emptySm}>Chưa tải shipper.</Text>}
             />
-            <Pressable style={styles.btnGhostWide} onPress={closeAssign} disabled={assignSubmitting}>
-              <Text style={styles.btnGhostText}>Đóng</Text>
-            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
 
-      <Modal visible={!!detailOrderId} transparent animationType="slide" onRequestClose={closeDetail}>
+      <Modal visible={!!detailId} transparent animationType="slide" onRequestClose={closeDetail}>
         <Pressable style={styles.backdrop} onPress={closeDetail}>
-          <Pressable style={styles.sheetLg} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <ScrollView>
               <Text style={styles.sheetTitle}>Chi tiết đơn</Text>
               {detailLoading ? <ActivityIndicator style={{ marginVertical: 16 }} /> : null}
               {detailError ? <Text style={styles.errText}>{detailError}</Text> : null}
               {detail ? (
                 <>
-                  <View style={styles.orderBadges}>
+                  <Text style={styles.k}>Trạng thái đơn</Text>
+                  <View style={[styles.orderBadges, styles.detailBadges]}>
                     <View style={[styles.miniPill, { backgroundColor: orderStatusPill(detail.status).bg }]}>
                       <Text style={[styles.miniPillText, { color: orderStatusPill(detail.status).color }]}>
                         {orderStatusPill(detail.status).label}
                       </Text>
                     </View>
+                  </View>
+                  <Text style={styles.k}>Trạng thái giao</Text>
+                  <View style={[styles.orderBadges, styles.detailBadges]}>
                     <View style={[styles.miniPill, { backgroundColor: deliveryStatusPill(detail.deliveryStatus).bg }]}>
                       <Text style={[styles.miniPillText, { color: deliveryStatusPill(detail.deliveryStatus).color }]}>
                         {deliveryStatusPill(detail.deliveryStatus).label}
@@ -552,7 +544,7 @@ export default function ShippersTransportScreen() {
                   <Text style={styles.v}>{detail.customerPhone}</Text>
                   <Text style={styles.k}>Địa chỉ</Text>
                   <Text style={styles.v}>{detail.customerAddress}</Text>
-                  <Text style={styles.k}>Tổng tiền</Text>
+                  <Text style={styles.k}>Tổng</Text>
                   <Text style={styles.v}>{detail.totalAmount?.toLocaleString('vi-VN')} đ</Text>
                   <Text style={styles.k}>Dòng hàng</Text>
                   {(detail.orderItems ?? []).map((li) => (
@@ -561,12 +553,8 @@ export default function ShippersTransportScreen() {
                     </Text>
                   ))}
                   {canCancelOrder(detail) ? (
-                    <Pressable
-                      style={styles.btnDanger}
-                      disabled={cancelSubmitting}
-                      onPress={confirmCancelOrder}
-                    >
-                      <Text style={styles.btnDangerText}>{cancelSubmitting ? 'Đang xử lý…' : 'Hủy đơn (chờ giao)'}</Text>
+                    <Pressable style={styles.btnDanger} disabled={actionLoading} onPress={handleCancelOrder}>
+                      <Text style={styles.btnDangerText}>Hủy đơn (chờ giao)</Text>
                     </Pressable>
                   ) : null}
                 </>
@@ -582,50 +570,13 @@ export default function ShippersTransportScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8fafc' },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a', paddingHorizontal: 16, marginBottom: 8 },
-  mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 8 },
-  mainTab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#e2e8f0',
-    alignItems: 'center'
-  },
-  mainTabLeft: { marginRight: 8 },
-  mainTabOn: { backgroundColor: '#1e293b' },
-  mainTabText: { fontWeight: '600', color: '#475569' },
-  mainTabTextOn: { color: '#fff' },
-  tabPanel: { flex: 1, minHeight: 0 },
-  tabList: { flex: 1, marginHorizontal: 12 },
-  listContent: { paddingBottom: 24, flexGrow: 1 },
-  search: {
-    marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
-    fontSize: 15,
-    color: '#0f172a'
-  },
-  filterBlock: {
-    paddingHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 4
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 6
-  },
+  orderList: { flex: 1 },
+  ordersPane: { flex: 1 },
+  filterBlock: { paddingHorizontal: 16, marginTop: 4, marginBottom: 8 },
+  filterLabel: { fontSize: 12, fontWeight: '600', color: '#64748b', marginBottom: 6 },
   chipRow: { maxHeight: 40 },
-  chipScroll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: 2,
-    flexGrow: 0
-  },
-  chipSm: {
+  chipScroll: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
+  chip: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
@@ -634,124 +585,122 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     marginRight: 6
   },
-  chipSmText: { fontSize: 12, fontWeight: '600', color: '#475569' },
   chipOn: { backgroundColor: '#1e293b', borderColor: '#1e293b' },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
   chipTextOn: { color: '#fff' },
-  hintInline: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
-  shipperListHeader: { paddingHorizontal: 4, paddingBottom: 12 },
-  shipperListTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
-  shipperListSub: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  filterHint: { fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 6 },
+  mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, backgroundColor: '#e2e8f0', borderRadius: 12, padding: 4 },
+  mainTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  mainTabLeft: { marginRight: 4 },
+  mainTabOn: { backgroundColor: '#fff' },
+  mainTabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  mainTabTextOn: { color: '#0f172a' },
+  listPad: { paddingHorizontal: 16, paddingBottom: 32 },
+  sectionHeader: { paddingHorizontal: 4, paddingBottom: 12 },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  sectionSub: { fontSize: 13, color: '#64748b', marginTop: 2 },
   shipCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0'
   },
-  shipCardTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  shipCardTop: { flexDirection: 'row' },
   shipAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#0369a1',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12
+    justifyContent: 'center'
   },
-  shipCardMain: { flex: 1, minWidth: 0 },
-  shipNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
-  shipCardName: { fontSize: 17, fontWeight: '700', color: '#0f172a', marginRight: 8, flexShrink: 1 },
-  activityPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
+  shipCardMain: { flex: 1, marginLeft: 12 },
+  shipNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  shipCardName: { flex: 1, fontSize: 16, fontWeight: '700', color: '#0f172a' },
+  activityPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   activityPillOn: { backgroundColor: '#dcfce7' },
   activityPillOff: { backgroundColor: '#f1f5f9' },
   activityPillText: { fontSize: 11, fontWeight: '700' },
   activityPillTextOn: { color: '#15803d' },
   activityPillTextOff: { color: '#64748b' },
-  shipPhoneRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  shipPhone: { fontSize: 14, color: '#475569', marginLeft: 6 },
+  shipPhoneRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  shipPhone: { fontSize: 13, color: '#64748b' },
   shipStatRow: { flexDirection: 'row', marginTop: 12 },
-  shipStatBox: {
-    flex: 1,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 8
-  },
+  shipStatBox: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 10, padding: 10, alignItems: 'center' },
   shipStatBoxSp: { marginRight: 8 },
-  shipStatLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', letterSpacing: 0.5 },
-  shipStatVal: { fontSize: 20, fontWeight: '700', color: '#0f172a', marginTop: 4 },
+  shipStatLabel: { fontSize: 10, fontWeight: '700', color: '#64748b' },
+  shipStatVal: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginTop: 4 },
   orderCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0'
   },
-  orderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  orderBadges: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
-  orderCode: { fontSize: 15, fontWeight: '700', color: '#0f172a', flex: 1, marginRight: 8 },
-  miniPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginRight: 6, marginBottom: 4 },
+  orderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  orderCode: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
+  orderStatusRow: { flexDirection: 'row', marginTop: 12, gap: 12 },
+  statusCol: { flex: 1, minWidth: 0 },
+  orderStatusLabel: { fontSize: 11, fontWeight: '700', color: '#64748b', marginBottom: 6, letterSpacing: 0.2 },
+  orderBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  detailBadges: { marginTop: 2 },
+  miniPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   miniPillText: { fontSize: 11, fontWeight: '700' },
-  orderName: { fontSize: 14, color: '#334155' },
-  orderCus: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  orderName: { fontSize: 15, fontWeight: '600', color: '#0f172a', marginTop: 8 },
+  orderCus: { fontSize: 13, color: '#64748b', marginTop: 4 },
   orderDate: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  orderActions: { flexDirection: 'row', marginTop: 10 },
-  btnGhost: {
+  assignRow: { flexDirection: 'row', marginTop: 12, gap: 8 },
+  btnPick: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#cbd5e1',
-    alignItems: 'center',
-    marginRight: 8
-  },
-  btnGhostText: { fontWeight: '700', color: '#334155' },
-  btnPrimarySm: {
-    flex: 1,
-    paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#2563eb',
-    alignItems: 'center'
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    justifyContent: 'center'
   },
-  btnPrimarySmText: { fontWeight: '700', color: '#fff' },
-  emptySm: { textAlign: 'center', color: '#94a3b8', paddingVertical: 12, fontSize: 13 },
-  errInline: { paddingHorizontal: 16, marginBottom: 6 },
+  btnPickText: { fontSize: 13, color: '#334155' },
+  btnPrimarySm: { backgroundColor: '#0369a1', borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
+  btnPrimarySmText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  errBox: { marginHorizontal: 16, padding: 12, backgroundColor: '#fef2f2', borderRadius: 10, marginBottom: 8 },
   errText: { color: '#b91c1c', fontSize: 13 },
-  link: { color: '#2563eb', fontWeight: '600', marginTop: 4 },
-  footerPad: { paddingVertical: 12, alignItems: 'center' },
+  link: { color: '#0369a1', marginTop: 8, fontWeight: '600' },
+  emptySm: { textAlign: 'center', color: '#64748b', marginTop: 24 },
+  footerPad: { paddingVertical: 16, alignItems: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    maxHeight: '88%',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24
+  },
+  sheetSm: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 40,
+    borderRadius: 16,
     padding: 16,
     maxHeight: '70%'
   },
-  sheetLg: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-    maxHeight: '88%'
-  },
-  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  sheetSub: { fontSize: 13, color: '#64748b', marginBottom: 8 },
-  pickRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
+  pickRow: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e2e8f0' },
   pickName: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
-  pickSub: { fontSize: 13, color: '#64748b', marginTop: 2 },
-  pickMeta: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  btnGhostWide: { marginTop: 12, paddingVertical: 12, alignItems: 'center' },
-  k: { fontSize: 12, color: '#64748b', marginTop: 8 },
-  v: { fontSize: 15, color: '#0f172a' },
+  pickMeta: { fontSize: 12, color: '#64748b', marginTop: 4 },
+  k: { fontSize: 12, color: '#64748b', marginTop: 10 },
+  v: { fontSize: 15, color: '#0f172a', marginTop: 2 },
   line: { fontSize: 14, color: '#334155', marginTop: 4 },
   btnDanger: {
     marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#b91c1c',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center'
   },
-  btnDangerText: { fontWeight: '700', color: '#b91c1c' }
+  btnDangerText: { color: '#fff', fontWeight: '700', fontSize: 15 }
 })
