@@ -20,7 +20,8 @@ const styles = StyleSheet.create({
             paddingHorizontal: 8,
             borderRadius: 12,
             alignItems:'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            alignSelf: 'flex-start',
       },
       success: {
             backgroundColor: '#2ECC71',
@@ -35,7 +36,7 @@ const styles = StyleSheet.create({
             backgroundColor: '#3366CC'
       },
       gray: {
-            backgroundColor: '#5c5470'
+            backgroundColor: '#E6E8EB'
       }
 })
 

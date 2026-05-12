@@ -1,4 +1,4 @@
-import { View, Text, StyleProp, ViewStyle, StyleSheet, TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, StyleProp, ViewStyle, StyleSheet, TouchableOpacity, FlatList, Modal } from 'react-native'
 import React, { useState } from 'react'
 import { ChevronDown, ChevronUp, CircleCheckBig } from 'lucide-react-native'
 
@@ -52,25 +52,36 @@ export default function Select({
             }
       </TouchableOpacity>
             {error && <Text style={styles.errorText}>{error}</Text>}
-      {isOpen && 
-            <View style={styles.optionContainer}>
+     <Modal visible={isOpen} transparent animationType="slide">
+            <TouchableOpacity
+                  style={styles.overlay}
+                  activeOpacity={1}
+                  onPress={() => setIsOpen(false)}
+            >
+            <View style={styles.modalContent}>
                   <FlatList
                         data={options}
+                        keyExtractor={(item) => item.value}
                         renderItem={({ item }) => {
-                              const isItemSelected = item.value == value
-                              return (
-                                    <TouchableOpacity
-                                          style={[styles.option, isItemSelected && styles.optionSelected]}
-                                          onPress={() => handleSelected(item.value)}
-                                    >
-                                    <Text style={[ styles.optionText, isItemSelected && styles.optionTextSelected ]}>{item.label}</Text>  
-                                    { isItemSelected && <CircleCheckBig size={20} color={'#FFFFFF'}/> }
-                                    </TouchableOpacity>
-                              )
-                        }}
+                        const isItemSelected = item.value === value
+                        return (
+                              <TouchableOpacity
+                                    style={[styles.option, isItemSelected && styles.optionSelected]}
+                                    onPress={() => {
+                                          handleSelected(item.value)
+                                          setIsOpen(false)
+                                    }}
+                              >
+                                    <Text style={[styles.optionText, isItemSelected && styles.optionTextSelected]}>
+                                          {item.label}
+                                    </Text>
+                              </TouchableOpacity>
+                  )
+                  }}
                   />
             </View>
-      }
+            </TouchableOpacity>
+      </Modal>
     </View>
   )
 }
@@ -82,7 +93,7 @@ const styles = StyleSheet.create({
       },
        label: {
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 12,
             color: '#6F7379',
       },
       trigger: {
@@ -97,7 +108,7 @@ const styles = StyleSheet.create({
       },
       triggerText: {
            fontSize: 12,
-           color: '#979BA2',
+           color: '#616161',
            fontWeight: 600
       },
       inputText: {
@@ -143,6 +154,18 @@ const styles = StyleSheet.create({
       },
       optionTextSelected: {
             color: '#ffffff'
-      }
+      },
+      overlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            justifyContent: 'center',
+            padding: 20,
+      },
 
+      modalContent: {
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            maxHeight: 300,
+            padding: 10,
+      },
 })

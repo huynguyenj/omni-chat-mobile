@@ -1,6 +1,6 @@
 import { CustomerInfoType } from "./customer-type";
-import { OrderType } from "./order-type";
-import { ProductType } from "./product-type";
+import { OrderType } from "../../order/types/order-type";
+import { ProductType } from "../../order/types/product-type";
 
 export type Recommendation =
   | { recommendType: 'SearchOrderHistory'; data: OrderType }

@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth-store'
 import useApiCall from '@/hooks/useApiCall'
 import { LoginResponseType } from '../types/login-types'
 import type { ApiResponseStructure } from '@/types/api.response'
+import Toast from 'react-native-toast-message'
 
 const LoginFormSchema = z.object({
       username: z.string(),
@@ -15,7 +16,7 @@ type LoginFormType = z.infer<typeof LoginFormSchema>
 
 export default function useLogin() {
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormType>({ resolver: zodResolver(LoginFormSchema) })
-  const addAuthStore = useAuthStore((s) => s.setAccessToken)
+  const addAuthStore = useAuthStore((s) => s.setAuthInfo)
   const { execute, loading } = useApiCall<LoginResponseType>()
   const resolveLoginPayload = (
     raw: LoginResponseType | ApiResponseStructure<LoginResponseType>
@@ -43,10 +44,24 @@ export default function useLogin() {
             body: formData
       })
       const { data, error } = apiData
-      if (error) return
+      if (error) {
+            Toast.show({
+                  type: 'error',
+                  text1: error
+            })
+            return
+      }
       const payload = resolveLoginPayload(data as LoginResponseType | ApiResponseStructure<LoginResponseType>)
       if (!payload) return
-      addAuthStore(payload.accessToken, payload.accountId, payload.staffId, payload.role)
+      addAuthStore(
+            payload.accessToken,
+            payload.refreshToken,
+            payload.accountId,
+            payload.staffId,
+            payload.role,
+            payload.staffName,
+            payload.avatarUrl
+      )
 }
   return { control, handleSubmit, onSubmit, errors, loading }
 }

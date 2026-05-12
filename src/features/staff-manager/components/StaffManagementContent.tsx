@@ -13,6 +13,8 @@ import usePagination from '@/hooks/usePagination'
 import NoDataCard from '@/components/ui/cards/NodataCard'
 import Input from '@/components/ui/inputs/Input'
 import { Search } from 'lucide-react-native'
+import OverviewCardStaffSkeleton from './ui/skeleton/OverviewCardStaffSkeleton'
+import StaffItemSkeleton from './ui/skeleton/StaffItemSkeleton'
 
 export default function StaffManagementContent() {
 //   const [isOpenEdit, setIsOpenEdit] = useState(false)
@@ -23,27 +25,40 @@ export default function StaffManagementContent() {
 //   const { handleDelete, loading: loadingDelete, setStaffId } = useDeleteStaff({ onRefresh: handleRefreshStaffList, onCloseModalUpdate: setIsAlertOpen })
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: listStaffs?.meta.total_pages ?? 1 })
   const handleSearch = (text: string) => {
+    handleRefreshStaffList()
     setSearchText(text)
   }
   const debounce = useDebounce(handleSearch, 500)
 
   return (
     <View style={styles.container}>
-      <OverviewCardStaff totalStaff={listStaffs?.meta.total_items ?? 0}/>
+      { loading ?
+        <OverviewCardStaffSkeleton/>
+      :
+        <OverviewCardStaff totalStaff={listStaffs?.meta.total_items ?? 0}/>
+      }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
       <View style={styles.listContainer}>
-         {listStaffs && listStaffs.items.length > 0 ?
-            <FlatList
-                  data={listStaffs.items}
-                  renderItem={({ item }) => <StaffItem data={item} onRefresh={handleRefreshStaffList}/>}
-                  onEndReached={loadMore}
-                  onEndReachedThreshold={0.1}
-                  refreshing={loading}
-                  onRefresh={handleRefreshStaffList}
-            />
-            :
-            <NoDataCard/>
-          }
+        { loading ?
+          Array.from({ length: 2 }).map((_, i) => (
+            <StaffItemSkeleton key={i}/>
+        ))
+        :
+          <>
+            {listStaffs && listStaffs.items.length > 0 ?
+              <FlatList
+                    data={listStaffs.items}
+                    renderItem={({ item }) => <StaffItem data={item} onRefresh={handleRefreshStaffList}/>}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.1}
+                    refreshing={loading}
+                    onRefresh={handleRefreshStaffList}
+              />
+              :
+              <NoDataCard/>
+            }
+          </> 
+        }
       </View>
     </View>
   )

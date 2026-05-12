@@ -3,10 +3,20 @@ import BottomTabNavigator from '../custom-tab/BottomTabNavigator'
 import { staffTabs } from '../role-route'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import ChatDetail from '@/screens/staff/ChatDetail'
+import OrderSectionScreen from '@/screens/staff/OrderSectionScreen'
+import CustomerInfoScreen from '@/screens/staff/CustomerInfoScreen'
+import ConversationTaskScreen from '@/screens/staff/ConversationTaskScreen'
+import TicketScreen from '@/screens/staff/TicketScreen'
+import CustomerOrderScreen from '@/screens/staff/CustomerOrderScreen'
 
 export type ChatStackParamList = {
   ChatScreen: undefined
   ChatDetail: { id: string }
+  OrderSectionScreen: { customerId: string }
+  CustomerInfoScreen: { conversationId: string }
+  ConversationTaskScreen: { conversationId: string }
+  TicketScreen: { customerId: string }
+  CustomerOrderScreen: { customerId: string }
 }
 
 const Stack = createNativeStackNavigator<ChatStackParamList>()
@@ -29,6 +39,33 @@ export default function StaffNavigator() {
                        }}
                        name='ChatDetail' 
                        component={ChatDetail}/>
+                  <Stack.Screen
+                        options={{
+                              headerShown: false
+                        }}
+                        name='OrderSectionScreen'
+                        component={OrderSectionScreen}
+                  />
+                   <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='CustomerInfoScreen' component={CustomerInfoScreen}/>
+                   <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='ConversationTaskScreen' component={ConversationTaskScreen}/>
+                  <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='TicketScreen' component={TicketScreen}/>
+                  <Stack.Screen
+                       options={{
+                             headerShown: false
+                       }}
+                       name='CustomerOrderScreen' component={CustomerOrderScreen}/>
            </Stack.Navigator>
   )
 }

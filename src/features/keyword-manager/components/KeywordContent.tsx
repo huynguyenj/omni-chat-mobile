@@ -9,33 +9,48 @@ import useDebounce from '@/hooks/useDebounce'
 import Input from '@/components/ui/inputs/Input'
 import { Search } from 'lucide-react-native'
 import CreateSection from './CreateSection'
+import OverviewKeywordCardSkeleton from './ui/skeleton/OverviewKeywordCardSkeleton'
+import KeywordItemSkeleton from './ui/skeleton/KeywordItemSkeleton'
 
 export default function KeywordContent() {
   const { currentPage, setCurrentPage, setSearchText, keyWordList, loading, handleRefreshKeywordList, searchText } = useGetListKeywords()
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: keyWordList?.meta.total_pages ?? 1 })
   
   const handleSearch = (text: string) => {
+      handleRefreshKeywordList()
       setSearchText(text)
     }
   const debounce = useDebounce(handleSearch, 500)
   
   return (
     <View style={styles.container}>
-      <OverviewCardKeyword totalKeywords={keyWordList?.meta.total_items ?? 0}/>
+      { loading ?
+        <OverviewKeywordCardSkeleton/>
+        :
+        <OverviewCardKeyword totalKeywords={keyWordList?.meta.total_items ?? 0}/>
+      }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
       <View style={styles.listContainer}>
-        { keyWordList && keyWordList.items.length > 0 ?
-            <FlatList
-               data={keyWordList.items}
-               renderItem={({ item }) => <KeywordItem data={item} onRefresh={handleRefreshKeywordList}/>}
-               onEndReached={loadMore}
-               onEndReachedThreshold={0.1}
-               refreshing={loading}
-               onRefresh={handleRefreshKeywordList}
-            />
+        { loading ?
+            Array.from({ length: 3 }).map((_, i) => (
+                      <KeywordItemSkeleton key={i}/>
+                  ))
             :
-            <NoDataCard/>
-        } 
+            <>
+            { keyWordList && keyWordList.items.length > 0 ?
+                <FlatList
+                   data={keyWordList.items}
+                   renderItem={({ item }) => <KeywordItem data={item} onRefresh={handleRefreshKeywordList}/>}
+                   onEndReached={loadMore}
+                   onEndReachedThreshold={0.1}
+                   refreshing={loading}
+                   onRefresh={handleRefreshKeywordList}
+                />
+                :
+                <NoDataCard/>
+            } 
+            </>
+        }
       </View>
       <CreateSection onRefresh={handleRefreshKeywordList}/>
     </View>
@@ -49,6 +64,6 @@ const styles = StyleSheet.create({
             paddingVertical: 8
       },
       listContainer: {
-            flex: 0.75,
+            flex: 0.85,
       },
 })

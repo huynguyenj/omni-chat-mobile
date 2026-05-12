@@ -99,8 +99,9 @@ const styles = StyleSheet.create({
 
   label: {
     fontWeight: 700,
-    fontSize: 13,
-    marginBottom: 6
+    fontSize: 12,
+    marginBottom: 6,
+    color: '#6F7379',
   },
 
   input: {

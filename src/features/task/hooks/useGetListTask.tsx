@@ -5,6 +5,7 @@ import { startOfDay } from '@/utils/format'
 import useApiCall from '@/hooks/useApiCall'
 import { PaginationStructure } from '@/types/api.response'
 import { RANGE_DATE_MAP } from '../const/date-task'
+import Toast from 'react-native-toast-message'
 
 
 export default function useGetListTasks() {
@@ -32,29 +33,34 @@ export default function useGetListTasks() {
     }
   }
   const handleFilterByDate = (date: string) => {
-    if (date === 'All') {
+    setCurrentPage(1)
+    if (date === '') {
       const removeDateFilter = { ...filters }
       delete removeDateFilter.fromDate
       delete removeDateFilter.toDate
       setFilter(removeDateFilter)
       return
     }
+    setListTasks(undefined)
     const { fromDate, toDate } = getDateRange(date)
     setFilter((prevVal) => {
       return { ...prevVal, fromDate: fromDate, toDate: toDate }
     })
   }
 
+  
   const handleFilterByType = (intentTypeId: string) => {
-    if (intentTypeId == 'All') {
+    setCurrentPage(1)
+    if (intentTypeId == '') {
       const removeIntentTypeFilter = { ...filters }
       delete removeIntentTypeFilter.intentTypeId
       setFilter(removeIntentTypeFilter)
       return
-    }
-    setFilter((prevVal) => {
-      return { ...prevVal, intentTypeId: intentTypeId }
-    })
+    } 
+      setListTasks(undefined)
+      setFilter((prevVal) => {
+        return { ...prevVal, intentTypeId: intentTypeId }
+      })
   }
 
 
@@ -71,10 +77,14 @@ export default function useGetListTasks() {
       })
       const { data, error } = apiData
       if (error) {
-      //   toast.error('Lấy danh sách task thất bại!')
+        Toast.show({
+          type: 'error',
+          text1: error
+        })
         return
       }
       setListTasks(prev => {
+         if (currentPage === 1) return data
          return {
             ...data,
             items: [...(prev?.items || [] ), ...data.items]

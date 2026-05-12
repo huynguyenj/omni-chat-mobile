@@ -1,10 +1,7 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, StyleSheet } from 'react-native'
 import React from 'react'
-import { NavigationProp, useNavigation, RouteProp } from '@react-navigation/native'
+import { RouteProp } from '@react-navigation/native'
 import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
-import Input from '@/components/ui/inputs/Input'
-import Button from '@/components/ui/buttons/Button'
-import { Send } from 'lucide-react-native'
 import ChatDetailHeader from '@/features/chat/components/ChatDetailHeader'
 import ChatDetailMainPart from '@/features/chat/components/ChatDetailMainPart'
 import { ChatProvider } from '@/features/chat/context/ChatProvider'
@@ -28,6 +25,8 @@ export default function ChatDetail({ route }: { route: ChatDetailRouteProp }) {
               { conversationDetail ?
               <>
                 <ChatDetailHeader
+                  conversationId={id}
+                  activeCustomerId={conversationDetail.activeCustomerId}
                   customerImageUrl={conversationDetail.avartarUrl}
                   customerName={conversationDetail.customerName}
                 />
