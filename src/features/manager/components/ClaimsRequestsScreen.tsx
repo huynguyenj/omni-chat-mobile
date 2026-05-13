@@ -13,6 +13,19 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  CircleCheck,
+  Clock,
+  FileText,
+  History,
+  LayoutList,
+  Plus,
+  Search,
+  Send,
+  XCircle
+} from 'lucide-react-native'
 import { ClaimApi } from '../api/claim-api'
 import { ManagerStaffApi } from '../api/manager-staff-api'
 import type {
@@ -50,6 +63,19 @@ function statusBg(s: ManagerClaimStatus) {
   if (s === 'pending') return '#fef3c7'
   if (s === 'approved') return '#dcfce7'
   return '#fee2e2'
+}
+
+function staffInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase() || '?'
+}
+
+function claimTypeIcon(type: string) {
+  const t = type.toLowerCase()
+  if (t.includes('party') || t.includes('gửi') || t.includes('send')) return Send
+  return FileText
 }
 
 export default function ClaimsRequestsScreen() {
@@ -329,51 +355,115 @@ export default function ClaimsRequestsScreen() {
     }
   }
 
-  const renderKpi = () => (
-    <View style={styles.kpiRow}>
-      {[
-        { k: 'Tổng', v: dashboard?.total ?? '—' },
-        { k: 'Chờ', v: dashboard?.pending ?? '—' },
-        { k: 'Đã duyệt', v: dashboard?.approved ?? '—' },
-        { k: 'Từ chối', v: dashboard?.rejected ?? '—' }
-      ].map((x) => (
-        <View key={x.k} style={styles.kpiCell}>
-          <Text style={styles.kpiVal}>{x.v}</Text>
-          <Text style={styles.kpiKey}>{x.k}</Text>
-        </View>
-      ))}
-    </View>
-  )
+  const onCreateClaimPress = () => {
+    Toast.show({
+      type: 'info',
+      text1: 'Tạo yêu cầu',
+      text2: 'Nhân viên tạo yêu cầu từ màn Claim trên ứng dụng nhân viên.'
+    })
+  }
 
-  const renderClaimCard = ({ item }: { item: ManagerClaimItem }) => (
-    <Pressable style={styles.card} onPress={() => setDetailClaim(item)}>
-      <View style={styles.cardTop}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
+  const renderKpi = () => {
+    const specs = [
+      {
+        key: 'Tổng',
+        val: dashboard?.total ?? '—',
+        bg: '#1e3a5f',
+        Icon: LayoutList
+      },
+      {
+        key: 'Chờ',
+        val: dashboard?.pending ?? '—',
+        bg: '#ea580c',
+        Icon: Clock
+      },
+      {
+        key: 'Đã duyệt',
+        val: dashboard?.approved ?? '—',
+        bg: '#16a34a',
+        Icon: CircleCheck
+      },
+      {
+        key: 'Từ chối',
+        val: dashboard?.rejected ?? '—',
+        bg: '#dc2626',
+        Icon: XCircle
+      }
+    ]
+    return (
+      <View style={styles.kpiRow}>
+        {specs.map((x) => {
+          const Icon = x.Icon
+          return (
+            <View key={x.key} style={[styles.kpiCard, { backgroundColor: x.bg }]}>
+              <Icon size={14} color="#fff" strokeWidth={2} />
+              <Text style={styles.kpiCardVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                {x.val}
+              </Text>
+              <Text style={styles.kpiCardKey} numberOfLines={2}>
+                {x.key}
+              </Text>
+            </View>
+          )
+        })}
+      </View>
+    )
+  }
+
+  const renderClaimCard = ({ item }: { item: ManagerClaimItem }) => {
+    const TypeIcon = claimTypeIcon(item.type)
+    const initials = staffInitials(item.staff)
+    return (
+      <Pressable style={styles.claimCard} onPress={() => setDetailClaim(item)}>
+        <View style={styles.claimCardTop}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.claimCardHeadMid}>
+            <View style={styles.claimTypeRow}>
+              <Text style={styles.claimWord}>Claim</Text>
+              <TypeIcon size={14} color="#64748b" strokeWidth={2} />
+            </View>
+          </View>
+          <View style={[styles.badge, { backgroundColor: statusBg(item.status) }]}>
+            <Text style={[styles.badgeText, { color: statusColor(item.status) }]}>{statusLabel(item.status)}</Text>
+          </View>
+        </View>
+        <Text style={styles.cardName} numberOfLines={1}>
+          {item.staff}
+        </Text>
+        <Text style={styles.cardTypeHint} numberOfLines={1}>
           {item.type}
         </Text>
-        <View style={[styles.badge, { backgroundColor: statusBg(item.status) }]}>
-          <Text style={[styles.badgeText, { color: statusColor(item.status) }]}>{statusLabel(item.status)}</Text>
-        </View>
-      </View>
-      <Text style={styles.cardMeta}>{item.staff}</Text>
-      <Text style={styles.cardDate}>{formatDateTime(item.submitDate)}</Text>
-      <Text style={styles.cardDesc} numberOfLines={2}>
-        {item.description}
-      </Text>
-    </Pressable>
-  )
+        <Text style={styles.cardDate}>{formatDateTime(item.submitDate)}</Text>
+        <Text style={styles.cardDesc} numberOfLines={2}>
+          {item.description || item.reason || '—'}
+        </Text>
+      </Pressable>
+    )
+  }
 
   const renderTaskCard = ({ item }: { item: ManagerChangeTaskClaimItem }) => (
-    <Pressable style={styles.card} onPress={() => setDetailTask(item)}>
-      <View style={styles.cardTop}>
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.claimTypeName || 'Đổi task'}
-        </Text>
+    <Pressable style={styles.claimCard} onPress={() => setDetailTask(item)}>
+      <View style={styles.claimCardTop}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{staffInitials(item.staffName)}</Text>
+        </View>
+        <View style={styles.claimCardHeadMid}>
+          <View style={styles.claimTypeRow}>
+            <Text style={styles.claimWord} numberOfLines={1}>
+              {item.claimTypeName || 'Đổi task'}
+            </Text>
+            <ArrowLeftRight size={14} color="#64748b" strokeWidth={2} />
+          </View>
+        </View>
         <View style={[styles.badge, { backgroundColor: '#e0e7ff' }]}>
           <Text style={[styles.badgeText, { color: '#3730a3' }]}>{item.status}</Text>
         </View>
       </View>
-      <Text style={styles.cardMeta}>{item.staffName}</Text>
+      <Text style={styles.cardName} numberOfLines={1}>
+        {item.staffName}
+      </Text>
       <Text style={styles.cardDate}>{formatDateTime(item.submitDate)}</Text>
       <Text style={styles.cardDesc} numberOfLines={2}>
         {item.description}
@@ -390,44 +480,63 @@ export default function ClaimsRequestsScreen() {
       {dashboardErr ? <Text style={styles.warn}>{dashboardErr}</Text> : null}
       {renderKpi()}
 
-      <View style={styles.mainTabs}>
-        <Pressable
-          onPress={() => setMainTab('claims')}
-          style={[styles.mainTab, mainTab === 'claims' && styles.mainTabOn]}
-        >
-          <Text style={[styles.mainTabText, mainTab === 'claims' && styles.mainTabTextOn]}>Yêu cầu</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setMainTab('changeTasks')}
-          style={[styles.mainTab, mainTab === 'changeTasks' && styles.mainTabOn]}
-        >
-          <Text style={[styles.mainTabText, mainTab === 'changeTasks' && styles.mainTabTextOn]}>Đổi task</Text>
-        </Pressable>
-      </View>
-
       {mainTab === 'claims' ? (
-        <>
-          <View style={styles.subTabs}>
-            <Pressable
-              onPress={() => setClaimMode('pending')}
-              style={[styles.subTab, claimMode === 'pending' && styles.subTabOn]}
-            >
-              <Text style={[styles.subTabText, claimMode === 'pending' && styles.subTabTextOn]}>Chờ duyệt</Text>
+        <View style={styles.actionGrid}>
+          <View style={styles.actionRow}>
+            <Pressable style={styles.actionPrimary} onPress={onCreateClaimPress}>
+              <Plus size={18} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.actionPrimaryText}>Tạo Yêu cầu</Text>
             </Pressable>
-            <Pressable
-              onPress={() => setClaimMode('history')}
-              style={[styles.subTab, claimMode === 'history' && styles.subTabOn]}
-            >
-              <Text style={[styles.subTabText, claimMode === 'history' && styles.subTabTextOn]}>Lịch sử</Text>
+            <Pressable style={styles.actionOutline} onPress={() => setMainTab('changeTasks')}>
+              <ArrowLeftRight size={18} color="#2563eb" strokeWidth={2.2} />
+              <Text style={styles.actionOutlineText}>Đổi task</Text>
             </Pressable>
           </View>
-          <TextInput
-            placeholder="Lọc trong danh sách đã tải…"
-            placeholderTextColor="#9ca3af"
-            value={claimSearch}
-            onChangeText={setClaimSearch}
-            style={styles.search}
-          />
+          <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.actionFilter, claimMode === 'pending' && styles.actionFilterOn]}
+              onPress={() => {
+                setMainTab('claims')
+                setClaimMode('pending')
+              }}
+            >
+              <Clock size={18} color={claimMode === 'pending' ? '#c2410c' : '#64748b'} strokeWidth={2.2} />
+              <Text style={[styles.actionFilterText, claimMode === 'pending' && styles.actionFilterTextOn]}>Chờ duyệt</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.actionOutline, claimMode === 'history' && styles.actionOutlineOn]}
+              onPress={() => {
+                setMainTab('claims')
+                setClaimMode('history')
+              }}
+            >
+              <History size={18} color="#2563eb" strokeWidth={2.2} />
+              <Text style={styles.actionOutlineText}>Lịch sử</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.ctTopBar}>
+          <Pressable style={styles.ctBack} onPress={() => setMainTab('claims')} hitSlop={8}>
+            <ArrowLeft size={20} color="#2563eb" strokeWidth={2.2} />
+            <Text style={styles.ctBackText}>Yêu cầu</Text>
+          </Pressable>
+          <Text style={styles.ctTitle}>Đổi task</Text>
+        </View>
+      )}
+
+      {mainTab === 'claims' ? (
+        <View style={styles.claimsPane}>
+          <View style={styles.searchWrap}>
+            <Search size={18} color="#64748b" strokeWidth={2.2} />
+            <TextInput
+              placeholder="Lọc trong danh sách..."
+              placeholderTextColor="#9ca3af"
+              value={claimSearch}
+              onChangeText={setClaimSearch}
+              style={styles.searchInput}
+            />
+          </View>
           {claimError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{claimError}</Text>
@@ -440,6 +549,7 @@ export default function ClaimsRequestsScreen() {
             <ActivityIndicator style={{ marginTop: 24 }} />
           ) : (
             <FlatList
+              style={styles.listFlex}
               data={filteredClaims}
               keyExtractor={(c) => c.id}
               renderItem={renderClaimCard}
@@ -459,9 +569,9 @@ export default function ClaimsRequestsScreen() {
               }
             />
           )}
-        </>
+        </View>
       ) : (
-        <>
+        <View style={styles.claimsPane}>
           {ctError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{ctError}</Text>
@@ -474,6 +584,7 @@ export default function ClaimsRequestsScreen() {
             <ActivityIndicator style={{ marginTop: 24 }} />
           ) : (
             <FlatList
+              style={styles.listFlex}
               data={ctItems}
               keyExtractor={(c) => c.id || c.conversationId}
               renderItem={renderTaskCard}
@@ -489,7 +600,7 @@ export default function ClaimsRequestsScreen() {
               }
             />
           )}
-        </>
+        </View>
       )}
 
       <Modal visible={!!detailClaim} animationType="slide" transparent onRequestClose={() => setDetailClaim(null)}>
@@ -582,7 +693,7 @@ export default function ClaimsRequestsScreen() {
               placeholderTextColor="#9ca3af"
               value={staffSearch}
               onChangeText={setStaffSearch}
-              style={styles.search}
+              style={styles.searchModal}
             />
             {staffLoading ? (
               <ActivityIndicator style={{ marginVertical: 16 }} />
@@ -618,45 +729,104 @@ const styles = StyleSheet.create({
   warn: { color: '#b45309', paddingHorizontal: 16, fontSize: 13 },
   kpiRow: {
     flexDirection: 'row',
-    marginHorizontal: 12,
-    marginTop: 8,
-    marginBottom: 4,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 2,
+    gap: 6
   },
-  kpiCell: { flex: 1, alignItems: 'center' },
-  kpiVal: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  kpiKey: { fontSize: 11, color: '#64748b', marginTop: 2 },
-  mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginTop: 12, gap: 8 },
-  mainTab: {
+  kpiCard: {
     flex: 1,
-    paddingVertical: 10,
+    minWidth: 0,
     borderRadius: 10,
-    backgroundColor: '#e2e8f0',
-    alignItems: 'center'
+    paddingVertical: 6,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1
   },
-  mainTabOn: { backgroundColor: '#1e293b' },
-  mainTabText: { fontWeight: '600', color: '#475569' },
-  mainTabTextOn: { color: '#fff' },
-  subTabs: { flexDirection: 'row', marginHorizontal: 16, marginTop: 10, gap: 8 },
-  subTab: {
+  kpiCardVal: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
+    maxWidth: '100%'
+  },
+  kpiCardKey: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.92)',
+    textAlign: 'center',
+    lineHeight: 11
+  },
+  actionGrid: { paddingHorizontal: 16, marginTop: 12, gap: 8 },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionPrimary: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    alignItems: 'center'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    borderRadius: 12
   },
-  subTabOn: { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
-  subTabText: { color: '#64748b', fontWeight: '500' },
-  subTabTextOn: { color: '#2563eb' },
-  search: {
+  actionPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  actionOutline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#93c5fd'
+  },
+  actionOutlineOn: { backgroundColor: '#eff6ff', borderColor: '#2563eb' },
+  actionOutlineText: { color: '#2563eb', fontWeight: '700', fontSize: 14 },
+  actionFilter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fff7ed',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fed7aa'
+  },
+  actionFilterOn: { backgroundColor: '#ffedd5', borderColor: '#fb923c' },
+  actionFilterText: { color: '#64748b', fontWeight: '700', fontSize: 14 },
+  actionFilterTextOn: { color: '#c2410c' },
+  ctTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 12,
+    gap: 12
+  },
+  ctBack: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ctBackText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
+  ctTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  claimsPane: { flex: 1, marginTop: 8 },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginHorizontal: 16,
-    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#93c5fd',
+    backgroundColor: '#fff'
+  },
+  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  searchModal: {
+    marginVertical: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
@@ -666,22 +836,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#0f172a'
   },
-  listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 8 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+  listFlex: { flex: 1 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
+  claimCard: {
+    backgroundColor: '#faf6f0',
+    borderRadius: 14,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#f0e6d8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: '#0f172a', marginRight: 8 },
-  cardMeta: { fontSize: 14, color: '#334155' },
-  cardDate: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  cardDesc: { fontSize: 13, color: '#475569', marginTop: 8 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
+  claimCardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#e8e4df',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  avatarText: { fontSize: 14, fontWeight: '800', color: '#57534e' },
+  claimCardHeadMid: { flex: 1, marginLeft: 10, marginRight: 8 },
+  claimTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  claimWord: { fontSize: 15, fontWeight: '700', color: '#334155' },
+  cardName: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
+  cardTypeHint: { fontSize: 12, color: '#78716c', marginTop: 2 },
+  cardDate: { fontSize: 12, color: '#64748b', marginTop: 4 },
+  cardDesc: { fontSize: 14, color: '#475569', marginTop: 8, lineHeight: 20 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  badgeText: { fontSize: 11, fontWeight: '700' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 32, fontSize: 15 },
   errBox: {
     marginHorizontal: 16,

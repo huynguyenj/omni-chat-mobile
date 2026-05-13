@@ -12,6 +12,19 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
+import {
+  AlertTriangle,
+  Building2,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleDollarSign,
+  Clock,
+  Mail,
+  RotateCcw,
+  Search,
+  Wallet
+} from 'lucide-react-native'
 import { ManagerInvoiceApi } from '../api/manager-invoice-api'
 import type { ManagerInvoiceItem, ManagerInvoiceSortColumn, ManagerInvoiceStatusFilter } from '../types/manager-invoice-type'
 import { formatDateTime } from '../utils/claimsNormalize'
@@ -72,6 +85,24 @@ function compareInvoices(a: ManagerInvoiceItem, b: ManagerInvoiceItem, col: Mana
   }
 }
 
+function invoiceStatusLabelVi(status: string): string {
+  const n = normInvoiceStatus(status)
+  if (n === 'completed') return 'Đã thanh toán'
+  if (n === 'pending') return 'Chờ thanh toán'
+  if (n === 'pendingrefund') return 'Quá hạn'
+  if (n === 'refunded') return 'Đã hoàn tiền'
+  return status || '—'
+}
+
+function invoiceProgress(status: string): { ratio: number; color: string } {
+  const n = normInvoiceStatus(status)
+  if (n === 'completed') return { ratio: 1, color: '#22c55e' }
+  if (n === 'refunded') return { ratio: 1, color: '#94a3b8' }
+  if (n === 'pendingrefund') return { ratio: 0.72, color: '#f97316' }
+  if (n === 'pending') return { ratio: 0.38, color: '#eab308' }
+  return { ratio: 0.15, color: '#cbd5e1' }
+}
+
 export default function InvoicesManagementScreen() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -82,9 +113,10 @@ export default function InvoicesManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
 
-  const [sortColumn, setSortColumn] = useState<ManagerInvoiceSortColumn>('startedDate')
-  const [sortDescending, setSortDescending] = useState(true)
+  const [sortColumn, setSortColumn] = useState<ManagerInvoiceSortColumn>('customerName')
+  const [sortDescending, setSortDescending] = useState(false)
   const [uiPage, setUiPage] = useState(1)
+  const [kpiHighlight, setKpiHighlight] = useState<'total' | 'paid' | 'pending'>('total')
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400)
@@ -207,21 +239,29 @@ export default function InvoicesManagementScreen() {
 
   const renderInvoice = ({ item, index }: { item: ManagerInvoiceItem; index: number }) => {
     const stt = (safeUiPage - 1) * INVOICE_PAGE_SIZE + index + 1
+    const st = normInvoiceStatus(item.invoiceStatus)
+    const prog = invoiceProgress(item.invoiceStatus)
+    const done = st === 'completed'
     return (
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>STT</Text>
-          <Text style={styles.cellVal}>{stt}</Text>
+          <Text style={styles.cellValStrong}>{stt}</Text>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>Tên khách hàng</Text>
-          <Text style={styles.cellVal}>{item.customerName || '—'}</Text>
+          <Text style={styles.cellValStrong} numberOfLines={2}>
+            {item.customerName || '—'}
+          </Text>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>Email</Text>
-          <Text style={styles.cellVal} numberOfLines={2}>
-            {item.customerEmail || '—'}
-          </Text>
+          <View style={styles.emailRow}>
+            <Text style={styles.cellVal} numberOfLines={2}>
+              {item.customerEmail || '—'}
+            </Text>
+            <Mail size={18} color="#64748b" strokeWidth={2} />
+          </View>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>SĐT</Text>
@@ -229,7 +269,12 @@ export default function InvoicesManagementScreen() {
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>Phương thức</Text>
-          <Text style={styles.cellVal}>{item.invoiceMethod || '—'}</Text>
+          <View style={styles.methodPill}>
+            <Building2 size={14} color="#1e40af" strokeWidth={2} />
+            <Text style={styles.methodPillText} numberOfLines={1}>
+              {item.invoiceMethod || '—'}
+            </Text>
+          </View>
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>Bắt đầu</Text>
@@ -241,11 +286,20 @@ export default function InvoicesManagementScreen() {
         </View>
         <View style={styles.cardRow}>
           <Text style={styles.cellLabel}>Tổng hóa đơn</Text>
-          <Text style={styles.cellVal}>{formatKpiMoney(item.total)} ₫</Text>
+          <Text style={styles.cellMoney}>{formatKpiMoney(item.total)} đ</Text>
         </View>
         <View style={[styles.cardRow, styles.cardRowLast]}>
           <Text style={styles.cellLabel}>Trạng thái</Text>
-          <Text style={styles.cellVal}>{item.invoiceStatus || '—'}</Text>
+          <View style={styles.statusRow}>
+            {done ? <Check size={18} color="#16a34a" strokeWidth={2.5} /> : null}
+            <Text style={[styles.cellStatus, done && styles.cellStatusDone]}>
+              {invoiceStatusLabelVi(item.invoiceStatus)}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { flex: Math.max(0.02, prog.ratio), backgroundColor: prog.color }]} />
+          <View style={{ flex: Math.max(0.02, 1 - prog.ratio), backgroundColor: '#f1f5f9' }} />
         </View>
       </View>
     )
@@ -253,36 +307,74 @@ export default function InvoicesManagementScreen() {
 
   const listHeader = (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.kpiScroll}>
-        <View style={[styles.kpiCard, styles.kpiAccent]}>
-          <Text style={styles.kpiLabel}>Tổng tiền</Text>
-          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.totalAll)} ₫</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Đã thanh toán</Text>
-          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.paidCompleted)} ₫</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Chờ thanh toán</Text>
-          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.pendingSum)} ₫</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Quá hạn</Text>
-          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.pendingRefundSum)} ₫</Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Đã hoàn tiền</Text>
-          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.refundedSum)} ₫</Text>
-        </View>
-      </ScrollView>
+      <Text style={styles.screenTitle}>Phiếu thanh toán</Text>
 
-      <TextInput
-        style={styles.search}
-        placeholder="Tìm theo mã, khách, email, SĐT…"
-        placeholderTextColor="#94a3b8"
-        value={search}
-        onChangeText={setSearch}
-      />
+      <View style={styles.kpiPrimaryRow}>
+        <Pressable
+          onPress={() => setKpiHighlight('total')}
+          style={[styles.kpiCardMain, kpiHighlight === 'total' && styles.kpiCardMainOn]}
+        >
+          <View style={styles.kpiCardHead}>
+            <View style={styles.kpiIconBg}>
+              <CircleDollarSign size={16} color="#0369a1" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.kpiLabel}>Tổng tiền</Text>
+          </View>
+          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.totalAll)} đ</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setKpiHighlight('paid')}
+          style={[styles.kpiCardMain, kpiHighlight === 'paid' && styles.kpiCardMainOn]}
+        >
+          <View style={styles.kpiCardHead}>
+            <View style={[styles.kpiIconBg, styles.kpiIconBgGreen]}>
+              <Wallet size={16} color="#15803d" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.kpiLabel}>Đã thanh toán</Text>
+          </View>
+          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.paidCompleted)} đ</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setKpiHighlight('pending')}
+          style={[styles.kpiCardMain, kpiHighlight === 'pending' && styles.kpiCardMainOn]}
+        >
+          <View style={styles.kpiCardHead}>
+            <View style={[styles.kpiIconBg, styles.kpiIconBgAmber]}>
+              <Clock size={16} color="#b45309" strokeWidth={2.2} />
+            </View>
+            <Text style={styles.kpiLabel}>Chờ thanh toán</Text>
+          </View>
+          <Text style={styles.kpiVal}>{formatKpiMoney(kpi.pendingSum)} đ</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.kpiSecondaryRow}>
+        <View style={styles.kpiCardSmall}>
+          <View style={styles.kpiCardHead}>
+            <AlertTriangle size={15} color="#c2410c" strokeWidth={2} />
+            <Text style={styles.kpiLabelSm}>Quá hạn</Text>
+          </View>
+          <Text style={styles.kpiValSm}>{formatKpiMoney(kpi.pendingRefundSum)} đ</Text>
+        </View>
+        <View style={styles.kpiCardSmall}>
+          <View style={styles.kpiCardHead}>
+            <RotateCcw size={15} color="#475569" strokeWidth={2} />
+            <Text style={styles.kpiLabelSm}>Đã hoàn tiền</Text>
+          </View>
+          <Text style={styles.kpiValSm}>{formatKpiMoney(kpi.refundedSum)} đ</Text>
+        </View>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <Search size={20} color="#64748b" strokeWidth={2} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm theo mã, khách, email, SĐT..."
+          placeholderTextColor="#94a3b8"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
         {STATUS_CHIPS.map((c) => {
@@ -290,7 +382,7 @@ export default function InvoicesManagementScreen() {
           return (
             <Pressable
               key={String(c.value)}
-              style={[styles.chip, active && styles.chipActive]}
+              style={[styles.chip, active ? styles.chipActive : styles.chipIdle]}
               onPress={() => selectStatus(c.value)}
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
@@ -299,12 +391,12 @@ export default function InvoicesManagementScreen() {
         })}
       </ScrollView>
 
-      <Text style={styles.sortTitle}>Sắp xếp (chạm lặp đổi chiều)</Text>
+      <Text style={styles.sortTitle}>Sắp xếp (chạm lặp đối chiếu)</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
         {SORT_COLUMNS.map((s) => {
           const active = sortColumn === s.key
           return (
-            <Pressable key={s.key} style={[styles.chip, active && styles.chipActive]} onPress={() => pickSortColumn(s.key)}>
+            <Pressable key={s.key} style={[styles.chip, active ? styles.chipActive : styles.chipIdle]} onPress={() => pickSortColumn(s.key)}>
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
                 {s.label}
                 {active ? (sortDescending ? ' ↓' : ' ↑') : ''}
@@ -335,21 +427,23 @@ export default function InvoicesManagementScreen() {
           disabled={safeUiPage <= 1}
           onPress={() => setUiPage((p) => Math.max(1, p - 1))}
         >
-          <Text style={styles.pageBtnText}>Trước</Text>
+          <ChevronLeft size={18} color={safeUiPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+          <Text style={[styles.pageBtnText, safeUiPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
         </Pressable>
         <Pressable
           style={[styles.pageBtn, safeUiPage >= totalUiPages && styles.pageBtnDisabled]}
           disabled={safeUiPage >= totalUiPages}
           onPress={() => setUiPage((p) => Math.min(totalUiPages, p + 1))}
         >
-          <Text style={styles.pageBtnText}>Sau</Text>
+          <Text style={[styles.pageBtnText, safeUiPage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
+          <ChevronRight size={18} color={safeUiPage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
         </Pressable>
       </View>
     </View>
   )
 
   return (
-    <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <FlatList
         data={loading && !refreshing ? [] : pageSlice}
         keyExtractor={(item, index) => item.id || `inv-${index}`}
@@ -370,44 +464,70 @@ export default function InvoicesManagementScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f1f5f9' },
-  listContent: { paddingBottom: 24, paddingHorizontal: 12, flexGrow: 1 },
-  kpiScroll: { marginTop: 8, marginBottom: 10 },
-  kpiCard: {
-    width: 148,
+  screenTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
+  listContent: { paddingBottom: 28, paddingHorizontal: 16, flexGrow: 1 },
+  kpiPrimaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  kpiCardMain: {
+    flex: 1,
+    minWidth: 0,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0'
+  },
+  kpiCardMainOn: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
+  kpiCardHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  kpiIconBg: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  kpiIconBgGreen: { backgroundColor: '#dcfce7' },
+  kpiIconBgAmber: { backgroundColor: '#fef3c7' },
+  kpiLabel: { fontSize: 10, fontWeight: '600', color: '#64748b', flex: 1 },
+  kpiVal: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  kpiSecondaryRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  kpiCardSmall: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0'
   },
-  kpiAccent: { borderColor: '#0ea5e9', backgroundColor: '#f0f9ff' },
-  kpiLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
-  kpiVal: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  search: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+  kpiLabelSm: { fontSize: 11, fontWeight: '600', color: '#64748b', marginLeft: 4, flex: 1 },
+  kpiValSm: { fontSize: 14, fontWeight: '700', color: '#0f172a', marginTop: 4 },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 10
+    marginBottom: 12
   },
+  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
   chipRow: { marginBottom: 10 },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    marginRight: 8
   },
-  chipActive: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
-  chipText: { fontSize: 13, color: '#334155' },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
-  sortTitle: { fontSize: 12, color: '#64748b', marginBottom: 6 },
+  chipIdle: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#93c5fd'
+  },
+  chipActive: { backgroundColor: '#1e40af', borderWidth: 1.5, borderColor: '#1e40af' },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#334155' },
+  chipTextActive: { color: '#fff' },
+  sortTitle: { fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: '500' },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
   centerPad: { alignItems: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
@@ -417,34 +537,72 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2
   },
   cardRow: {
     flexDirection: 'row',
-    paddingVertical: 6,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e2e8f0'
   },
   cellLabel: {
-    width: 130,
+    width: 118,
     fontSize: 13,
     color: '#64748b',
-    paddingRight: 8
+    paddingRight: 8,
+    fontWeight: '500'
   },
   cellVal: { flex: 1, fontSize: 14, color: '#0f172a' },
-  cardRowLast: { borderBottomWidth: 0 },
+  cellValStrong: { flex: 1, fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  cellMoney: { flex: 1, fontSize: 15, fontWeight: '800', color: '#16a34a' },
+  cellStatus: { fontSize: 14, fontWeight: '700', color: '#334155' },
+  cellStatusDone: { color: '#16a34a' },
+  emailRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  methodPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10
+  },
+  methodPillText: { fontSize: 13, fontWeight: '600', color: '#1e40af', flex: 1 },
+  statusRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardRowLast: { borderBottomWidth: 0, paddingBottom: 4 },
+  progressTrack: {
+    flexDirection: 'row',
+    height: 5,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginTop: 8,
+    backgroundColor: '#f1f5f9'
+  },
+  progressFill: { borderRadius: 3 },
   footer: { paddingVertical: 16, alignItems: 'center' },
-  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 10 },
+  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: '500' },
   pager: { flexDirection: 'row', gap: 12 },
   pageBtn: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#cbd5e1'
   },
-  pageBtnDisabled: { opacity: 0.4 },
-  pageBtnText: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
+  pageBtnDisabled: { opacity: 0.45 },
+  pageBtnText: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  pageBtnTextDisabled: { color: '#94a3b8' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 24, fontSize: 15 }
 })

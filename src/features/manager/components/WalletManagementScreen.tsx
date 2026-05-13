@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +13,17 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
+import {
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  Coins,
+  Scale,
+  Search,
+  TrendingDown,
+  User,
+  Wallet
+} from 'lucide-react-native'
 import { ManagerWalletApi } from '../api/manager-wallet-api'
 import type { ManagerCustomerWalletItem, ManagerWalletTransaction } from '../types/manager-wallet-type'
 import { formatDateTime } from '../utils/claimsNormalize'
@@ -24,6 +34,8 @@ import {
 } from '../utils/managerWalletNormalize'
 
 const WALLET_PAGE_SIZE = 6
+
+const PRIMARY = '#3b6ea5'
 
 function netAmountColor(net: number) {
   if (net < 0) return '#dc2626'
@@ -37,12 +49,18 @@ function WalletAvatar({ name, url }: { name: string; url: string }) {
     setFailed(false)
   }, [url])
   const initial = customerInitial(name)
-  if (url && !failed) {
-    return <Image source={{ uri: url }} style={styles.avatarImg} onError={() => setFailed(true)} resizeMode="cover" />
-  }
   return (
-    <View style={styles.avatarFallback}>
-      <Text style={styles.avatarFallbackText}>{initial}</Text>
+    <View style={styles.avatarWrap}>
+      {url && !failed ? (
+        <Image source={{ uri: url }} style={styles.avatarImg} onError={() => setFailed(true)} resizeMode="cover" />
+      ) : (
+        <View style={styles.avatarFallback}>
+          <User size={28} color="#fff" strokeWidth={2} />
+        </View>
+      )}
+      <View style={styles.avatarBadge}>
+        <Text style={styles.avatarBadgeText}>{initial}</Text>
+      </View>
     </View>
   )
 }
@@ -147,13 +165,14 @@ export default function WalletManagementScreen() {
         <Text style={styles.txType}>{transactionTypeLabel(item.transactionType)}</Text>
         <Text style={styles.txDate}>{formatDateTime(item.createDate)}</Text>
       </View>
-      <Text style={styles.txAmount}>{formatWalletMoney(item.amount)} ₫</Text>
+      <Text style={styles.txAmount}>{formatWalletMoney(item.amount)} đ</Text>
     </View>
   )
 
   const renderCustomer = ({ item }: { item: ManagerCustomerWalletItem }) => {
     const w = item.getWalletResponse
     const netColor = netAmountColor(w.netAmount)
+
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -166,31 +185,44 @@ export default function WalletManagementScreen() {
             <Text style={styles.subLine}>{item.phoneNumber || '—'}</Text>
           </View>
         </View>
+
         <View style={styles.walletRow}>
           <View style={styles.walletBox}>
-            <Text style={styles.walletBoxLabel}>Số dư ví</Text>
-            <Text style={styles.walletBoxVal}>{formatWalletMoney(w.amount)} ₫</Text>
+            <View style={styles.walletBoxHead}>
+              <Wallet size={14} color={PRIMARY} strokeWidth={2.2} />
+              <Text style={styles.walletBoxLabel}>Số dư ví</Text>
+            </View>
+            <Text style={styles.walletBoxVal}>{formatWalletMoney(w.amount)} đ</Text>
           </View>
           <View style={styles.walletBox}>
-            <Text style={styles.walletBoxLabel}>Tổng nợ</Text>
-            <Text style={styles.walletBoxVal}>{formatWalletMoney(w.totalDebt)} ₫</Text>
+            <View style={styles.walletBoxHead}>
+              <Calculator size={14} color={PRIMARY} strokeWidth={2.2} />
+              <Text style={styles.walletBoxLabel}>Tổng nợ</Text>
+            </View>
+            <Text style={[styles.walletBoxVal, styles.walletDebtVal]}>{formatWalletMoney(w.totalDebt)} đ</Text>
           </View>
           <View style={styles.walletBox}>
-            <Text style={styles.walletBoxLabel}>Số dư ròng</Text>
-            <Text style={[styles.walletBoxVal, { color: netColor }]}>{formatWalletMoney(w.netAmount)} ₫</Text>
+            <View style={styles.walletBoxHead}>
+              <Scale size={14} color={PRIMARY} strokeWidth={2.2} />
+              <Text style={styles.walletBoxLabel}>Số dư ròng</Text>
+            </View>
+            <Text style={[styles.walletBoxVal, { color: netColor }]}>{formatWalletMoney(w.netAmount)} đ</Text>
           </View>
         </View>
+
         <View style={styles.activityBlock}>
-          <Text style={styles.activityTitle}>Hoạt động khác</Text>
+          <Text style={styles.activityTitle}>Thống kê hoạt động</Text>
           <Text style={styles.activityLine}>
             Tổng đơn: <Text style={styles.activityVal}>{item.totalOrder}</Text>
           </Text>
           <Text style={styles.activityLine}>
-            Tổng thanh toán: <Text style={styles.activityVal}>{formatWalletMoney(item.totalPayment)} ₫</Text>
+            Tổng thanh toán: <Text style={styles.activityVal}>{formatWalletMoney(item.totalPayment)} đ</Text>
           </Text>
         </View>
+
         <Pressable style={styles.historyBtn} onPress={() => setHistoryCustomer(item)}>
           <Text style={styles.historyBtnText}>Lịch sử giao dịch</Text>
+          <ChevronRight size={20} color="#fff" strokeWidth={2.5} />
         </Pressable>
       </View>
     )
@@ -198,27 +230,55 @@ export default function WalletManagementScreen() {
 
   const listHeader = (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.kpiScroll}>
-        <View style={[styles.kpiCard, styles.kpiAccent]}>
-          <Text style={styles.kpiLabel}>Tổng ví</Text>
-          <Text style={styles.kpiVal}>{formatWalletMoney(kpi.totalWallet)} ₫</Text>
+      <Text style={styles.screenTitle}>Ví tiền</Text>
+
+      <View style={styles.kpiRow}>
+        <View style={[styles.kpiCard, styles.kpiCardWallet]}>
+          <View style={styles.kpiCardTop}>
+            <Coins size={18} color="#15803d" strokeWidth={2.2} />
+            <Text style={styles.kpiLabel} numberOfLines={2}>
+              Tổng ví
+            </Text>
+          </View>
+          <Text style={[styles.kpiVal, styles.kpiValWallet]} numberOfLines={1} adjustsFontSizeToFit>
+            {formatWalletMoney(kpi.totalWallet)} đ
+          </Text>
         </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Tổng công nợ</Text>
-          <Text style={styles.kpiVal}>{formatWalletMoney(kpi.totalDebt)} ₫</Text>
+        <View style={[styles.kpiCard, styles.kpiCardDebt]}>
+          <View style={styles.kpiCardTop}>
+            <TrendingDown size={18} color="#b45309" strokeWidth={2.2} />
+            <Text style={styles.kpiLabel} numberOfLines={2}>
+              Tổng công nợ
+            </Text>
+          </View>
+          <Text style={[styles.kpiVal, styles.kpiValDebt]} numberOfLines={1} adjustsFontSizeToFit>
+            {formatWalletMoney(kpi.totalDebt)} đ
+          </Text>
         </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>Số dư ròng</Text>
-          <Text style={[styles.kpiVal, { color: netAmountColor(kpi.netSum) }]}>{formatWalletMoney(kpi.netSum)} ₫</Text>
+        <View style={[styles.kpiCard, styles.kpiCardNet]}>
+          <View style={styles.kpiCardTop}>
+            <Scale size={18} color={PRIMARY} strokeWidth={2.2} />
+            <Text style={styles.kpiLabel} numberOfLines={2}>
+              Số dư ròng
+            </Text>
+          </View>
+          <Text style={[styles.kpiVal, { color: netAmountColor(kpi.netSum) }]} numberOfLines={1} adjustsFontSizeToFit>
+            {formatWalletMoney(kpi.netSum)} đ
+          </Text>
         </View>
-      </ScrollView>
-      <TextInput
-        style={styles.search}
-        placeholder="Tìm theo tên, mã, email, SĐT…"
-        placeholderTextColor="#94a3b8"
-        value={search}
-        onChangeText={setSearch}
-      />
+      </View>
+
+      <View style={styles.searchWrap}>
+        <Search size={20} color="#64748b" strokeWidth={2} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm theo tên, mã, email, SĐT..."
+          placeholderTextColor="#94a3b8"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
       {listError ? <Text style={styles.bannerErr}>{listError}</Text> : null}
       {loading && !refreshing ? (
         <View style={styles.centerPad}>
@@ -240,14 +300,16 @@ export default function WalletManagementScreen() {
           disabled={safePage <= 1}
           onPress={() => setWalletPage((p) => Math.max(1, p - 1))}
         >
-          <Text style={styles.pageBtnText}>Trước</Text>
+          <ChevronLeft size={18} color={safePage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+          <Text style={[styles.pageBtnText, safePage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
         </Pressable>
         <Pressable
           style={[styles.pageBtn, safePage >= totalUiPages && styles.pageBtnDisabled]}
           disabled={safePage >= totalUiPages}
           onPress={() => setWalletPage((p) => Math.min(totalUiPages, p + 1))}
         >
-          <Text style={styles.pageBtnText}>Sau</Text>
+          <Text style={[styles.pageBtnText, safePage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
+          <ChevronRight size={18} color={safePage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
         </Pressable>
       </View>
     </View>
@@ -256,7 +318,7 @@ export default function WalletManagementScreen() {
   const txList = historyCustomer?.getWalletResponse?.transactions ?? []
 
   return (
-    <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <FlatList
         data={loading && !refreshing ? [] : pageSlice}
         keyExtractor={(item, index) => item.id || `w-${index}`}
@@ -300,30 +362,47 @@ export default function WalletManagementScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f1f5f9' },
-  listContent: { paddingBottom: 24, paddingHorizontal: 12, flexGrow: 1 },
-  kpiScroll: { marginTop: 8, marginBottom: 10 },
+  screenTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
+  listContent: { paddingBottom: 28, paddingHorizontal: 16, flexGrow: 1 },
+  kpiRow: { flexDirection: 'row', gap: 6, marginBottom: 12, alignItems: 'stretch' },
   kpiCard: {
-    width: 156,
-    backgroundColor: '#fff',
+    flex: 1,
+    minWidth: 0,
     borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
-  },
-  kpiAccent: { borderColor: '#0ea5e9', backgroundColor: '#f0f9ff' },
-  kpiLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
-  kpiVal: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  search: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 10,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 10
+    borderWidth: 1
   },
+  kpiCardWallet: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#bbf7d0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#16a34a'
+  },
+  kpiCardDebt: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa'
+  },
+  kpiCardNet: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe'
+  },
+  kpiCardTop: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
+  kpiLabel: { fontSize: 10, fontWeight: '600', color: '#64748b', flex: 1, minWidth: 0 },
+  kpiVal: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
+  kpiValWallet: { color: '#15803d' },
+  kpiValDebt: { color: '#b45309' },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12
+  },
+  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
   centerPad: { alignItems: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
@@ -333,64 +412,93 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2
   },
-  cardHeader: { flexDirection: 'row', marginBottom: 12 },
-  avatarImg: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#e2e8f0' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  avatarWrap: { position: 'relative' },
+  avatarImg: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#e2e8f0' },
   avatarFallback: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#0ea5e9',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: PRIMARY,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  avatarFallbackText: { fontSize: 20, fontWeight: '700', color: '#fff' },
-  cardHeaderText: { flex: 1, marginLeft: 12, justifyContent: 'center' },
-  customerName: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#1e40af',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    paddingHorizontal: 4
+  },
+  avatarBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  cardHeaderText: { flex: 1, marginLeft: 12, justifyContent: 'center', minWidth: 0 },
+  customerName: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
   subLine: { fontSize: 13, color: '#64748b', marginTop: 2 },
   walletRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   walletBox: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
     padding: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe'
   },
-  walletBoxLabel: { fontSize: 11, color: '#64748b', marginBottom: 4 },
-  walletBoxVal: { fontSize: 13, fontWeight: '600', color: '#0f172a' },
+  walletBoxHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  walletBoxLabel: { fontSize: 10, fontWeight: '600', color: '#64748b', flex: 1 },
+  walletBoxVal: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  walletDebtVal: { color: '#b45309' },
   activityBlock: {
     backgroundColor: '#f8fafc',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0'
   },
-  activityTitle: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 },
+  activityTitle: { fontSize: 13, fontWeight: '800', color: '#334155', marginBottom: 6 },
   activityLine: { fontSize: 13, color: '#64748b', marginTop: 2 },
-  activityVal: { fontWeight: '600', color: '#0f172a' },
+  activityVal: { fontWeight: '700', color: '#0f172a' },
   historyBtn: {
-    backgroundColor: '#0369a1',
-    paddingVertical: 11,
-    borderRadius: 10,
-    alignItems: 'center'
+    backgroundColor: PRIMARY,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8
   },
-  historyBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  historyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   footer: { paddingVertical: 16, alignItems: 'center' },
-  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 10 },
+  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: '500' },
   pager: { flexDirection: 'row', gap: 12 },
   pageBtn: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
     paddingVertical: 10,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#cbd5e1'
   },
-  pageBtnDisabled: { opacity: 0.4 },
-  pageBtnText: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
+  pageBtnDisabled: { opacity: 0.45 },
+  pageBtnText: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  pageBtnTextDisabled: { color: '#94a3b8' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 24, fontSize: 15 },
   modalSafe: { flex: 1, backgroundColor: '#fff' },
   modalHeader: {
@@ -404,7 +512,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#0f172a', paddingRight: 12 },
   modalClose: { paddingVertical: 6, paddingHorizontal: 10 },
-  modalCloseText: { fontSize: 16, color: '#0369a1', fontWeight: '600' },
+  modalCloseText: { fontSize: 16, color: PRIMARY, fontWeight: '600' },
   emptyModal: { textAlign: 'center', color: '#64748b', marginTop: 40, fontSize: 15 },
   txListContent: { padding: 16, paddingBottom: 32 },
   txRow: {

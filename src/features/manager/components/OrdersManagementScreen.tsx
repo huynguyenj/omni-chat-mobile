@@ -14,6 +14,16 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
+import {
+  CreditCard,
+  FileText,
+  List,
+  MapPin,
+  Search,
+  Smartphone,
+  Tag,
+  User
+} from 'lucide-react-native'
 import { ManagerOrderApi } from '../api/manager-order-api'
 import { ManagerPostSaleRequestApi } from '../api/manager-post-sale-request-api'
 import type { ManagerOrderDetail, ManagerOrderItem } from '../types/manager-order-type'
@@ -47,6 +57,39 @@ function postSaleStatusLabel(status: string) {
   if (s.includes('approve')) return 'Đã duyệt'
   if (s.includes('reject')) return 'Từ chối'
   return status || '—'
+}
+
+function customerInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase()
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase() || '?'
+}
+
+type IconCmp = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
+
+function DetailField({
+  Icon,
+  label,
+  value,
+  emphasis
+}: {
+  Icon: IconCmp
+  label: string
+  value: string
+  emphasis?: boolean
+}) {
+  return (
+    <View style={styles.detailField}>
+      <View style={styles.detailIconCircle}>
+        <Icon size={16} color="#64748b" strokeWidth={2} />
+      </View>
+      <View style={styles.detailFieldBody}>
+        <Text style={styles.detailFieldLabel}>{label}</Text>
+        <Text style={[styles.detailFieldValue, emphasis && styles.detailFieldEmphasis]}>{value}</Text>
+      </View>
+    </View>
+  )
 }
 
 export default function OrdersManagementScreen() {
@@ -280,7 +323,12 @@ export default function OrdersManagementScreen() {
     return (
       <Pressable style={styles.card} onPress={() => openDetail(item.id, { fromPostSale: false })}>
         <View style={styles.cardTop}>
-          <Text style={styles.code}>{item.code || item.id}</Text>
+          <View style={styles.cardTopLeft}>
+            <Text style={styles.code} numberOfLines={1}>
+              {item.code || item.id}
+            </Text>
+            <User size={17} color="#64748b" strokeWidth={2} />
+          </View>
           <View style={styles.badgeRow}>
             <View style={[styles.pill, { backgroundColor: st.bg }]}>
               <Text style={[styles.pillText, { color: st.color }]}>{st.label}</Text>
@@ -290,12 +338,15 @@ export default function OrdersManagementScreen() {
             </View>
           </View>
         </View>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={styles.name} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.cus} numberOfLines={1}>
-          {item.customerName}
-        </Text>
+        <View style={styles.cusRow}>
+          <User size={14} color="#94a3b8" strokeWidth={2} />
+          <Text style={styles.cus} numberOfLines={1}>
+            {item.customerName}
+          </Text>
+        </View>
         <Text style={styles.date}>{formatDateTime(item.orderDate)}</Text>
         <Text style={styles.amount}>{item.totalAmount?.toLocaleString('vi-VN')} đ</Text>
       </Pressable>
@@ -349,13 +400,16 @@ export default function OrdersManagementScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <Text style={styles.title}>Đơn hàng</Text>
 
-      <TextInput
-        placeholder="Tìm đơn…"
-        placeholderTextColor="#9ca3af"
-        value={search}
-        onChangeText={setSearch}
-        style={styles.search}
-      />
+      <View style={styles.searchWrap}>
+        <TextInput
+          placeholder="Tìm đơn…"
+          placeholderTextColor="#9ca3af"
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+        />
+        <Search size={20} color="#64748b" strokeWidth={2} />
+      </View>
 
       <View style={styles.filterBlock}>
         <Text style={styles.filterLabel}>Trạng thái</Text>
@@ -363,7 +417,11 @@ export default function OrdersManagementScreen() {
           {ORDER_STATUS_FILTERS.map((f) => {
             const on = statusFilter === f.value
             return (
-              <Pressable key={String(f.value ?? 'all')} onPress={() => selectStatus(f.value)} style={[styles.chip, on && styles.chipOn]}>
+              <Pressable
+                key={String(f.value ?? 'all')}
+                onPress={() => selectStatus(f.value)}
+                style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
+              >
                 <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
               </Pressable>
             )
@@ -410,34 +468,78 @@ export default function OrdersManagementScreen() {
               {detailError ? <Text style={styles.errText}>{detailError}</Text> : null}
               {detail ? (
                 <>
-                  <View style={styles.badgeRow}>
-                    <View style={[styles.pill, { backgroundColor: orderStatusPill(detail.status).bg }]}>
-                      <Text style={[styles.pillText, { color: orderStatusPill(detail.status).color }]}>
+                  <View style={styles.detailIntro}>
+                    <View style={[styles.statusPillMuted, { backgroundColor: orderStatusPill(detail.status).bg }]}>
+                      <Text style={[styles.statusPillMutedText, { color: orderStatusPill(detail.status).color }]}>
                         {orderStatusPill(detail.status).label}
                       </Text>
                     </View>
-                    <View style={[styles.pill, { backgroundColor: deliveryStatusPill(detail.deliveryStatus).bg }]}>
-                      <Text style={[styles.pillText, { color: deliveryStatusPill(detail.deliveryStatus).color }]}>
-                        {deliveryStatusPill(detail.deliveryStatus).label}
+                    <View style={styles.loaiDonRow}>
+                      <FileText size={16} color="#64748b" strokeWidth={2} />
+                      <Text style={styles.loaiDonText}>
+                        Loại đơn: {orderStatusPill(detail.status).label}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.k}>Mã</Text>
-                  <Text style={styles.v}>{detail.code}</Text>
-                  <Text style={styles.k}>Khách</Text>
-                  <Text style={styles.v}>{detail.customerName}</Text>
-                  <Text style={styles.k}>SĐT</Text>
-                  <Text style={styles.v}>{detail.customerPhone}</Text>
-                  <Text style={styles.k}>Địa chỉ</Text>
-                  <Text style={styles.v}>{detail.customerAddress}</Text>
-                  <Text style={styles.k}>Tổng</Text>
-                  <Text style={styles.v}>{detail.totalAmount?.toLocaleString('vi-VN')} đ</Text>
-                  <Text style={styles.k}>Dòng hàng</Text>
-                  {(detail.orderItems ?? []).map((li) => (
-                    <Text key={li.id} style={styles.line}>
-                      • {li.productName} × {li.quantity}
+
+                  <View style={styles.detailMainRow}>
+                    <View style={styles.detailFieldsCol}>
+                      <DetailField Icon={Tag} label="Mã" value={detail.code || detail.id} />
+                      <DetailField Icon={User} label="Khách" value={detail.customerName || '—'} />
+                      <DetailField Icon={Smartphone} label="SĐT" value={detail.customerPhone || '—'} />
+                      <DetailField Icon={MapPin} label="Địa chỉ" value={detail.customerAddress || '—'} />
+                      <DetailField
+                        Icon={CreditCard}
+                        label="Tổng"
+                        value={`${detail.totalAmount?.toLocaleString('vi-VN') ?? '0'} đ`}
+                        emphasis
+                      />
+                    </View>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarLetter}>{customerInitials(detail.customerName || detail.name)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.tableBlock}>
+                    <View style={styles.tableHead}>
+                      <View style={styles.tableIconCell}>
+                        <List size={15} color="#64748b" strokeWidth={2} />
+                      </View>
+                      <Text style={[styles.th, styles.thProduct]}>Dòng hàng</Text>
+                      <Text style={[styles.th, styles.thQty]}>Qty</Text>
+                      <Text style={[styles.th, styles.thPrice]}>Giá</Text>
+                      <Text style={[styles.th, styles.thTotal]}>Line Total</Text>
+                    </View>
+                    {(detail.orderItems ?? []).map((li) => {
+                      const unit = li.itemsPrice != null ? `${li.itemsPrice.toLocaleString('vi-VN')}đ` : '—'
+                      const lineTot =
+                        li.itemsPrice != null
+                          ? `${(li.quantity * li.itemsPrice).toLocaleString('vi-VN')} đ`
+                          : '—'
+                      return (
+                        <View key={li.id} style={styles.tableRow}>
+                          <View style={styles.tableIconCell} />
+                          <Text style={[styles.td, styles.thProduct]} numberOfLines={2}>
+                            {li.productName}
+                          </Text>
+                          <Text style={[styles.td, styles.thQty]}>{li.quantity}</Text>
+                          <Text style={[styles.td, styles.thPrice]}>{unit}</Text>
+                          <Text style={[styles.td, styles.thTotal, styles.tdStrong]}>{lineTot}</Text>
+                        </View>
+                      )
+                    })}
+                  </View>
+
+                  <View style={styles.timeBar}>
+                    <Text style={styles.timeBarText} numberOfLines={1}>
+                      Tạo lúc: {formatDateTime(detail.orderDate)}
                     </Text>
-                  ))}
+                    <Text style={styles.timeBarText} numberOfLines={1}>
+                      Cập nhật:{' '}
+                      {detail.updatedAt ? formatDateTime(detail.updatedAt) : formatDateTime(detail.orderDate)}
+                    </Text>
+                  </View>
+
                   {canSubmitDraftOrder(detail, fromPostSaleList) ? (
                     <Pressable
                       style={styles.btnPrimary}
@@ -463,19 +565,22 @@ export default function OrdersManagementScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
+  safe: { flex: 1, backgroundColor: '#f1f5f9' },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a', paddingHorizontal: 16, marginBottom: 8 },
-  search: {
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
-    padding: 12,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     backgroundColor: '#fff',
-    fontSize: 15,
-    color: '#0f172a'
+    gap: 10
   },
-  filterBlock: { paddingHorizontal: 16, marginTop: 8, marginBottom: 4 },
+  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  filterBlock: { paddingHorizontal: 16, marginTop: 10, marginBottom: 4 },
   filterLabel: { fontSize: 12, fontWeight: '600', color: '#64748b', marginBottom: 6 },
   chipRow: { maxHeight: 40 },
   chipScroll: { flexDirection: 'row', alignItems: 'center', paddingBottom: 2 },
@@ -483,36 +588,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
     marginRight: 6
   },
-  chipOn: { backgroundColor: '#1e293b', borderColor: '#1e293b' },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
+  chipOff: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#93c5fd'
+  },
+  chipOn: { backgroundColor: '#1e40af', borderWidth: 1.5, borderColor: '#1e40af' },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#334155' },
   chipTextOn: { color: '#fff' },
   errBox: { marginHorizontal: 16, marginTop: 8 },
   errText: { color: '#b91c1c', fontSize: 14 },
   link: { color: '#2563eb', fontWeight: '600', marginTop: 4 },
-  list: { flex: 1, marginTop: 4 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 24 },
+  list: { flex: 1, marginTop: 6 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
-    marginBottom: 10,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  code: { fontSize: 16, fontWeight: '700', color: '#0f172a', flex: 1, marginRight: 8 },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
-  pill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginRight: 6, marginBottom: 4 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  cardTopLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0, marginRight: 8 },
+  code: { fontSize: 16, fontWeight: '800', color: '#0f172a', flexShrink: 1 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 6, maxWidth: '52%' },
+  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   pillText: { fontSize: 11, fontWeight: '700' },
-  name: { fontSize: 15, color: '#334155' },
-  cus: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  name: { fontSize: 15, fontWeight: '600', color: '#1e293b', lineHeight: 21 },
+  cusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  cus: { fontSize: 13, color: '#475569', flex: 1 },
   date: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  amount: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginTop: 6 },
+  amount: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginTop: 10 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 32 },
   footerPad: { paddingVertical: 12, alignItems: 'center' },
   footerWrap: { paddingTop: 8 },
@@ -544,9 +658,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
-    maxHeight: '90%'
+    maxHeight: '92%'
   },
-  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
   psrBanner: {
     fontSize: 12,
     color: '#9a3412',
@@ -555,17 +669,72 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8
   },
-  k: { fontSize: 12, color: '#64748b', marginTop: 8 },
-  v: { fontSize: 15, color: '#0f172a' },
-  line: { fontSize: 14, color: '#334155', marginTop: 4 },
+  detailIntro: { marginBottom: 12 },
+  statusPillMuted: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  statusPillMutedText: { fontSize: 12, fontWeight: '700' },
+  loaiDonRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  loaiDonText: { fontSize: 14, fontWeight: '600', color: '#334155', flex: 1 },
+  detailMainRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  detailFieldsCol: { flex: 1, minWidth: 0 },
+  detailField: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  detailIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  detailFieldBody: { flex: 1, minWidth: 0 },
+  detailFieldLabel: { fontSize: 12, color: '#64748b', marginBottom: 2 },
+  detailFieldValue: { fontSize: 15, color: '#0f172a', lineHeight: 21 },
+  detailFieldEmphasis: { fontSize: 17, fontWeight: '800' },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2
+  },
+  avatarLetter: { fontSize: 18, fontWeight: '800', color: '#475569' },
+  tableBlock: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 10,
+    marginTop: 4,
+    marginBottom: 8
+  },
+  tableHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  tableIconCell: { width: 26, alignItems: 'center', justifyContent: 'center' },
+  th: { fontSize: 11, fontWeight: '700', color: '#64748b' },
+  thProduct: { flex: 2.2, minWidth: 0 },
+  thQty: { width: 34, textAlign: 'center' },
+  thPrice: { flex: 1, minWidth: 0, textAlign: 'right' },
+  thTotal: { flex: 1.1, minWidth: 0, textAlign: 'right' },
+  tableRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f1f5f9' },
+  td: { fontSize: 12, color: '#334155' },
+  tdStrong: { fontWeight: '800', color: '#0f172a' },
+  timeBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: '#f8fafc',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 12
+  },
+  timeBarText: { fontSize: 11, color: '#64748b', flex: 1 },
   btnPrimary: {
-    marginTop: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
+    marginTop: 4,
+    paddingVertical: 14,
+    borderRadius: 12,
     backgroundColor: '#2563eb',
     alignItems: 'center'
   },
-  btnPrimaryText: { color: '#fff', fontWeight: '700' },
+  btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   btnDanger: {
     marginTop: 10,
     paddingVertical: 12,

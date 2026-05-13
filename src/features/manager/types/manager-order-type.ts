@@ -34,6 +34,8 @@ export type ManagerOrderLineItem = {
 
 export type ManagerOrderDetail = ManagerOrderItem & {
   orderItems: ManagerOrderLineItem[]
+  /** ISO / chuỗi từ API nếu có (hiển thị «Cập nhật»). */
+  updatedAt?: string
 }
 
 export type ManagerOrderListResponse = {

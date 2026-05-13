@@ -110,7 +110,16 @@ export function normalizeOrderDetail(raw: unknown): ManagerOrderDetail {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const linesRaw = o.orderItems ?? o.order_items ?? o.OrderItems
   const orderItems = Array.isArray(linesRaw) ? (linesRaw as unknown[]).map(normalizeOrderLine) : []
-  return { ...base, orderItems }
+  const updatedAt = pickStr(
+    o.updatedAt,
+    o.UpdatedAt,
+    o.lastModified,
+    o.LastModified,
+    o.modifiedAt,
+    o.ModifiedAt,
+    o.updated_at
+  )
+  return { ...base, orderItems, ...(updatedAt ? { updatedAt } : {}) }
 }
 
 export function isDeliveryPending(deliveryStatus: unknown): boolean {
@@ -133,7 +142,7 @@ export function orderStatusPill(status: string): { label: string; color: string;
   const raw = String(status ?? '').trim()
   if (!raw) return empty
   const map: Record<string, { label: string; color: string; bg: string }> = {
-    Draft: { label: 'Nháp', color: '#64748b', bg: '#f1f5f9' },
+    Draft: { label: 'Nháp', color: '#0f172a', bg: '#cbd5e1' },
     Pending: { label: 'Chờ xử lý', color: '#b45309', bg: '#fef3c7' },
     Shipped: { label: 'Đã gửi', color: '#1e40af', bg: '#dbeafe' },
     Confirmed: { label: 'Đã xác nhận', color: '#1d4ed8', bg: '#dbeafe' },
