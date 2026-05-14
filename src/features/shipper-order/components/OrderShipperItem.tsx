@@ -12,7 +12,7 @@ import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 type OrderShipperItemProps = {
    data: OrderShipperType
-   onRefresh: Dispatch<SetStateAction<boolean>>
+   onRefresh: () => void
 }
 
 export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemProps) {
@@ -53,11 +53,11 @@ export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemPr
         </View>
       </View>
       <View style={styles.btnContainer}>
-        <Button variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
+        <Button style={styles.btn} variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
         { loading ?
             <LoadingCircle size={40}/>
           :
-          <Button variant='secondary' content='Hoàn thành' onPress={() => handleCompleteOrder(data.id)}/>
+          <Button style={styles.btn} variant='secondary' content='Hoàn thành' onPress={() => handleCompleteOrder(data.id)}/>
         }
       </View>
         <ModalCustom isOpen={isModalOpen} onClose={handleOpenModal}>
@@ -205,5 +205,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#3366CC'
+  },
+  btn: {
+    width: '100%'
   }
 })

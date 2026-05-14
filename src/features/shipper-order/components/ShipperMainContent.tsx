@@ -7,8 +7,8 @@ import OrderShipperItem from './OrderShipperItem'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 export default function ShipperMainContent() {
-  const { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh } = useGetShipperOrder()
-  const { loadMore, refresh, refreshing } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: orderShipperList?.meta.total_pages ?? 1 })
+  const { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh, handleRefresh } = useGetShipperOrder()
+  const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: orderShipperList?.meta.total_pages ?? 1 })
   return (
     <View style={styles.wrapper}>
             <OrderShipperHeader totalItems={orderShipperList?.meta.total_items}/>
@@ -18,12 +18,12 @@ export default function ShipperMainContent() {
                         data={orderShipperList.items}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) => (
-                              <OrderShipperItem data={item} onRefresh={setOnRefresh}/>
+                              <OrderShipperItem data={item} onRefresh={handleRefresh}/>
                         )}
                         onEndReached={loadMore}
                         onEndReachedThreshold={0.1}
-                        refreshing={refreshing}
-                        onRefresh={refresh}
+                        refreshing={loading}
+                        onRefresh={handleRefresh}
                         ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
                   />
                }

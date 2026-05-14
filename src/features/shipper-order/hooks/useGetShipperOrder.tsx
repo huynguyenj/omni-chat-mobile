@@ -10,6 +10,7 @@ export default function useGetShipperOrder() {
   const [orderShipperList, setOrderShipperList] = useState<PaginationStructure<OrderShipperType>>()
   const [currentPage, setCurrentPage] = useState(1)
   const [onRefresh, setOnRefresh] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
       const fetchOrderShipper = async () => {
        
@@ -36,5 +37,9 @@ export default function useGetShipperOrder() {
       fetchOrderShipper()
   }, [currentPage, onRefresh])
 
-  return { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh }
+  const handleRefresh = () => {
+      setCurrentPage(1)
+      setRefreshKey(prevKey => prevKey + 1)
+  }
+  return { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh, handleRefresh }
 }

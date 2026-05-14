@@ -1,10 +1,5 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-
-export default function ShipperManagement() {
-  return (
-    <View>
-      <Text>ShipperManagement</Text>
-    </View>
-  )
-}
+/**
+ * Kept for path stability (`@screens/manager/ShipperManagement`).
+ * Manager drawer registers `ShippersTransportScreen` directly in `role-route.ts`.
+ */
+export { default } from '@/features/manager/components/ShippersTransportScreen'
