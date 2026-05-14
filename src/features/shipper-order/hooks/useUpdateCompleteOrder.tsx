@@ -2,7 +2,7 @@ import { Dispatch, SetStateAction } from 'react'
 import useApiCall from '@/hooks/useApiCall'
 
 type UseUpdateCompleteOrder = {
-      onRefresh: Dispatch<SetStateAction<boolean>>
+      onRefresh: () => void
 }
 
 export default function useUpdateCompleteOrder({ onRefresh }: UseUpdateCompleteOrder) {
@@ -15,7 +15,7 @@ export default function useUpdateCompleteOrder({ onRefresh }: UseUpdateCompleteO
       })
       const { error } = apiData
       if (error) return
-      onRefresh(prev => !prev)
+      onRefresh()
 
   }
   return { loading, handleCompleteOrder }

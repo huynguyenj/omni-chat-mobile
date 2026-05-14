@@ -23,11 +23,8 @@ export default function useGetShipperOrder() {
             if (error) return
             setOrderShipperList(prev => {
                   if (currentPage === 1) {
-                  // refresh → replace
                   return data
             }
-
-                  // load more → append
             return {
             ...data,
             items: [...(prev?.items || []), ...data.items]
@@ -35,7 +32,7 @@ export default function useGetShipperOrder() {
     })
       }
       fetchOrderShipper()
-  }, [currentPage, onRefresh])
+  }, [currentPage, refreshKey])
 
   const handleRefresh = () => {
       setCurrentPage(1)
