@@ -17,7 +17,10 @@ export const FILTER_LIST: FilterType[] = [
    { label: 'Đã trả hàng', value: 'Returned' },
    { label: 'Hoàn thành', value: 'Completed' },
    { label: 'Đã trả hàng lỗi', value: 'ReturnedDefective' },
-
+   { label: 'Từ chối trả hàng', value: 'ReturnRejected' },
+   { label: 'Từ chối hoàn hàng', value: 'RefundRejected' },
+   { label: 'Chấp nhận hoàn hàng', value: 'RefundApproved' },
+   { label: 'Chấp nhận trả hàng', value: 'ReturnApproved' },
 ] 
 
 export const ORDER_STATUS: Record<string, OrderStatusType> = {
@@ -52,6 +55,22 @@ export const ORDER_STATUS: Record<string, OrderStatusType> = {
   ReturnDefective: {
     name: 'Đã trả hàng do lỗi',
     tagVariant: 'danger'
+  },
+  ReturnRejected: {
+    name: 'Từ chối trả hàng',
+    tagVariant: 'danger'
+  },
+  RefundRejected: {
+    name: 'Từ chối hoàn hàng',
+    tagVariant: 'danger'
+  },
+  RefundApproved: {
+    name: 'Chấp nhận hoàn hàng',
+    tagVariant: 'success'
+  },
+  ReturnApproved: {
+    name: 'Chấp nhận trả hàng',
+    tagVariant: 'success'
   }
 }
 
