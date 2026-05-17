@@ -5,4 +5,4 @@ export const POST_REQUEST_TYPE: Record<string, string>= {
   Refund: 'Hoàn tiền'
 }
 
-export const LIST_POST_REQUEST_TYPE = ['Cancel', 'Return', 'Replacement', 'Refund']
+export const LIST_POST_REQUEST_TYPE = ['Return', 'Refund']
