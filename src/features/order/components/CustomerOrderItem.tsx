@@ -156,23 +156,38 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
                         />
                   )}
             />
-            <Controller
-                  control={control}
-                  name='type'
-                  render={({ field }) => (
-                  <Select
-                        style={styles.inputContainer}
-                        label='Loại hoàn trả'
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={LIST_POST_REQUEST_TYPE.map((type) => ({
-                              label: POST_REQUEST_TYPE[type],
-                              value: type
-                        }))}
-                        error={errors.type?.message}
-                        />
-                  )}
-            />
+            { item.status === 'Completed' && 
+               <Controller
+                     control={control}
+                     name='type'
+                     render={({ field }) => (
+                     <Select
+                           style={styles.inputContainer}
+                           label='Loại hoàn trả'
+                           value={field.value}
+                           onChange={field.onChange}
+                           options={[{ label: 'Hoàn hàng', value: 'Refund' }]}
+                           error={errors.type?.message}
+                           />
+                     )}
+                     />
+               }
+               { item.status === 'Shipped' && 
+               <Controller
+                     control={control}
+                     name='type'
+                     render={({ field }) => (
+                     <Select
+                           style={styles.inputContainer}
+                           label='Loại hoàn trả'
+                           value={field.value}
+                           onChange={field.onChange}
+                           options={[{ label: 'Trả hàng', value: 'Return' }]}
+                           error={errors.type?.message}
+                           />
+                     )}
+                     />
+               }
                   <View style={styles.refundBtnContainer}>
                      {loading ?
                         <LoadingCircle/>
