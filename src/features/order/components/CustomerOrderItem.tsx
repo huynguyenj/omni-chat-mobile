@@ -5,7 +5,7 @@ import Card from '@/components/ui/cards/Card'
 import { Eye, Minus, Package, Plus, RotateCcw } from 'lucide-react-native'
 import { formatDate, formatTime } from '@/utils/format'
 import Tag from '@/components/ui/tags/Tag'
-import { ORDER_STATUS } from '../const/order-status'
+import { getOrderStatusDisplay } from '../const/order-status'
 import Button from '@/components/ui/buttons/Button'
 import ModalCustom from '@/components/ui/modal/ModalCustom'
 import Checkbox from '@/components/ui/inputs/Checkbox'
@@ -62,6 +62,7 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
       return total + (item.price * item.number)
     }, 0)
    }, [listRefund])
+  const orderStatus = getOrderStatusDisplay(item.status)
   return (
     <Card style={styles.cardContainer}>
       <Card variant='primary' style={styles.illustrationContainer}>
@@ -77,8 +78,8 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
                   <Text style={styles.timeText}>•</Text>
                   <Text style={styles.timeText}>{formatDate(item.orderDate)}</Text>
             </View>
-                  <Tag variant={ORDER_STATUS[item.status].tagVariant} style={styles.tagContainer}>
-                        <Text style={[styles.tagText, ORDER_STATUS[item.status].tagVariant === 'gray' && { color: '#000000' } ]}>{ORDER_STATUS[item.status].name}</Text>
+                  <Tag variant={orderStatus.tagVariant} style={styles.tagContainer}>
+                        <Text style={[styles.tagText, orderStatus.tagVariant === 'gray' && { color: '#000000' } ]}>{orderStatus.name}</Text>
                   </Tag>
             <View style={styles.btnContainer}>
                   <Button variant='outline' content='Chi tiết' style={styles.detailBtn} icon={{ iconName: Eye, iconDirection: 'left' }} onPress={handleOpenDetailOrder}/>

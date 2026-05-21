@@ -240,8 +240,8 @@ export default function InvoicesManagementScreen() {
     )
   }
 
-  const listHeader = (
-    <View>
+  const fixedHeader = (
+    <View style={styles.fixedTop}>
       <Text style={styles.screenTitle}>Phiếu thanh toán</Text>
 
       <View style={styles.kpiPrimaryRow}>
@@ -318,65 +318,70 @@ export default function InvoicesManagementScreen() {
       </ScrollView>
 
       {listError ? <Text style={styles.bannerErr}>{listError}</Text> : null}
-      {loading && !refreshing ? (
-        <View style={styles.centerPad}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.hint}>Đang tải toàn bộ hóa đơn…</Text>
-        </View>
-      ) : null}
-    </View>
-  )
-
-  const listFooter = (
-    <View style={styles.footer}>
-      <Text style={styles.footerMeta}>
-        {filtered.length} hóa đơn · Trang {safeUiPage}/{totalUiPages}
-      </Text>
-      <View style={styles.pager}>
-        <Pressable
-          style={[styles.pageBtn, safeUiPage <= 1 && styles.pageBtnDisabled]}
-          disabled={safeUiPage <= 1}
-          onPress={() => setUiPage((p) => Math.max(1, p - 1))}
-        >
-          <ChevronLeft size={18} color={safeUiPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
-          <Text style={[styles.pageBtnText, safeUiPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.pageBtn, safeUiPage >= totalUiPages && styles.pageBtnDisabled]}
-          disabled={safeUiPage >= totalUiPages}
-          onPress={() => setUiPage((p) => Math.min(totalUiPages, p + 1))}
-        >
-          <Text style={[styles.pageBtnText, safeUiPage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
-          <ChevronRight size={18} color={safeUiPage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
-        </Pressable>
-      </View>
     </View>
   )
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <FlatList
-        data={loading && !refreshing ? [] : pageSlice}
-        keyExtractor={(item, index) => item.id || `inv-${index}`}
-        renderItem={renderInvoice}
-        ListHeaderComponent={listHeader}
-        ListFooterComponent={listFooter}
-        ListEmptyComponent={
-          loading && !refreshing ? null : (
-            <Text style={styles.empty}>{listError ? ' ' : 'Không có hóa đơn phù hợp.'}</Text>
-          )
-        }
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
+      {fixedHeader}
+
+      <View style={styles.listPane}>
+        {loading && !refreshing ? (
+          <View style={styles.centerPad}>
+            <ActivityIndicator size="large" />
+            <Text style={styles.hint}>Đang tải toàn bộ hóa đơn…</Text>
+          </View>
+        ) : (
+          <FlatList
+            style={styles.list}
+            data={pageSlice}
+            keyExtractor={(item, index) => item.id || `inv-${index}`}
+            renderItem={renderInvoice}
+            ListEmptyComponent={
+              <Text style={styles.empty}>{listError ? ' ' : 'Không có hóa đơn phù hợp.'}</Text>
+            }
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          />
+        )}
+      </View>
+
+      {!loading || refreshing ? (
+        <View style={styles.pagerFixed}>
+          <Text style={styles.footerMeta}>
+            {filtered.length} hóa đơn · Trang {safeUiPage}/{totalUiPages}
+          </Text>
+          <View style={styles.pager}>
+            <Pressable
+              style={[styles.pageBtn, safeUiPage <= 1 && styles.pageBtnDisabled]}
+              disabled={safeUiPage <= 1}
+              onPress={() => setUiPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={18} color={safeUiPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+              <Text style={[styles.pageBtnText, safeUiPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.pageBtn, safeUiPage >= totalUiPages && styles.pageBtnDisabled]}
+              disabled={safeUiPage >= totalUiPages}
+              onPress={() => setUiPage((p) => Math.min(totalUiPages, p + 1))}
+            >
+              <Text style={[styles.pageBtnText, safeUiPage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
+              <ChevronRight size={18} color={safeUiPage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f1f5f9' },
+  fixedTop: { paddingHorizontal: 16, paddingTop: 4, backgroundColor: '#f1f5f9' },
+  listPane: { flex: 1, minHeight: 0 },
+  list: { flex: 1 },
   screenTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
-  listContent: { paddingBottom: 28, paddingHorizontal: 16, flexGrow: 1 },
+  listContent: { paddingBottom: 12, paddingHorizontal: 16, flexGrow: 1 },
   kpiPrimaryRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   kpiCardMain: {
     flex: 1,
@@ -422,7 +427,7 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
-  chipRow: { marginBottom: 10 },
+  chipRow: { marginBottom: 8 },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -438,7 +443,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '600', color: '#334155' },
   chipTextActive: { color: '#fff' },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
-  centerPad: { alignItems: 'center', paddingVertical: 20 },
+  centerPad: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
   card: {
     backgroundColor: '#fff',
@@ -496,8 +501,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9'
   },
   progressFill: { borderRadius: 3 },
-  footer: { paddingVertical: 16, alignItems: 'center' },
-  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: '500' },
+  pagerFixed: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    alignItems: 'center'
+  },
+  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 10, fontWeight: '500' },
   pager: { flexDirection: 'row', gap: 12 },
   pageBtn: {
     flexDirection: 'row',

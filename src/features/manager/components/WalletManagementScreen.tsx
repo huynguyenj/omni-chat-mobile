@@ -207,8 +207,8 @@ export default function WalletManagementScreen() {
     )
   }
 
-  const listHeader = (
-    <View>
+  const fixedHeader = (
+    <View style={styles.fixedTop}>
       <Text style={styles.screenTitle}>Ví tiền</Text>
 
       <View style={styles.kpiRow}>
@@ -259,12 +259,6 @@ export default function WalletManagementScreen() {
       </View>
 
       {listError ? <Text style={styles.bannerErr}>{listError}</Text> : null}
-      {loading && !refreshing ? (
-        <View style={styles.centerPad}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.hint}>Đang tải danh sách ví…</Text>
-        </View>
-      ) : null}
     </View>
   )
 
@@ -272,19 +266,28 @@ export default function WalletManagementScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <FlatList
-        data={loading && !refreshing ? [] : filtered}
-        keyExtractor={(item, index) => item.id || `w-${index}`}
-        renderItem={renderCustomer}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          loading && !refreshing ? null : (
-            <Text style={styles.empty}>{listError ? ' ' : 'Không có khách phù hợp.'}</Text>
-          )
-        }
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      />
+      {fixedHeader}
+
+      <View style={styles.listPane}>
+        {loading && !refreshing ? (
+          <View style={styles.centerPad}>
+            <ActivityIndicator size="large" />
+            <Text style={styles.hint}>Đang tải danh sách ví…</Text>
+          </View>
+        ) : (
+          <FlatList
+            style={styles.list}
+            data={filtered}
+            keyExtractor={(item, index) => item.id || `w-${index}`}
+            renderItem={renderCustomer}
+            ListEmptyComponent={
+              <Text style={styles.empty}>{listError ? ' ' : 'Không có khách phù hợp.'}</Text>
+            }
+            contentContainerStyle={styles.listContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          />
+        )}
+      </View>
 
       <Modal visible={!!historyCustomer} animationType="slide" transparent={false} onRequestClose={() => setHistoryCustomer(null)}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'left', 'right', 'bottom']}>
@@ -314,8 +317,11 @@ export default function WalletManagementScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f1f5f9' },
+  fixedTop: { paddingHorizontal: 16, paddingTop: 4, backgroundColor: '#f1f5f9' },
+  listPane: { flex: 1, minHeight: 0 },
+  list: { flex: 1 },
   screenTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
-  listContent: { paddingBottom: 28, paddingHorizontal: 16, flexGrow: 1 },
+  listContent: { paddingBottom: 24, paddingHorizontal: 16, flexGrow: 1 },
   kpiRow: { flexDirection: 'row', gap: 6, marginBottom: 12, alignItems: 'stretch' },
   kpiCard: {
     flex: 1,
@@ -356,7 +362,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
-  centerPad: { alignItems: 'center', paddingVertical: 20 },
+  centerPad: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
   card: {
     backgroundColor: '#fff',

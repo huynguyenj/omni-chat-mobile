@@ -52,7 +52,7 @@ export const ORDER_STATUS: Record<string, OrderStatusType> = {
     name: 'Hoàn thành',
     tagVariant: 'success'
   },
-  ReturnDefective: {
+  ReturnedDefective: {
     name: 'Đã trả hàng do lỗi',
     tagVariant: 'danger'
   },
@@ -76,12 +76,34 @@ export const ORDER_STATUS: Record<string, OrderStatusType> = {
 
 export const DELIVERY_STATUS: Record<string, OrderStatusType> = {
   Pending: {
-    name: 'Đang vận chuyển',
-    tagVariant: 'default'
+    name: 'Chờ ship',
+    tagVariant: 'warning'
   },
 
   Completed: {
     name: 'Đã chuyển xong',
     tagVariant: 'success'
   }
+}
+
+const ORDER_STATUS_FALLBACK: OrderStatusType = {
+  name: '—',
+  tagVariant: 'default'
+}
+
+/** Tránh crash khi API trả status chưa có trong ORDER_STATUS (giống orderStatusPill bên manager). */
+export function getOrderStatusDisplay(status: string | undefined): OrderStatusType {
+  const raw = String(status ?? '').trim()
+  if (!raw) return ORDER_STATUS_FALLBACK
+  const hit = Object.keys(ORDER_STATUS).find((k) => k.toLowerCase() === raw.toLowerCase())
+  if (hit) return ORDER_STATUS[hit]
+  return { name: raw, tagVariant: 'default' }
+}
+
+export function getDeliveryStatusDisplay(status: string | undefined): OrderStatusType {
+  const raw = String(status ?? '').trim()
+  if (!raw) return ORDER_STATUS_FALLBACK
+  const hit = Object.keys(DELIVERY_STATUS).find((k) => k.toLowerCase() === raw.toLowerCase())
+  if (hit) return DELIVERY_STATUS[hit]
+  return { name: raw, tagVariant: 'default' }
 }

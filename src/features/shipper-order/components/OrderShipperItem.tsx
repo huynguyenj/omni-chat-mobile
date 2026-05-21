@@ -9,6 +9,7 @@ import Button from '@/components/ui/buttons/Button'
 import ModalCustom from '@/components/ui/modal/ModalCustom'
 import useUpdateCompleteOrder from '../hooks/useUpdateCompleteOrder'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
+import { getDeliveryStatusDisplay } from '@/features/order/const/order-status'
 
 type OrderShipperItemProps = {
    data: OrderShipperType
@@ -18,6 +19,7 @@ type OrderShipperItemProps = {
 export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { handleCompleteOrder, loading } = useUpdateCompleteOrder({ onRefresh: onRefresh })
+  const delivery = getDeliveryStatusDisplay(data.deliveryStatus)
   const handleOpenModal = () => {
     setIsModalOpen(prev => !prev)
   }
@@ -26,8 +28,8 @@ export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemPr
     <Card style={styles.container}>
       <View style={styles.orderHeaderContainer}>
         <Text style={styles.orderCode}>#{data.code}</Text>
-          <Tag variant={ data.deliveryStatus === 'Pending' ? 'warning' : 'default' }>
-            <Text style={{ color: '#ffffff', fontWeight: 600 }}>{data.deliveryStatus === 'Pending' ? 'Chờ ship' : data.deliveryStatus}</Text>
+          <Tag variant={delivery.tagVariant}>
+            <Text style={{ color: '#ffffff', fontWeight: 600 }}>{delivery.name}</Text>
           </Tag>
       </View>
       <View style={styles.tagContainer}>
