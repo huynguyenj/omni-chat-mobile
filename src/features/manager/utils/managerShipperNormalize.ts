@@ -118,6 +118,9 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
     'UserInfo'
   ]
   const nestedNameFields = [
+    'shipperName',
+    'ShipperName',
+    'shipper_name',
     'fullName',
     'FullName',
     'full_name',
@@ -141,6 +144,9 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
   const fromNestedName = firstNonEmptyNested(o, nestedNameKeys, nestedNameFields)
   const fullName =
     pickStr(
+      o.shipperName,
+      o.ShipperName,
+      o.shipper_name,
       o.fullName,
       o.FullName,
       o.full_name,
@@ -163,6 +169,9 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
       combineFirstLast(isObj(raw) ? (raw as Record<string, unknown>) : {})
     ) || 'Shipper'
   const nestedPhoneFields = [
+    'shipperPhone',
+    'ShipperPhone',
+    'shipper_phone',
     'phone',
     'Phone',
     'phoneNumber',
@@ -186,6 +195,9 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
   ]
   const fromNestedPhone = firstNonEmptyNested(o, nestedNameKeys, nestedPhoneFields)
   const phoneRaw = pickStr(
+    o.shipperPhone,
+    o.ShipperPhone,
+    o.shipper_phone,
     o.phone,
     o.Phone,
     o.phoneNumber,
@@ -212,7 +224,10 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
     fromNestedPhone
   )
   const deliveringCount = num(
-    o.deliveringCount ??
+    o.totalOrderShipNow ??
+      o.TotalOrderShipNow ??
+      o.total_order_ship_now ??
+      o.deliveringCount ??
       o.delivering_count ??
       o.deliveringOrders ??
       o.delivering_orders ??
@@ -224,7 +239,10 @@ export function normalizeShipper(raw: unknown): ManagerShipperApiItem {
       o.dang_giao
   )
   const deliveredCount = num(
-    o.deliveredCount ??
+    o.totalOrderShipped ??
+      o.TotalOrderShipped ??
+      o.total_order_shipped ??
+      o.deliveredCount ??
       o.delivered_count ??
       o.deliveredOrders ??
       o.delivered_orders ??

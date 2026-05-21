@@ -1,4 +1,5 @@
 import { apiPublic } from '@/configs/axios.config'
+import { logApiResponse } from '@/utils/logApiResponse'
 import type { ManagerShipperListQuery, ManagerShipperListResponse } from '../types/shipper-type'
 import { assertManagerPublicSuccess, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
 import { normalizeShipper } from '../utils/managerShipperNormalize'
@@ -51,8 +52,19 @@ export const ManagerShipperApi = {
     const pageIndex = Math.max(1, query.pageIndex)
     const pageSize = Math.max(1, query.pageSize)
     const params = { pageIndex, pageSize }
-    const raw: unknown = await apiPublic.get(resolveShippersBasePath(), { params })
-    return unwrapShipperListEnvelope(raw, pageSize)
+    const path = resolveShippersBasePath()
+    const raw: unknown = await apiPublic.get(path, { params })
+    const result = unwrapShipperListEnvelope(raw, pageSize)
+    logApiResponse('ManagerShipperApi.getShippers', {
+      baseURL: apiPublic.defaults.baseURL,
+      path,
+      query: params,
+      rawAfterInterceptor: raw,
+      normalizedItemCount: result.items.length,
+      normalizedPreview: result.items.slice(0, 3),
+      meta: result.meta
+    })
+    return result
   },
 
   /** POST body null, orderId trong query string — giống web. */
