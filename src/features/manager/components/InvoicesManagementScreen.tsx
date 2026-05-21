@@ -116,7 +116,6 @@ export default function InvoicesManagementScreen() {
   const [sortColumn, setSortColumn] = useState<ManagerInvoiceSortColumn>('customerName')
   const [sortDescending, setSortDescending] = useState(false)
   const [uiPage, setUiPage] = useState(1)
-  const [kpiHighlight, setKpiHighlight] = useState<'total' | 'paid' | 'pending'>('total')
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400)
@@ -310,10 +309,7 @@ export default function InvoicesManagementScreen() {
       <Text style={styles.screenTitle}>Phiếu thanh toán</Text>
 
       <View style={styles.kpiPrimaryRow}>
-        <Pressable
-          onPress={() => setKpiHighlight('total')}
-          style={[styles.kpiCardMain, kpiHighlight === 'total' && styles.kpiCardMainOn]}
-        >
+        <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={styles.kpiIconBg}>
               <CircleDollarSign size={16} color="#0369a1" strokeWidth={2.2} />
@@ -321,11 +317,8 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Tổng tiền</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.totalAll)} đ</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setKpiHighlight('paid')}
-          style={[styles.kpiCardMain, kpiHighlight === 'paid' && styles.kpiCardMainOn]}
-        >
+        </View>
+        <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={[styles.kpiIconBg, styles.kpiIconBgGreen]}>
               <Wallet size={16} color="#15803d" strokeWidth={2.2} />
@@ -333,11 +326,8 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Đã thanh toán</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.paidCompleted)} đ</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setKpiHighlight('pending')}
-          style={[styles.kpiCardMain, kpiHighlight === 'pending' && styles.kpiCardMainOn]}
-        >
+        </View>
+        <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={[styles.kpiIconBg, styles.kpiIconBgAmber]}>
               <Clock size={16} color="#b45309" strokeWidth={2.2} />
@@ -345,7 +335,7 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Chờ thanh toán</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.pendingSum)} đ</Text>
-        </Pressable>
+        </View>
       </View>
 
       <View style={styles.kpiSecondaryRow}>
@@ -476,7 +466,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#e2e8f0'
   },
-  kpiCardMainOn: { borderColor: '#3b82f6', backgroundColor: '#eff6ff' },
   kpiCardHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   kpiIconBg: {
     width: 28,

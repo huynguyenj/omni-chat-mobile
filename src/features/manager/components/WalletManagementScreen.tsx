@@ -15,7 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import {
   Calculator,
-  ChevronLeft,
   ChevronRight,
   Coins,
   Scale,
@@ -32,8 +31,6 @@ import {
   formatWalletMoney,
   transactionTypeLabel
 } from '../utils/managerWalletNormalize'
-
-const WALLET_PAGE_SIZE = 6
 
 const PRIMARY = '#3b6ea5'
 
@@ -72,7 +69,6 @@ export default function WalletManagementScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
-  const [walletPage, setWalletPage] = useState(1)
   const [historyCustomer, setHistoryCustomer] = useState<ManagerCustomerWalletItem | null>(null)
 
   useEffect(() => {
@@ -141,23 +137,6 @@ export default function WalletManagementScreen() {
     }
     return { totalWallet, totalDebt, netSum }
   }, [filtered])
-
-  useEffect(() => {
-    setWalletPage(1)
-  }, [debouncedSearch])
-
-  const totalUiPages = Math.max(1, Math.ceil(filtered.length / WALLET_PAGE_SIZE))
-  const safePage = Math.min(walletPage, totalUiPages)
-
-  useEffect(() => {
-    setWalletPage((p) => Math.min(p, totalUiPages))
-  }, [totalUiPages])
-
-  const pageSlice = useMemo(() => {
-    const page = Math.min(walletPage, totalUiPages)
-    const start = (page - 1) * WALLET_PAGE_SIZE
-    return filtered.slice(start, start + WALLET_PAGE_SIZE)
-  }, [filtered, walletPage, totalUiPages])
 
   const renderTx = ({ item }: { item: ManagerWalletTransaction }) => (
     <View style={styles.txRow}>
@@ -289,42 +268,15 @@ export default function WalletManagementScreen() {
     </View>
   )
 
-  const listFooter = (
-    <View style={styles.footer}>
-      <Text style={styles.footerMeta}>
-        {filtered.length} khách · Trang {safePage}/{totalUiPages}
-      </Text>
-      <View style={styles.pager}>
-        <Pressable
-          style={[styles.pageBtn, safePage <= 1 && styles.pageBtnDisabled]}
-          disabled={safePage <= 1}
-          onPress={() => setWalletPage((p) => Math.max(1, p - 1))}
-        >
-          <ChevronLeft size={18} color={safePage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
-          <Text style={[styles.pageBtnText, safePage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.pageBtn, safePage >= totalUiPages && styles.pageBtnDisabled]}
-          disabled={safePage >= totalUiPages}
-          onPress={() => setWalletPage((p) => Math.min(totalUiPages, p + 1))}
-        >
-          <Text style={[styles.pageBtnText, safePage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
-          <ChevronRight size={18} color={safePage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
-        </Pressable>
-      </View>
-    </View>
-  )
-
   const txList = historyCustomer?.getWalletResponse?.transactions ?? []
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <FlatList
-        data={loading && !refreshing ? [] : pageSlice}
+        data={loading && !refreshing ? [] : filtered}
         keyExtractor={(item, index) => item.id || `w-${index}`}
         renderItem={renderCustomer}
         ListHeaderComponent={listHeader}
-        ListFooterComponent={listFooter}
         ListEmptyComponent={
           loading && !refreshing ? null : (
             <Text style={styles.empty}>{listError ? ' ' : 'Không có khách phù hợp.'}</Text>
@@ -482,23 +434,6 @@ const styles = StyleSheet.create({
     gap: 8
   },
   historyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  footer: { paddingVertical: 16, alignItems: 'center' },
-  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 12, fontWeight: '500' },
-  pager: { flexDirection: 'row', gap: 12 },
-  pageBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#cbd5e1'
-  },
-  pageBtnDisabled: { opacity: 0.45 },
-  pageBtnText: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
-  pageBtnTextDisabled: { color: '#94a3b8' },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 24, fontSize: 15 },
   modalSafe: { flex: 1, backgroundColor: '#fff' },
   modalHeader: {

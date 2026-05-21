@@ -14,14 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import {
-  ArrowLeft,
   ArrowLeftRight,
   CircleCheck,
   Clock,
   FileText,
   History,
   LayoutList,
-  Plus,
   Search,
   Send,
   XCircle
@@ -355,14 +353,6 @@ export default function ClaimsRequestsScreen() {
     }
   }
 
-  const onCreateClaimPress = () => {
-    Toast.show({
-      type: 'info',
-      text1: 'Tạo yêu cầu',
-      text2: 'Nhân viên tạo yêu cầu từ màn Claim trên ứng dụng nhân viên.'
-    })
-  }
-
   const renderKpi = () => {
     const specs = [
       {
@@ -480,50 +470,42 @@ export default function ClaimsRequestsScreen() {
       {dashboardErr ? <Text style={styles.warn}>{dashboardErr}</Text> : null}
       {renderKpi()}
 
-      {mainTab === 'claims' ? (
-        <View style={styles.actionGrid}>
-          <View style={styles.actionRow}>
-            <Pressable style={styles.actionPrimary} onPress={onCreateClaimPress}>
-              <Plus size={18} color="#fff" strokeWidth={2.5} />
-              <Text style={styles.actionPrimaryText}>Tạo Yêu cầu</Text>
-            </Pressable>
-            <Pressable style={styles.actionOutline} onPress={() => setMainTab('changeTasks')}>
-              <ArrowLeftRight size={18} color="#2563eb" strokeWidth={2.2} />
-              <Text style={styles.actionOutlineText}>Đổi task</Text>
-            </Pressable>
-          </View>
+      <View style={styles.actionGrid}>
+        <View style={styles.actionRow}>
+          <Pressable
+            style={mainTab === 'claims' ? styles.actionPrimary : styles.actionOutline}
+            onPress={() => setMainTab('claims')}
+          >
+            <FileText size={18} color={mainTab === 'claims' ? '#fff' : '#2563eb'} strokeWidth={2.2} />
+            <Text style={mainTab === 'claims' ? styles.actionPrimaryText : styles.actionOutlineText}>Yêu cầu</Text>
+          </Pressable>
+          <Pressable
+            style={mainTab === 'changeTasks' ? styles.actionPrimary : styles.actionOutline}
+            onPress={() => setMainTab('changeTasks')}
+          >
+            <ArrowLeftRight size={18} color={mainTab === 'changeTasks' ? '#fff' : '#2563eb'} strokeWidth={2.2} />
+            <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>Đổi task</Text>
+          </Pressable>
+        </View>
+        {mainTab === 'claims' ? (
           <View style={styles.actionRow}>
             <Pressable
               style={[styles.actionFilter, claimMode === 'pending' && styles.actionFilterOn]}
-              onPress={() => {
-                setMainTab('claims')
-                setClaimMode('pending')
-              }}
+              onPress={() => setClaimMode('pending')}
             >
               <Clock size={18} color={claimMode === 'pending' ? '#c2410c' : '#64748b'} strokeWidth={2.2} />
               <Text style={[styles.actionFilterText, claimMode === 'pending' && styles.actionFilterTextOn]}>Chờ duyệt</Text>
             </Pressable>
             <Pressable
               style={[styles.actionOutline, claimMode === 'history' && styles.actionOutlineOn]}
-              onPress={() => {
-                setMainTab('claims')
-                setClaimMode('history')
-              }}
+              onPress={() => setClaimMode('history')}
             >
               <History size={18} color="#2563eb" strokeWidth={2.2} />
               <Text style={styles.actionOutlineText}>Lịch sử</Text>
             </Pressable>
           </View>
-        </View>
-      ) : (
-        <View style={styles.ctTopBar}>
-          <Pressable style={styles.ctBack} onPress={() => setMainTab('claims')} hitSlop={8}>
-            <ArrowLeft size={20} color="#2563eb" strokeWidth={2.2} />
-            <Text style={styles.ctBackText}>Yêu cầu</Text>
-          </Pressable>
-          <Text style={styles.ctTitle}>Đổi task</Text>
-        </View>
-      )}
+        ) : null}
+      </View>
 
       {mainTab === 'claims' ? (
         <View style={styles.claimsPane}>
@@ -800,16 +782,6 @@ const styles = StyleSheet.create({
   actionFilterOn: { backgroundColor: '#ffedd5', borderColor: '#fb923c' },
   actionFilterText: { color: '#64748b', fontWeight: '700', fontSize: 14 },
   actionFilterTextOn: { color: '#c2410c' },
-  ctTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 12,
-    gap: 12
-  },
-  ctBack: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ctBackText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  ctTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
   claimsPane: { flex: 1, marginTop: 8 },
   searchWrap: {
     flexDirection: 'row',

@@ -19,6 +19,7 @@ import {
   FileText,
   List,
   MapPin,
+  RotateCcw,
   Search,
   Smartphone,
   Tag,
@@ -38,6 +39,8 @@ import {
 
 const ORDER_PAGE = 6
 const PSR_PAGE = 6
+
+type MainTab = 'orders' | 'refund'
 
 const ORDER_STATUS_FILTERS: { value: string | null; label: string }[] = [
   { value: null, label: 'Tất cả' },
@@ -93,6 +96,7 @@ function DetailField({
 }
 
 export default function OrdersManagementScreen() {
+  const [mainTab, setMainTab] = useState<MainTab>('orders')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
@@ -115,6 +119,7 @@ export default function OrdersManagementScreen() {
   const [psrMeta, setPsrMeta] = useState({ total_pages: 1, current_page: 1 })
   const [psrLoading, setPsrLoading] = useState(false)
   const [psrLoadingMore, setPsrLoadingMore] = useState(false)
+  const [psrRefreshing, setPsrRefreshing] = useState(false)
   const [psrError, setPsrError] = useState<string | null>(null)
   const [psrRefreshKey, setPsrRefreshKey] = useState(0)
 
@@ -176,6 +181,7 @@ export default function OrdersManagementScreen() {
   }, [])
 
   useEffect(() => {
+    if (mainTab !== 'refund') return
     let cancelled = false
     setPsrLoading(true)
     setPsrError(null)
@@ -195,14 +201,13 @@ export default function OrdersManagementScreen() {
     return () => {
       cancelled = true
     }
-  }, [fetchPsrPage, psrRefreshKey])
+  }, [mainTab, fetchPsrPage, psrRefreshKey])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     setListError(null)
     try {
       await fetchOrdersPage(1, true)
-      setPsrRefreshKey((k) => k + 1)
     } catch (e) {
       const msg = typeof e === 'string' ? e : 'Làm mới thất bại.'
       Toast.show({ type: 'error', text1: msg })
@@ -210,6 +215,20 @@ export default function OrdersManagementScreen() {
       setRefreshing(false)
     }
   }, [fetchOrdersPage])
+
+  const onRefreshPsr = useCallback(async () => {
+    setPsrRefreshing(true)
+    setPsrError(null)
+    try {
+      await fetchPsrPage(1, true)
+    } catch (e) {
+      const msg = typeof e === 'string' ? e : 'Làm mới thất bại.'
+      setPsrError(msg)
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setPsrRefreshing(false)
+    }
+  }, [fetchPsrPage])
 
   const onLoadMore = useCallback(async () => {
     if (loading || loadingMore || refreshing) return
@@ -353,107 +372,154 @@ export default function OrdersManagementScreen() {
     )
   }
 
-  const psrFooter = (
-    <View style={styles.psrSection}>
-      <Text style={styles.psrTitle}>Yêu cầu hoàn / refund</Text>
-      <Text style={styles.psrSub}>Mở đơn từ đây sẽ không hiện nút xác nhận nháp (post-sale).</Text>
-      {psrError ? <Text style={styles.psrErr}>{psrError}</Text> : null}
-      {psrLoading && psrItems.length === 0 ? (
-        <ActivityIndicator style={{ marginVertical: 8 }} />
-      ) : (
-        <>
-          {psrItems.map((r, idx) => (
-            <Pressable
-              key={r.id || `${r.orderId}-${idx}`}
-              style={styles.psrCard}
-              onPress={() => r.orderId && openDetail(r.orderId, { fromPostSale: true })}
-            >
-              <Text style={styles.psrCardTitle}>Đơn #{r.orderId || '—'}</Text>
-              <Text style={styles.psrCardMeta}>{postSaleStatusLabel(r.status)}</Text>
-              {r.reason ? (
-                <Text style={styles.psrReason} numberOfLines={2}>
-                  {r.reason}
-                </Text>
-              ) : null}
-            </Pressable>
-          ))}
-          {psrMeta.current_page < psrMeta.total_pages ? (
-            <Pressable style={styles.psrMore} onPress={onLoadMorePsr} disabled={psrLoadingMore}>
-              <Text style={styles.psrMoreText}>{psrLoadingMore ? 'Đang tải…' : 'Tải thêm yêu cầu'}</Text>
-            </Pressable>
+  const renderPsrCard = ({ item }: { item: ManagerPostSaleRequestItem }) => {
+    const orderSt = orderStatusPill(item.orderStatus ?? '')
+    return (
+      <Pressable
+        style={styles.psrCard}
+        onPress={() => item.orderId && openDetail(item.orderId, { fromPostSale: true })}
+      >
+        <View style={styles.psrCardTop}>
+          <View style={styles.psrCardTopLeft}>
+            <Text style={styles.psrCodeLabel}>Mã</Text>
+            <Text style={styles.psrCardTitle} numberOfLines={1}>
+              {item.orderCode || '—'}
+            </Text>
+          </View>
+          {item.orderStatus ? (
+            <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: orderSt.bg }]}>
+              <Text style={[styles.pillText, { color: orderSt.color }]} numberOfLines={1}>
+                {orderSt.label}
+              </Text>
+            </View>
           ) : null}
-        </>
-      )}
-    </View>
-  )
+        </View>
+        <Text style={styles.psrCardMeta}>{postSaleStatusLabel(item.status)}</Text>
+        {item.reason ? (
+          <Text style={styles.psrReason} numberOfLines={2}>
+            {item.reason}
+          </Text>
+        ) : null}
+      </Pressable>
+    )
+  }
 
-  const listFooter = (
-    <>
-      {psrFooter}
-      {meta.current_page < meta.total_pages ? (
-        <View style={styles.footerPad}>{loadingMore ? <ActivityIndicator /> : null}</View>
-      ) : null}
-    </>
-  )
+  const orderListFooter =
+    meta.current_page < meta.total_pages ? (
+      <View style={styles.footerPad}>{loadingMore ? <ActivityIndicator /> : null}</View>
+    ) : null
+
+  const psrListFooter =
+    psrMeta.current_page < psrMeta.total_pages ? (
+      <View style={styles.footerPad}>{psrLoadingMore ? <ActivityIndicator /> : null}</View>
+    ) : null
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <Text style={styles.title}>Đơn hàng</Text>
 
-      <View style={styles.searchWrap}>
-        <TextInput
-          placeholder="Tìm đơn…"
-          placeholderTextColor="#9ca3af"
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-        />
-        <Search size={20} color="#64748b" strokeWidth={2} />
+      <View style={styles.mainTabs}>
+        <Pressable
+          style={[styles.mainTab, mainTab === 'orders' && styles.mainTabOn]}
+          onPress={() => setMainTab('orders')}
+        >
+          <FileText size={16} color={mainTab === 'orders' ? '#0f172a' : '#64748b'} strokeWidth={2.2} />
+          <Text style={[styles.mainTabText, mainTab === 'orders' && styles.mainTabTextOn]}>Đơn</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.mainTab, mainTab === 'refund' && styles.mainTabOn]}
+          onPress={() => setMainTab('refund')}
+        >
+          <RotateCcw size={16} color={mainTab === 'refund' ? '#0f172a' : '#64748b'} strokeWidth={2.2} />
+          <Text style={[styles.mainTabText, mainTab === 'refund' && styles.mainTabTextOn]}>Refund</Text>
+        </Pressable>
       </View>
 
-      <View style={styles.filterBlock}>
-        <Text style={styles.filterLabel}>Trạng thái</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
-          {ORDER_STATUS_FILTERS.map((f) => {
-            const on = statusFilter === f.value
-            return (
-              <Pressable
-                key={String(f.value ?? 'all')}
-                onPress={() => selectStatus(f.value)}
-                style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
-              >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
+      {mainTab === 'orders' ? (
+        <View style={styles.tabPane}>
+          <View style={styles.searchWrap}>
+            <TextInput
+              placeholder="Tìm đơn…"
+              placeholderTextColor="#9ca3af"
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+            />
+            <Search size={20} color="#64748b" strokeWidth={2} />
+          </View>
+
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Trạng thái</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
+              {ORDER_STATUS_FILTERS.map((f) => {
+                const on = statusFilter === f.value
+                return (
+                  <Pressable
+                    key={String(f.value ?? 'all')}
+                    onPress={() => selectStatus(f.value)}
+                    style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
+          </View>
+
+          {listError ? (
+            <View style={styles.errBox}>
+              <Text style={styles.errText}>{listError}</Text>
+              <Pressable onPress={onRefresh}>
+                <Text style={styles.link}>Thử lại</Text>
               </Pressable>
-            )
-          })}
-        </ScrollView>
-      </View>
+            </View>
+          ) : null}
 
-      {listError ? (
-        <View style={styles.errBox}>
-          <Text style={styles.errText}>{listError}</Text>
-          <Pressable onPress={onRefresh}>
-            <Text style={styles.link}>Thử lại</Text>
-          </Pressable>
+          {loading && items.length === 0 ? (
+            <ActivityIndicator style={{ marginTop: 24 }} />
+          ) : (
+            <FlatList
+              style={styles.list}
+              data={items}
+              keyExtractor={(o) => o.id}
+              renderItem={renderOrderCard}
+              contentContainerStyle={styles.listContent}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              ListEmptyComponent={<Text style={styles.empty}>Không có đơn.</Text>}
+              ListFooterComponent={orderListFooter}
+              onEndReached={onLoadMore}
+              onEndReachedThreshold={0.35}
+            />
+          )}
         </View>
-      ) : null}
-
-      {loading && items.length === 0 ? (
-        <ActivityIndicator style={{ marginTop: 24 }} />
       ) : (
-        <FlatList
-          style={styles.list}
-          data={items}
-          keyExtractor={(o) => o.id}
-          renderItem={renderOrderCard}
-          contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={<Text style={styles.empty}>Không có đơn.</Text>}
-          ListFooterComponent={listFooter}
-          onEndReached={onLoadMore}
-          onEndReachedThreshold={0.35}
-          ListFooterComponentStyle={styles.footerWrap}
-        />
+        <View style={styles.tabPane}>
+          <Text style={styles.psrSub}>Mở đơn từ đây sẽ không hiện nút xác nhận nháp (post-sale).</Text>
+          {psrError ? (
+            <View style={styles.errBox}>
+              <Text style={styles.errText}>{psrError}</Text>
+              <Pressable onPress={onRefreshPsr}>
+                <Text style={styles.link}>Thử lại</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {psrLoading && psrItems.length === 0 ? (
+            <ActivityIndicator style={{ marginTop: 24 }} />
+          ) : (
+            <FlatList
+              style={styles.list}
+              data={psrItems}
+              keyExtractor={(r, idx) => r.id || `${r.orderId}-${idx}`}
+              renderItem={renderPsrCard}
+              contentContainerStyle={styles.listContent}
+              refreshControl={<RefreshControl refreshing={psrRefreshing} onRefresh={onRefreshPsr} />}
+              ListEmptyComponent={<Text style={styles.empty}>Không có yêu cầu refund.</Text>}
+              ListFooterComponent={psrListFooter}
+              onEndReached={onLoadMorePsr}
+              onEndReachedThreshold={0.35}
+            />
+          )}
+        </View>
       )}
 
       <Modal visible={!!detailId} transparent animationType="slide" onRequestClose={closeDetail}>
@@ -567,6 +633,28 @@ export default function OrdersManagementScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f1f5f9' },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a', paddingHorizontal: 16, marginBottom: 8 },
+  mainTabs: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4
+  },
+  mainTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10
+  },
+  mainTabOn: { backgroundColor: '#fff' },
+  mainTabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  mainTabTextOn: { color: '#0f172a' },
+  tabPane: { flex: 1, minHeight: 0 },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -629,15 +717,7 @@ const styles = StyleSheet.create({
   amount: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginTop: 10 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 32 },
   footerPad: { paddingVertical: 12, alignItems: 'center' },
-  footerWrap: { paddingTop: 8 },
-  psrSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0'
-  },
-  psrTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 4 },
-  psrSub: { fontSize: 12, color: '#64748b', marginBottom: 10 },
+  psrSub: { fontSize: 12, color: '#64748b', marginHorizontal: 16, marginBottom: 8 },
   psrErr: { fontSize: 12, color: '#b91c1c', marginBottom: 8 },
   psrCard: {
     backgroundColor: '#fff7ed',
@@ -647,11 +727,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fed7aa'
   },
-  psrCardTitle: { fontSize: 15, fontWeight: '700', color: '#9a3412' },
-  psrCardMeta: { fontSize: 13, color: '#c2410c', marginTop: 4 },
+  psrCardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  psrCardTopLeft: { flex: 1, minWidth: 0 },
+  psrCodeLabel: { fontSize: 12, color: '#64748b', marginBottom: 2 },
+  psrCardTitle: { fontSize: 16, fontWeight: '800', color: '#9a3412' },
+  psrOrderPill: { flexShrink: 0, maxWidth: '46%', marginTop: 14 },
+  psrCardMeta: { fontSize: 13, color: '#c2410c', marginTop: 8 },
   psrReason: { fontSize: 13, color: '#57534e', marginTop: 6 },
-  psrMore: { paddingVertical: 10, alignItems: 'center' },
-  psrMoreText: { color: '#2563eb', fontWeight: '600' },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#fff',

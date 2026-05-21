@@ -1,7 +1,7 @@
 import { apiPublic } from '@/configs/axios.config'
 import type { ManagerPostSaleRequestListResponse } from '../types/manager-post-sale-request-type'
 import { assertManagerPublicSuccess, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
-import { normalizePostSaleRequest } from '../utils/managerPostSaleNormalize'
+import { enrichPostSaleRequestsWithOrderInfo, normalizePostSaleRequest } from '../utils/managerPostSaleNormalize'
 
 function resolvePostSaleListPath() {
   const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
@@ -21,6 +21,7 @@ export const ManagerPostSaleRequestApi = {
     const raw: unknown = await apiPublic.get(resolvePostSaleListPath(), { params })
     assertManagerPublicSuccess(raw)
     const { items, meta } = unwrapItemsMeta(raw, pageSize, normalizePostSaleRequest)
-    return { items, meta }
+    const enriched = await enrichPostSaleRequestsWithOrderInfo(items)
+    return { items: enriched, meta }
   }
 }
