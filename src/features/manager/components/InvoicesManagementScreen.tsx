@@ -26,9 +26,9 @@ import {
   Wallet
 } from 'lucide-react-native'
 import { ManagerInvoiceApi } from '../api/manager-invoice-api'
-import type { ManagerInvoiceItem, ManagerInvoiceSortColumn, ManagerInvoiceStatusFilter } from '../types/manager-invoice-type'
+import type { ManagerInvoiceItem, ManagerInvoiceStatusFilter } from '../types/manager-invoice-type'
 import { formatDateTime } from '../utils/claimsNormalize'
-import { formatKpiMoney, invoiceStatusSortRank, normInvoiceStatus } from '../utils/managerInvoicesNormalize'
+import { formatKpiMoney, normInvoiceStatus } from '../utils/managerInvoicesNormalize'
 
 const INVOICE_PAGE_SIZE = 10
 
@@ -39,51 +39,6 @@ const STATUS_CHIPS: { value: ManagerInvoiceStatusFilter; label: string }[] = [
   { value: 'pendingrefund', label: 'Quá hạn' },
   { value: 'refunded', label: 'Đã hoàn tiền' }
 ]
-
-const SORT_COLUMNS: { key: ManagerInvoiceSortColumn; label: string }[] = [
-  { key: 'customerName', label: 'Tên khách hàng' },
-  { key: 'customerEmail', label: 'Email' },
-  { key: 'customerPhoneNumber', label: 'SĐT' },
-  { key: 'invoiceMethod', label: 'Phương thức' },
-  { key: 'startedDate', label: 'Bắt đầu' },
-  { key: 'endedDate', label: 'Kết thúc' },
-  { key: 'total', label: 'Tổng hóa đơn' },
-  { key: 'invoiceStatus', label: 'Trạng thái' }
-]
-
-function parseSortTime(s: string): number {
-  if (!s) return 0
-  const t = new Date(s).getTime()
-  return Number.isNaN(t) ? 0 : t
-}
-
-function defaultDescendingForColumn(col: ManagerInvoiceSortColumn): boolean {
-  if (col === 'startedDate' || col === 'endedDate' || col === 'total') return true
-  return false
-}
-
-function compareInvoices(a: ManagerInvoiceItem, b: ManagerInvoiceItem, col: ManagerInvoiceSortColumn): number {
-  switch (col) {
-    case 'customerName':
-      return a.customerName.localeCompare(b.customerName, 'vi')
-    case 'customerEmail':
-      return a.customerEmail.localeCompare(b.customerEmail, 'vi')
-    case 'customerPhoneNumber':
-      return a.customerPhoneNumber.localeCompare(b.customerPhoneNumber, 'vi')
-    case 'invoiceMethod':
-      return a.invoiceMethod.localeCompare(b.invoiceMethod, 'vi')
-    case 'startedDate':
-      return parseSortTime(a.startedDate) - parseSortTime(b.startedDate)
-    case 'endedDate':
-      return parseSortTime(a.endedDate) - parseSortTime(b.endedDate)
-    case 'total':
-      return a.total - b.total
-    case 'invoiceStatus':
-      return invoiceStatusSortRank(a.invoiceStatus) - invoiceStatusSortRank(b.invoiceStatus)
-    default:
-      return 0
-  }
-}
 
 function invoiceStatusLabelVi(status: string): string {
   const n = normInvoiceStatus(status)
@@ -113,8 +68,6 @@ export default function InvoicesManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
 
-  const [sortColumn, setSortColumn] = useState<ManagerInvoiceSortColumn>('customerName')
-  const [sortDescending, setSortDescending] = useState(false)
   const [uiPage, setUiPage] = useState(1)
 
   useEffect(() => {
@@ -198,20 +151,11 @@ export default function InvoicesManagementScreen() {
     })
   }, [allInvoices, debouncedSearch, statusFilter])
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered]
-    arr.sort((a, b) => {
-      const c = compareInvoices(a, b, sortColumn)
-      return sortDescending ? -c : c
-    })
-    return arr
-  }, [filtered, sortColumn, sortDescending])
-
   useEffect(() => {
     setUiPage(1)
   }, [statusFilter, debouncedSearch])
 
-  const totalUiPages = Math.max(1, Math.ceil(sorted.length / INVOICE_PAGE_SIZE))
+  const totalUiPages = Math.max(1, Math.ceil(filtered.length / INVOICE_PAGE_SIZE))
   const safeUiPage = Math.min(uiPage, totalUiPages)
 
   useEffect(() => {
@@ -221,16 +165,8 @@ export default function InvoicesManagementScreen() {
   const pageSlice = useMemo(() => {
     const page = Math.min(uiPage, totalUiPages)
     const start = (page - 1) * INVOICE_PAGE_SIZE
-    return sorted.slice(start, start + INVOICE_PAGE_SIZE)
-  }, [sorted, uiPage, totalUiPages])
-
-  const pickSortColumn = (col: ManagerInvoiceSortColumn) => {
-    if (col === sortColumn) setSortDescending((d) => !d)
-    else {
-      setSortColumn(col)
-      setSortDescending(defaultDescendingForColumn(col))
-    }
-  }
+    return filtered.slice(start, start + INVOICE_PAGE_SIZE)
+  }, [filtered, uiPage, totalUiPages])
 
   const selectStatus = (v: ManagerInvoiceStatusFilter) => {
     setStatusFilter(v)
@@ -381,21 +317,6 @@ export default function InvoicesManagementScreen() {
         })}
       </ScrollView>
 
-      <Text style={styles.sortTitle}>Sắp xếp (chạm lặp đối chiếu)</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-        {SORT_COLUMNS.map((s) => {
-          const active = sortColumn === s.key
-          return (
-            <Pressable key={s.key} style={[styles.chip, active ? styles.chipActive : styles.chipIdle]} onPress={() => pickSortColumn(s.key)}>
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {s.label}
-                {active ? (sortDescending ? ' ↓' : ' ↑') : ''}
-              </Text>
-            </Pressable>
-          )
-        })}
-      </ScrollView>
-
       {listError ? <Text style={styles.bannerErr}>{listError}</Text> : null}
       {loading && !refreshing ? (
         <View style={styles.centerPad}>
@@ -409,7 +330,7 @@ export default function InvoicesManagementScreen() {
   const listFooter = (
     <View style={styles.footer}>
       <Text style={styles.footerMeta}>
-        {sorted.length} hóa đơn · Trang {safeUiPage}/{totalUiPages}
+        {filtered.length} hóa đơn · Trang {safeUiPage}/{totalUiPages}
       </Text>
       <View style={styles.pager}>
         <Pressable
@@ -516,7 +437,6 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: '#1e40af', borderWidth: 1.5, borderColor: '#1e40af' },
   chipText: { fontSize: 12, fontWeight: '600', color: '#334155' },
   chipTextActive: { color: '#fff' },
-  sortTitle: { fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: '500' },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
   centerPad: { alignItems: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
