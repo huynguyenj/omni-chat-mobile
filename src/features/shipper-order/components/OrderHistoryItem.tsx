@@ -49,7 +49,7 @@ export default function OrderHistoryItem({ data }: OrderShipperItemProps) {
            </View>
          </View>
          <View style={styles.btnContainer}>
-           <Button variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
+           <Button style={styles.btn} variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
          </View>
            <ModalCustom isOpen={isModalOpen} onClose={handleOpenModal}>
              <Text style={styles.modalTitle}>Danh sách sản phẩm</Text>
@@ -196,5 +196,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#3366CC'
+  },
+  btn: {
+    width: '100%'
   }
 })

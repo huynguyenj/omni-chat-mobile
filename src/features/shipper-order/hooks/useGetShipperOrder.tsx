@@ -10,6 +10,7 @@ export default function useGetShipperOrder() {
   const [orderShipperList, setOrderShipperList] = useState<PaginationStructure<OrderShipperType>>()
   const [currentPage, setCurrentPage] = useState(1)
   const [onRefresh, setOnRefresh] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
       const fetchOrderShipper = async () => {
        
@@ -22,11 +23,8 @@ export default function useGetShipperOrder() {
             if (error) return
             setOrderShipperList(prev => {
                   if (currentPage === 1) {
-                  // refresh → replace
                   return data
             }
-
-                  // load more → append
             return {
             ...data,
             items: [...(prev?.items || []), ...data.items]
@@ -34,7 +32,11 @@ export default function useGetShipperOrder() {
     })
       }
       fetchOrderShipper()
-  }, [currentPage, onRefresh])
+  }, [currentPage, refreshKey])
 
-  return { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh }
+  const handleRefresh = () => {
+      setCurrentPage(1)
+      setRefreshKey(prevKey => prevKey + 1)
+  }
+  return { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh, handleRefresh }
 }
