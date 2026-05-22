@@ -130,12 +130,20 @@ const PILL_BG_BY_VARIANT: Record<string, string> = {
   warning: '#FF9800'
 }
 
-const CARD_BORDER_BY_VARIANT: Record<string, string> = {
-  gray: '#6B7280',
-  default: '#3366CC',
-  success: '#26C271',
-  danger: '#FB2C36',
-  warning: '#FF9800'
+/** Màu pill/viền thẻ theo từng status — tránh trùng khi nhiều status cùng tagVariant. */
+const ORDER_STATUS_UI_COLORS: Record<string, { pillBg: string; cardBorderColor: string }> = {
+  Draft: { pillBg: '#6B7280', cardBorderColor: '#6B7280' },
+  Pending: { pillBg: '#3366CC', cardBorderColor: '#3366CC' },
+  Cancelled: { pillBg: '#FB2C36', cardBorderColor: '#FB2C36' },
+  Shipped: { pillBg: '#0891B2', cardBorderColor: '#0891B2' },
+  PendingReturn: { pillBg: '#FF9800', cardBorderColor: '#FF9800' },
+  Returned: { pillBg: '#E11D48', cardBorderColor: '#E11D48' },
+  Completed: { pillBg: '#26C271', cardBorderColor: '#26C271' },
+  ReturnedDefective: { pillBg: '#9333EA', cardBorderColor: '#9333EA' },
+  ReturnRejected: { pillBg: '#B45309', cardBorderColor: '#B45309' },
+  RefundRejected: { pillBg: '#DB2777', cardBorderColor: '#DB2777' },
+  RefundApproved: { pillBg: '#059669', cardBorderColor: '#059669' },
+  ReturnApproved: { pillBg: '#65A30D', cardBorderColor: '#65A30D' }
 }
 
 export function getOrderStatusUi(status: string): {
@@ -145,11 +153,19 @@ export function getOrderStatusUi(status: string): {
 } {
   const key = resolveOrderStatusKey(status)
   const meta = ORDER_STATUS[key]
+  const colors = ORDER_STATUS_UI_COLORS[key]
+  if (meta && colors) {
+    return {
+      labelVi: meta.name,
+      pillBg: colors.pillBg,
+      cardBorderColor: colors.cardBorderColor
+    }
+  }
   if (meta) {
     return {
       labelVi: meta.name,
       pillBg: PILL_BG_BY_VARIANT[meta.tagVariant] ?? '#94A3B8',
-      cardBorderColor: CARD_BORDER_BY_VARIANT[meta.tagVariant] ?? '#94A3B8'
+      cardBorderColor: PILL_BG_BY_VARIANT[meta.tagVariant] ?? '#94A3B8'
     }
   }
   return { labelVi: key || '—', pillBg: '#94A3B8', cardBorderColor: '#94A3B8' }
