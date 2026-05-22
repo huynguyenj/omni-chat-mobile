@@ -1,15 +1,22 @@
-/** Yêu cầu hoàn / refund (post-sale) — map thêm field khi biết contract API. */
+export type ManagerPostSaleRequestLineItem = {
+  orderItemId: string
+  quantity: number
+}
+
+/** Yêu cầu hoàn / refund (post-sale). */
 export type ManagerPostSaleRequestItem = {
   id: string
   orderId: string
-  /** Mã đơn hiển thị (khác UUID orderId). */
   orderCode?: string
-  /** Trạng thái đơn (Draft, RefundApproved, …). */
   orderStatus?: string
-  /** Trạng thái yêu cầu hoàn/refund. */
   status: string
-  reason?: string
   type?: string
+  reason?: string
+  refundAmount?: number
+  requestedTime?: string
+  customerName?: string
+  presentByStaffName?: string
+  postSaleItems?: ManagerPostSaleRequestLineItem[]
   createdAt?: string
 }
 

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native'
 import { ManagerOrderApi } from '../api/manager-order-api'
 import { ManagerPostSaleRequestApi } from '../api/manager-post-sale-request-api'
+import { logRefund, logRefundError } from '../utils/refund-log'
 import type { ManagerOrderDetail, ManagerOrderItem } from '../types/manager-order-type'
 import type { ManagerPostSaleRequestItem } from '../types/manager-post-sale-request-type'
 import { formatDateTime } from '../utils/claimsNormalize'
@@ -134,8 +135,14 @@ export default function OrdersManagementScreen() {
   )
 
   const filteredPsrItems = useMemo(() => {
-    if (psrStatusFilter === 'all') return psrItems
-    return psrItems.filter((r) => String(r.status) === psrStatusFilter)
+    const list =
+      psrStatusFilter === 'all' ? psrItems : psrItems.filter((r) => String(r.status) === psrStatusFilter)
+    logRefund('UI filter PSR', {
+      statusFilter: psrStatusFilter,
+      before: psrItems.length,
+      after: list.length
+    })
+    return list
   }, [psrItems, psrStatusFilter])
 
   const fetchOrdersPage = useCallback(
@@ -179,10 +186,25 @@ export default function OrdersManagementScreen() {
   }, [fetchOrdersPage])
 
   const fetchPsrPage = useCallback(async (pageNumber: number, reset: boolean) => {
-    const res = await ManagerPostSaleRequestApi.getRequests(pageNumber, PSR_PAGE)
-    const m = res.meta
-    setPsrMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
-    setPsrItems((prev) => (reset ? res.items : [...prev, ...res.items]))
+    logRefund('UI fetchPsrPage →', { pageNumber, pageSize: PSR_PAGE, reset, statusFilter: psrStatusFilter })
+    try {
+      const res = await ManagerPostSaleRequestApi.getRequests(pageNumber, PSR_PAGE)
+      const m = res.meta
+      setPsrMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
+      setPsrItems((prev) => {
+        const next = reset ? res.items : [...prev, ...res.items]
+        logRefund('UI fetchPsrPage ←', {
+          received: res.items.length,
+          totalInState: next.length,
+          meta: m,
+          statusFilter: psrStatusFilter
+        })
+        return next
+      })
+    } catch (error) {
+      logRefundError('UI fetchPsrPage failed', error)
+      throw error
+    }
   }, [])
 
   useEffect(() => {
@@ -190,7 +212,6 @@ export default function OrdersManagementScreen() {
     let cancelled = false
     setPsrLoading(true)
     setPsrError(null)
-    setPsrItems([])
     ;(async () => {
       try {
         await fetchPsrPage(1, true)
@@ -270,13 +291,16 @@ export default function OrdersManagementScreen() {
 
   const handlePsrApprove = async (item: ManagerPostSaleRequestItem) => {
     if (!item.id) return
+    logRefund('UI approve →', { id: item.id, status: item.status, orderId: item.orderId })
     setPsrActionId(item.id)
     try {
       const msg = await ManagerPostSaleRequestApi.approvePostSaleRequest(item.id)
+      logRefund('UI approve ←', { id: item.id, message: msg })
       Toast.show({ type: 'success', text1: msg })
       setPsrRefreshKey((k) => k + 1)
       await reloadList()
     } catch (e) {
+      logRefundError('UI approve failed', e)
       const msg = e instanceof Error ? e.message : 'Duyệt thất bại.'
       Toast.show({ type: 'error', text1: msg })
     } finally {
@@ -286,13 +310,16 @@ export default function OrdersManagementScreen() {
 
   const handlePsrReject = async (item: ManagerPostSaleRequestItem) => {
     if (!item.id) return
+    logRefund('UI reject →', { id: item.id, status: item.status, orderId: item.orderId })
     setPsrActionId(item.id)
     try {
       const msg = await ManagerPostSaleRequestApi.rejectPostSaleRequest(item.id)
+      logRefund('UI reject ←', { id: item.id, message: msg })
       Toast.show({ type: 'success', text1: msg })
       setPsrRefreshKey((k) => k + 1)
       await reloadList()
     } catch (e) {
+      logRefundError('UI reject failed', e)
       const msg = e instanceof Error ? e.message : 'Từ chối thất bại.'
       Toast.show({ type: 'error', text1: msg })
     } finally {
@@ -431,7 +458,16 @@ export default function OrdersManagementScreen() {
               </View>
             ) : null}
           </View>
-          <Text style={styles.psrCardMeta}>{postSaleStatusLabel(item.status)}</Text>
+          <Text style={styles.psrCardMeta}>
+            {postSaleStatusLabel(item.status)}
+            {item.type ? ` · ${item.type}` : ''}
+          </Text>
+          {item.refundAmount != null ? (
+            <Text style={styles.psrAmount}>{item.refundAmount.toLocaleString('vi-VN')} đ</Text>
+          ) : null}
+          {item.requestedTime ? (
+            <Text style={styles.psrDate}>{formatDateTime(item.requestedTime)}</Text>
+          ) : null}
           {item.reason ? (
             <Text style={styles.psrReason} numberOfLines={2}>
               {item.reason}
@@ -803,6 +839,8 @@ const styles = StyleSheet.create({
   psrCardTitle: { fontSize: 16, fontWeight: '800', color: '#9a3412' },
   psrOrderPill: { flexShrink: 0, maxWidth: '46%', marginTop: 14 },
   psrCardMeta: { fontSize: 13, color: '#c2410c', marginTop: 8 },
+  psrAmount: { fontSize: 15, fontWeight: '800', color: '#0f172a', marginTop: 6 },
+  psrDate: { fontSize: 12, color: '#64748b', marginTop: 4 },
   psrReason: { fontSize: 13, color: '#57534e', marginTop: 6 },
   psrActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   psrBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },

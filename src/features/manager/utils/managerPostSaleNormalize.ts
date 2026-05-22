@@ -1,5 +1,8 @@
 import { ManagerOrderApi } from '../api/manager-order-api'
-import type { ManagerPostSaleRequestItem } from '../types/manager-post-sale-request-type'
+import type {
+  ManagerPostSaleRequestItem,
+  ManagerPostSaleRequestLineItem
+} from '../types/manager-post-sale-request-type'
 
 type OrderSummaryCache = { code?: string; status?: string }
 
@@ -12,6 +15,30 @@ function pickStr(...candidates: unknown[]): string {
     if (s !== '') return s
   }
   return ''
+}
+
+function pickNum(...candidates: unknown[]): number | undefined {
+  for (const c of candidates) {
+    if (c == null || c === '') continue
+    const n = typeof c === 'number' ? c : Number(c)
+    if (Number.isFinite(n)) return n
+  }
+  return undefined
+}
+
+function pickPostSaleItems(raw: unknown): ManagerPostSaleRequestLineItem[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const lines = raw
+    .map((row) => {
+      if (!row || typeof row !== 'object') return null
+      const o = row as Record<string, unknown>
+      const orderItemId = pickStr(o.orderItemId, o.OrderItemId, o.order_item_id, o.id, o.Id)
+      const quantity = pickNum(o.quantity, o.Quantity, o.qty, o.Qty)
+      if (!orderItemId || quantity == null) return null
+      return { orderItemId, quantity }
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null)
+  return lines.length ? lines : undefined
 }
 
 function flattenPostSalePayload(raw: unknown): Record<string, unknown> {
@@ -59,15 +86,69 @@ export function normalizePostSaleRequest(raw: unknown): ManagerPostSaleRequestIt
     o.statusOrder,
     o.StatusOrder
   )
+  const requestStatus = pickStr(
+    o.requestStatus,
+    o.RequestStatus,
+    o.postSaleStatus,
+    o.PostSaleStatus,
+    o.status,
+    o.Status
+  )
+  const refundAmount = pickNum(
+    o.refundAmount,
+    o.RefundAmount,
+    o.refund_amount,
+    o.totalRefundAmount,
+    o.TotalRefundAmount,
+    o.refundTotal,
+    o.RefundTotal,
+    o.amount,
+    o.Amount,
+    o.totalAmount,
+    o.TotalAmount
+  )
+  const requestedTime = pickStr(
+    o.requestedTime,
+    o.RequestedTime,
+    o.requested_time,
+    o.requestDate,
+    o.RequestDate,
+    o.createdAt,
+    o.CreatedAt,
+    o.created_at
+  )
   return {
     id: pickStr(o.id, o.Id, o.requestId, o.RequestId),
     orderId,
     orderCode: orderCode || undefined,
     orderStatus: orderStatus || undefined,
-    status: pickStr(o.status, o.Status, o.requestStatus, o.RequestStatus) || '—',
+    status: requestStatus || '—',
     reason: pickStr(o.reason, o.Reason) || undefined,
-    type: pickStr(o.type, o.Type) || undefined,
-    createdAt: pickStr(o.createdAt, o.CreatedAt, o.created_at) || undefined
+    type: pickStr(o.type, o.Type, o.postSaleType, o.PostSaleType) || undefined,
+    refundAmount,
+    requestedTime: requestedTime || undefined,
+    customerName:
+      pickStr(
+        o.customerName,
+        o.CustomerName,
+        o.customer_name,
+        o.nameCustomer,
+        o.NameCustomer
+      ) || undefined,
+    presentByStaffName:
+      pickStr(
+        o.presentByStaffName,
+        o.PresentByStaffName,
+        o.present_by_staff_name,
+        o.staffName,
+        o.StaffName,
+        o.presentByStaff,
+        o.PresentByStaff
+      ) || undefined,
+    postSaleItems: pickPostSaleItems(
+      o.postSaleItems ?? o.PostSaleItems ?? o.post_sale_items ?? o.items ?? o.Items
+    ),
+    createdAt: requestedTime || pickStr(o.createdAt, o.CreatedAt, o.created_at) || undefined
   }
 }
 
