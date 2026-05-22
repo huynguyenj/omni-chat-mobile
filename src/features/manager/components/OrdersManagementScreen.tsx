@@ -28,6 +28,7 @@ import {
 import { ManagerOrderApi } from '../api/manager-order-api'
 import { ManagerPostSaleRequestApi } from '../api/manager-post-sale-request-api'
 import { logRefund, logRefundError } from '../utils/refund-log'
+import { postSaleRequestStatusLabelVi, postSaleTypeLabelVi } from '../utils/manager-ui-labels'
 import type { ManagerOrderDetail, ManagerOrderItem } from '../types/manager-order-type'
 import type { ManagerPostSaleRequestItem } from '../types/manager-post-sale-request-type'
 import { formatDateTime } from '../utils/claimsNormalize'
@@ -53,12 +54,21 @@ const PSR_STATUS_FILTERS: Array<{ value: PostSaleFilterStatus; label: string }> 
   { value: 'Rejected', label: 'Đã từ chối' }
 ]
 
-function postSaleStatusLabel(status: string) {
+function postSaleStatusPill(status: string): { label: string; bg: string; color: string } {
   const s = status.toLowerCase()
-  if (s.includes('pending')) return 'Chờ xử lý'
-  if (s.includes('approve')) return 'Đã duyệt'
-  if (s.includes('reject')) return 'Từ chối'
-  return status || '—'
+  if (s.includes('pending')) return { label: 'Chờ duyệt', bg: '#f59e0b', color: '#fff' }
+  if (s.includes('approve')) return { label: 'Đã duyệt', bg: '#16a34a', color: '#fff' }
+  if (s.includes('reject')) return { label: 'Đã từ chối', bg: '#dc2626', color: '#fff' }
+  return { label: postSaleRequestStatusLabelVi(status), bg: '#64748b', color: '#fff' }
+}
+
+function postSaleTypePill(type: string): { label: string; bg: string; color: string } {
+  const t = type.trim().toLowerCase()
+  if (t === 'refund') return { label: 'Hoàn tiền', bg: '#2563eb', color: '#fff' }
+  if (t === 'return') return { label: 'Trả hàng', bg: '#7c3aed', color: '#fff' }
+  if (t === 'cancel') return { label: 'Hủy đơn', bg: '#64748b', color: '#fff' }
+  if (t === 'replacement') return { label: 'Đổi hàng', bg: '#0ea5e9', color: '#fff' }
+  return { label: postSaleTypeLabelVi(type), bg: '#64748b', color: '#fff' }
 }
 
 function customerInitials(name: string): string {
@@ -217,7 +227,7 @@ export default function OrdersManagementScreen() {
         await fetchPsrPage(1, true)
       } catch (e) {
         if (!cancelled) {
-          const msg = typeof e === 'string' ? e : 'Không tải yêu cầu hoàn/refund.'
+          const msg = typeof e === 'string' ? e : 'Không tải yêu cầu hoàn tiền.'
           setPsrError(msg)
         }
       } finally {
@@ -437,7 +447,8 @@ export default function OrdersManagementScreen() {
   }
 
   const renderPsrCard = ({ item }: { item: ManagerPostSaleRequestItem }) => {
-    const orderSt = orderStatusPill(item.orderStatus ?? '')
+    const statusPill = postSaleStatusPill(item.status)
+    const typePill = postSaleTypePill(item.type ?? '')
     const isPending = String(item.status) === 'Pending'
     const busy = psrActionId === item.id
     return (
@@ -450,18 +461,19 @@ export default function OrdersManagementScreen() {
                 {item.orderCode || '—'}
               </Text>
             </View>
-            {item.orderStatus ? (
-              <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: orderSt.bg }]}>
-                <Text style={[styles.pillText, { color: orderSt.color }]} numberOfLines={1}>
-                  {orderSt.label}
+            <View style={styles.psrBadgeRow}>
+              <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: statusPill.bg }]}>
+                <Text style={[styles.pillText, { color: statusPill.color }]} numberOfLines={1}>
+                  {statusPill.label}
                 </Text>
               </View>
-            ) : null}
+              <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: typePill.bg }]}>
+                <Text style={[styles.pillText, { color: typePill.color }]} numberOfLines={1}>
+                  {typePill.label}
+                </Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.psrCardMeta}>
-            {postSaleStatusLabel(item.status)}
-            {item.type ? ` · ${item.type}` : ''}
-          </Text>
           {item.refundAmount != null ? (
             <Text style={styles.psrAmount}>{item.refundAmount.toLocaleString('vi-VN')} đ</Text>
           ) : null}
@@ -523,7 +535,7 @@ export default function OrdersManagementScreen() {
           onPress={() => setMainTab('refund')}
         >
           <RotateCcw size={16} color={mainTab === 'refund' ? '#0f172a' : '#64748b'} strokeWidth={2.2} />
-          <Text style={[styles.mainTabText, mainTab === 'refund' && styles.mainTabTextOn]}>Refund</Text>
+          <Text style={[styles.mainTabText, mainTab === 'refund' && styles.mainTabTextOn]}>Hoàn tiền</Text>
         </Pressable>
       </View>
 
@@ -586,23 +598,21 @@ export default function OrdersManagementScreen() {
         </View>
       ) : (
         <View style={styles.tabPane}>
-          <Text style={styles.psrSub}>Yêu cầu hoàn tiền — lọc trạng thái trên trang đã tải.</Text>
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterLabel}>Trạng thái PSR</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
-              {PSR_STATUS_FILTERS.map((f) => {
-                const on = psrStatusFilter === f.value
-                return (
-                  <Pressable
-                    key={f.value}
-                    onPress={() => setPsrStatusFilter(f.value)}
-                    style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
-                  >
-                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
-                  </Pressable>
-                )
-              })}
-            </ScrollView>
+          <View style={styles.psrFilterRow}>
+            {PSR_STATUS_FILTERS.map((f) => {
+              const on = psrStatusFilter === f.value
+              return (
+                <Pressable
+                  key={f.value}
+                  onPress={() => setPsrStatusFilter(f.value)}
+                  style={[styles.psrChip, on ? styles.chipOn : styles.chipOff]}
+                >
+                  <Text style={[styles.psrChipText, on && styles.chipTextOn]} numberOfLines={1}>
+                    {f.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
           </View>
           {psrError ? (
             <View style={styles.errBox}>
@@ -622,7 +632,7 @@ export default function OrdersManagementScreen() {
               renderItem={renderPsrCard}
               contentContainerStyle={styles.listContent}
               refreshControl={<RefreshControl refreshing={psrRefreshing} onRefresh={onRefreshPsr} />}
-              ListEmptyComponent={<Text style={styles.empty}>Không có yêu cầu refund.</Text>}
+              ListEmptyComponent={<Text style={styles.empty}>Không có yêu cầu hoàn tiền.</Text>}
               ListFooterComponent={psrListFooter}
               onEndReached={onLoadMorePsr}
               onEndReachedThreshold={0.35}
@@ -678,9 +688,9 @@ export default function OrdersManagementScreen() {
                         <List size={15} color="#64748b" strokeWidth={2} />
                       </View>
                       <Text style={[styles.th, styles.thProduct]}>Dòng hàng</Text>
-                      <Text style={[styles.th, styles.thQty]}>Qty</Text>
+                      <Text style={[styles.th, styles.thQty]}>SL</Text>
                       <Text style={[styles.th, styles.thPrice]}>Giá</Text>
-                      <Text style={[styles.th, styles.thTotal]}>Line Total</Text>
+                      <Text style={[styles.th, styles.thTotal]}>Thành tiền</Text>
                     </View>
                     {(detail.orderItems ?? []).map((li) => {
                       const unit = li.itemsPrice != null ? `${li.itemsPrice.toLocaleString('vi-VN')}đ` : '—'
@@ -823,7 +833,23 @@ const styles = StyleSheet.create({
   amount: { fontSize: 16, fontWeight: '800', color: '#0f172a', marginTop: 10 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 32 },
   footerPad: { paddingVertical: 12, alignItems: 'center' },
-  psrSub: { fontSize: 12, color: '#64748b', marginHorizontal: 16, marginBottom: 8 },
+  psrFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 10
+  },
+  psrChip: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  psrChipText: { fontSize: 12, fontWeight: '600', color: '#1e40af', textAlign: 'center' },
   psrErr: { fontSize: 12, color: '#b91c1c', marginBottom: 8 },
   psrCard: {
     backgroundColor: '#fff7ed',
@@ -837,8 +863,8 @@ const styles = StyleSheet.create({
   psrCardTopLeft: { flex: 1, minWidth: 0 },
   psrCodeLabel: { fontSize: 12, color: '#64748b', marginBottom: 2 },
   psrCardTitle: { fontSize: 16, fontWeight: '800', color: '#9a3412' },
-  psrOrderPill: { flexShrink: 0, maxWidth: '46%', marginTop: 14 },
-  psrCardMeta: { fontSize: 13, color: '#c2410c', marginTop: 8 },
+  psrBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end', maxWidth: '52%', marginTop: 12 },
+  psrOrderPill: { flexShrink: 0 },
   psrAmount: { fontSize: 15, fontWeight: '800', color: '#0f172a', marginTop: 6 },
   psrDate: { fontSize: 12, color: '#64748b', marginTop: 4 },
   psrReason: { fontSize: 13, color: '#57534e', marginTop: 6 },

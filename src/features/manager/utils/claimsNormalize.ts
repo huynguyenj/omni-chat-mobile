@@ -20,7 +20,7 @@ export function normalizeClaim(raw: unknown, mode: 'pending' | 'history'): Manag
   return {
     id: String(item.id ?? item.claimId ?? ''),
     staff: String(item.staff ?? item.staffName ?? item.createdBy ?? description ?? 'Chưa rõ'),
-    type: String(item.type ?? item.claimType ?? item.category ?? 'Claim'),
+    type: String(item.type ?? item.claimType ?? item.category ?? 'Yêu cầu'),
     submitDate: String(item.submitDate ?? item.createdAt ?? item.startDate ?? item.startAt ?? '-'),
     description,
     reason: String(item.reason ?? item.note ?? item.description ?? 'Không có lý do'),

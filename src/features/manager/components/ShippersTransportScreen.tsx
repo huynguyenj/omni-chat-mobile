@@ -274,7 +274,7 @@ export default function ShippersTransportScreen() {
   const shipperListHeader = useMemo(
     () => (
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Danh sách Shipper</Text>
+        <Text style={styles.sectionTitle}>Danh sách tài xế</Text>
         <Text style={styles.sectionSub}>Trang {shipperMeta.current_page}/{shipperMeta.total_pages}</Text>
       </View>
     ),
@@ -355,7 +355,7 @@ export default function ShippersTransportScreen() {
         </Pressable>
         <View style={styles.assignRow}>
           <Pressable style={styles.btnPick} onPress={() => setPickShipperOrderId(item.id)}>
-            <Text style={styles.btnPickText}>{selName ? selName : 'Chọn shipper'}</Text>
+            <Text style={styles.btnPickText}>{selName ? selName : 'Chọn tài xế'}</Text>
           </Pressable>
           <Pressable style={styles.btnPrimarySm} onPress={() => assignOne(item.id)}>
             <Text style={styles.btnPrimarySmText}>Gán</Text>
@@ -377,13 +377,13 @@ export default function ShippersTransportScreen() {
           <Text style={[styles.mainTabText, mainTab === 'orders' && styles.mainTabTextOn]}>Đơn chờ giao</Text>
         </Pressable>
         <Pressable onPress={() => setMainTab('shippers')} style={[styles.mainTab, mainTab === 'shippers' && styles.mainTabOn]}>
-          <Text style={[styles.mainTabText, mainTab === 'shippers' && styles.mainTabTextOn]}>Shipper</Text>
+          <Text style={[styles.mainTabText, mainTab === 'shippers' && styles.mainTabTextOn]}>Tài xế</Text>
         </Pressable>
       </View>
 
       {mainTab === 'orders' ? (
         <View style={styles.ordersPane}>
-          <Text style={styles.filterHint}>Chỉ hiển thị đơn chờ giao (Pending).</Text>
+          <Text style={styles.filterHint}>Chỉ hiển thị đơn chờ giao.</Text>
           {orderError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{orderError}</Text>
@@ -418,7 +418,7 @@ export default function ShippersTransportScreen() {
           <View style={styles.kpiRow}>
             <View style={styles.kpiCard}>
               <Text style={styles.kpiVal}>{shipperKpi.active}</Text>
-              <Text style={styles.kpiLabel}>Shipper online</Text>
+              <Text style={styles.kpiLabel}>Tài xế online</Text>
             </View>
             <View style={styles.kpiCard}>
               <Text style={styles.kpiVal}>{shipperKpi.shipping}</Text>
@@ -447,7 +447,7 @@ export default function ShippersTransportScreen() {
               ListHeaderComponent={shipperListHeader}
               contentContainerStyle={styles.listPad}
               refreshControl={<RefreshControl refreshing={shipperRefreshing} onRefresh={onRefreshShippers} />}
-              ListEmptyComponent={<Text style={styles.emptySm}>Chưa có shipper.</Text>}
+              ListEmptyComponent={<Text style={styles.emptySm}>Chưa có tài xế.</Text>}
               onEndReached={onLoadMoreShippers}
               onEndReachedThreshold={0.35}
               ListFooterComponent={
@@ -463,7 +463,7 @@ export default function ShippersTransportScreen() {
       <Modal visible={!!pickShipperOrderId} transparent animationType="fade" onRequestClose={() => setPickShipperOrderId(null)}>
         <Pressable style={styles.backdrop} onPress={() => setPickShipperOrderId(null)}>
           <Pressable style={styles.sheetSm} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Chọn shipper</Text>
+            <Text style={styles.sheetTitle}>Chọn tài xế</Text>
             <FlatList
               data={shippers}
               keyExtractor={(s) => s.id}
@@ -484,7 +484,7 @@ export default function ShippersTransportScreen() {
                   </Text>
                 </Pressable>
               )}
-              ListEmptyComponent={<Text style={styles.emptySm}>Chưa tải shipper.</Text>}
+              ListEmptyComponent={<Text style={styles.emptySm}>Chưa tải tài xế.</Text>}
             />
           </Pressable>
         </Pressable>

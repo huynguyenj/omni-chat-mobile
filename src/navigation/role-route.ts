@@ -22,7 +22,7 @@ import WalletManagement from "@/screens/manager/WalletManagement";
 
 const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
-  { route: 'Keywords',   label: 'Keywords',   icon: Hash,          screen: KeywordManagement },
+  { route: 'Keywords',   label: 'Từ khóa',   icon: Hash,          screen: KeywordManagement },
   { route: 'Sản phẩm',  label: 'Sản phẩm',  icon: ShoppingCart,  screen: ProductManagement },
   { route: 'Kho hàng',  label: 'Kho hàng',  icon: Archive,       screen: StorageManagement },
   { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
@@ -42,8 +42,8 @@ const adminTabs: TAB_LIST_ITEMS_TYPES[] = [
 
 const staffTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Chat', label: 'Chat', icon: MessageSquare, screen: ChatScreen},
-  { route: 'Claim', label: 'Claim', icon: Newspaper, screen: ClaimScreen},
-  { route: 'Task History', label: 'Task History', icon: ClipboardClock, screen: TaskScreen }
+  { route: 'Claim', label: 'Yêu cầu', icon: Newspaper, screen: ClaimScreen},
+  { route: 'Task History', label: 'Lịch sử task', icon: ClipboardClock, screen: TaskScreen }
 ]
 
 const shipperTabs: TAB_LIST_ITEMS_TYPES[] = [

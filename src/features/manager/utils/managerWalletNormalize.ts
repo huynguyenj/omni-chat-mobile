@@ -1,5 +1,6 @@
 import type { ManagerCustomerWalletItem, ManagerWalletResponse, ManagerWalletTransaction } from '../types/manager-wallet-type'
 import { formatKpiMoney } from './managerInvoicesNormalize'
+import { walletTransactionTypeLabelVi } from './manager-ui-labels'
 
 function pickStr(v: unknown): string {
   if (v == null) return ''
@@ -74,11 +75,7 @@ export function customerInitial(name: string): string {
 }
 
 export function transactionTypeLabel(type: string): string {
-  const t = type.toLowerCase()
-  if (t === 'deposit') return 'Nạp tiền vào ví'
-  if (t === 'credit') return 'Hoàn tiền lại ví'
-  if (t === 'debit') return 'Debit'
-  return type || 'Khác'
+  return walletTransactionTypeLabelVi(type)
 }
 
 export function formatWalletTxDateTime(rawDate: string): string {

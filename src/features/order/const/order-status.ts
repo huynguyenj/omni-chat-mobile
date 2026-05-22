@@ -10,7 +10,7 @@ type FilterType = {
 
 export const FILTER_LIST: FilterType[] = [
    { label: 'Bản nháp', value: 'Draft' },
-   { label: 'Chờ xử lí', value: 'Pending' },
+   { label: 'Chờ xử lý', value: 'Pending' },
    { label: 'Đã hủy', value: 'Cancelled' },
    { label: 'Đã giao', value: 'Shipped' },
    { label: 'Chờ trả hàng', value: 'PendingReturn' },
@@ -29,7 +29,7 @@ export const ORDER_STATUS: Record<string, OrderStatusType> = {
     tagVariant: 'gray'
   },
   Pending: {
-    name: 'Chờ xử lí',
+    name: 'Chờ xử lý',
     tagVariant: 'default'
   },
   Cancelled: {

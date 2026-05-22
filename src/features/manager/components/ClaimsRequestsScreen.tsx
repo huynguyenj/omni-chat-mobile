@@ -43,6 +43,11 @@ import {
   normalizeChangeTaskClaim,
   normalizeClaim
 } from '../utils/claimsNormalize'
+import {
+  changeTaskStatusLabelVi,
+  claimTypeLabelVi,
+  intentTypeLabelVi
+} from '../utils/manager-ui-labels'
 
 const CLAIM_PAGE = 9
 const CHANGE_TASK_PAGE = 10
@@ -84,19 +89,19 @@ function claimTypeIcon(type: string) {
 function changeTaskStatusUi(status: string): { label: string; color: string; bg: string } {
   const s = String(status ?? '').toLowerCase()
   if (s.includes('approve')) return { label: 'Đã duyệt', color: '#166534', bg: '#dcfce7' }
-  if (s.includes('reject')) return { label: 'Từ chối', color: '#991b1b', bg: '#fee2e2' }
+  if (s.includes('reject')) return { label: 'Đã từ chối', color: '#991b1b', bg: '#fee2e2' }
   return { label: 'Chờ duyệt', color: '#c2410c', bg: '#ffedd5' }
 }
 
 function IntentChips({ intents }: { intents: ManagerChangeTaskClaimItem['staffIntentTypes'] }) {
   if (!intents?.length) {
-    return <Text style={styles.intentEmpty}>Chưa xác định IntentTypes cho staff.</Text>
+    return <Text style={styles.intentEmpty}>Chưa có loại intent cho nhân viên.</Text>
   }
   return (
     <View style={styles.intentChipRow}>
       {intents.map((intent) => (
         <View key={`${intent.id}-${intent.intentTypeName}`} style={styles.intentChip}>
-          <Text style={styles.intentChipText}>{intent.intentTypeName}</Text>
+          <Text style={styles.intentChipText}>{intentTypeLabelVi(intent.intentTypeName)}</Text>
         </View>
       ))}
     </View>
@@ -489,7 +494,7 @@ export default function ClaimsRequestsScreen() {
           </View>
           <View style={styles.claimCardHeadMid}>
             <View style={styles.claimTypeRow}>
-              <Text style={styles.claimWord}>Claim</Text>
+              <Text style={styles.claimWord}>Yêu cầu</Text>
               <TypeIcon size={14} color="#64748b" strokeWidth={2} />
             </View>
           </View>
@@ -501,7 +506,7 @@ export default function ClaimsRequestsScreen() {
           {item.staff}
         </Text>
         <Text style={styles.cardTypeHint} numberOfLines={1}>
-          {item.type}
+          {claimTypeLabelVi(item.type)}
         </Text>
         <Text style={styles.cardDate}>{formatDateTime(item.submitDate)}</Text>
         <Text style={styles.cardDesc} numberOfLines={2}>
@@ -511,7 +516,9 @@ export default function ClaimsRequestsScreen() {
     )
   }
 
-  const renderTaskCard = ({ item }: { item: ManagerChangeTaskClaimItem }) => (
+  const renderTaskCard = ({ item }: { item: ManagerChangeTaskClaimItem }) => {
+    const ctSt = changeTaskStatusUi(item.status)
+    return (
     <Pressable
       style={styles.claimCard}
       onPress={() => {
@@ -531,8 +538,8 @@ export default function ClaimsRequestsScreen() {
             <ArrowLeftRight size={14} color="#64748b" strokeWidth={2} />
           </View>
         </View>
-        <View style={[styles.badge, { backgroundColor: '#e0e7ff' }]}>
-          <Text style={[styles.badgeText, { color: '#3730a3' }]}>{item.status}</Text>
+        <View style={[styles.badge, { backgroundColor: ctSt.bg }]}>
+          <Text style={[styles.badgeText, { color: ctSt.color }]}>{changeTaskStatusLabelVi(item.status)}</Text>
         </View>
       </View>
       <Text style={styles.cardName} numberOfLines={1}>
@@ -543,7 +550,8 @@ export default function ClaimsRequestsScreen() {
         {item.description}
       </Text>
     </Pressable>
-  )
+    )
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
@@ -684,7 +692,7 @@ export default function ClaimsRequestsScreen() {
               {detailClaim ? (
                 <>
                   <Text style={styles.modalLabel}>Loại</Text>
-                  <Text style={styles.modalValue}>{detailClaim.type}</Text>
+                  <Text style={styles.modalValue}>{claimTypeLabelVi(detailClaim.type)}</Text>
                   <Text style={styles.modalLabel}>Nhân viên</Text>
                   <Text style={styles.modalValue}>{detailClaim.staff}</Text>
                   <Text style={styles.modalLabel}>Thời gian</Text>
@@ -724,7 +732,7 @@ export default function ClaimsRequestsScreen() {
         <Pressable style={styles.modalBackdrop} onPress={closeDetailTask}>
           <Pressable style={styles.ctModalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.ctModalHeader}>
-              <Text style={styles.ctModalTitle}>Chi tiết ChangeTask Claim</Text>
+              <Text style={styles.ctModalTitle}>Chi tiết yêu cầu đổi task</Text>
               <Pressable style={styles.ctCloseBtn} onPress={closeDetailTask} hitSlop={12}>
                 <X size={18} color="#003366" strokeWidth={2.2} />
               </Pressable>
@@ -735,8 +743,8 @@ export default function ClaimsRequestsScreen() {
                   <View style={styles.ctHeroRow}>
                     <View style={styles.ctHeroLeft}>
                       <Text style={styles.ctStaffName}>{detailTask.staffName || 'Chưa rõ'}</Text>
-                      <Text style={styles.ctClaimType}>{detailTask.claimTypeName || 'Claim'}</Text>
-                      <Text style={styles.ctIntentLabel}>INTENTTYPES (STAFF)</Text>
+                      <Text style={styles.ctClaimType}>{detailTask.claimTypeName || 'Đổi task'}</Text>
+                      <Text style={styles.ctIntentLabel}>LOẠI INTENT (NHÂN VIÊN)</Text>
                       <IntentChips intents={detailTask.staffIntentTypes} />
                     </View>
                     {(() => {
@@ -751,22 +759,22 @@ export default function ClaimsRequestsScreen() {
 
                   <View style={styles.ctGrid}>
                     <View style={styles.ctInfoBox}>
-                      <Text style={styles.ctInfoLabel}>Submit date</Text>
+                      <Text style={styles.ctInfoLabel}>Ngày gửi</Text>
                       <Text style={styles.ctInfoValue}>{formatDateTime(detailTask.submitDate)}</Text>
                     </View>
                     <View style={styles.ctInfoBox}>
-                      <Text style={styles.ctInfoLabel}>Status</Text>
-                      <Text style={styles.ctInfoValue}>{detailTask.status || '—'}</Text>
+                      <Text style={styles.ctInfoLabel}>Trạng thái</Text>
+                      <Text style={styles.ctInfoValue}>{changeTaskStatusLabelVi(detailTask.status)}</Text>
                     </View>
                   </View>
 
                   <View style={styles.ctInfoBoxFull}>
-                    <Text style={styles.ctInfoLabelUpper}>DESCRIPTION</Text>
+                    <Text style={styles.ctInfoLabelUpper}>MÔ TẢ</Text>
                     <Text style={styles.ctInfoValue}>{detailTask.description || '—'}</Text>
                   </View>
 
                   <View style={styles.ctInfoBoxFull}>
-                    <Text style={styles.ctInfoLabelUpper}>REASON</Text>
+                    <Text style={styles.ctInfoLabelUpper}>LÝ DO</Text>
                     <Text style={styles.ctInfoValue}>{detailTask.reason || '—'}</Text>
                   </View>
 
