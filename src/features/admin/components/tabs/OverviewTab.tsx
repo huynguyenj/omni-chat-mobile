@@ -1,437 +1,512 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { CheckCircle2, Clock3, Package2, ShoppingCart, TrendingUp, XCircle } from 'lucide-react-native'
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native'
+import {
+  CheckCircle2,
+  Clock3,
+  FileX2,
+  Milk,
+  Package2,
+  ShoppingCart,
+  TrendingUp
+} from 'lucide-react-native'
 import Card from '@/components/ui/cards/Card'
+import AdminDashboardMetricCard from '../AdminDashboardMetricCard'
 import { OrderApi } from '../../api/order-api'
 import { ProductApi } from '../../api/product-api'
 import { SupportTaskApi } from '../../api/support-task-api'
-import { TaskCancelReasonApi } from '../../api/task-cancel-reason-api'
 import type { OrderDashboardMonthRow } from '../../types/order-type'
 import type { ProductType } from '../../types/product-type'
 import type { TaskIntentMonthRow } from '../../types/support-task-type'
 import {
+  buildOrderDashboardChartRows,
+  buildTaskDashboardChartRows,
+  collectIntentNames,
+  collectOrderDashboardStatusNames,
   extractArrayFromResponse,
+  extractProductItems,
   extractProductTotalItems,
   extractProductTotalPages,
   isApiSuccessLike,
-  normalizeCancelReasonMeta
+  isAxiosNoDataError,
+  normalizePeriodInput,
+  summarizeInventoryFromProducts,
+  sumTaskIntentByName
 } from '../../utils/api-helpers'
 import { notifyError, notifyInfo } from '../../utils/notify'
 
-type CancelReasonRow = {
-  id: string
-  title: string
-  description: string
-  createdAt: string
-}
-
-type InventorySummary = {
-  totalProducts: number
-  totalItems: number
-}
-
 const DEFAULT_PERIOD = '2026'
 
-const INTENT_KEYS = ['PRE_SALE', 'ORDER_CREATION', 'ORDER_STATUS', 'PAYMENT', 'POST_SALE_CHANGE']
-
-function normalizePeriodInput(value: string): string | null {
-  const trimmed = value.trim()
-  if (/^\d{4}$/.test(trimmed)) return trimmed
-  const monthYearMatch = /^(\d{1,2})\/(\d{4})$/.exec(trimmed)
-  if (!monthYearMatch) return null
-
-  const month = Number(monthYearMatch[1])
-  if (month < 1 || month > 12) return null
-  return `${String(month).padStart(2, '0')}/${monthYearMatch[2]}`
-}
-
-function sumTaskIntentByName(rows: TaskIntentMonthRow[], intentName: string): number {
-  return rows.reduce((sum, row) => {
-    const byIntent = new Map((row.intents ?? []).map((item) => [item.intentName, Number(item.taskCount ?? 0)]))
-    return sum + Number(byIntent.get(intentName) ?? 0)
-  }, 0)
-}
-
-function mapCancelReasonRow(raw: unknown): CancelReasonRow {
-  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
-  const title =
-    typeof o.reasonName === 'string'
-      ? o.reasonName
-      : typeof o.name === 'string'
-        ? o.name
-        : typeof o.reason === 'string'
-          ? o.reason
-          : typeof o.title === 'string'
-            ? o.title
-            : '�'
-
-  return {
-    id: String(o.id ?? o.cancelReasonId ?? ''),
-    title,
-    description: typeof o.description === 'string' ? o.description : typeof o.note === 'string' ? o.note : '',
-    createdAt: typeof o.createdAt === 'string' ? o.createdAt : typeof o.created_at === 'string' ? o.created_at : ''
+const OVERVIEW_INTENT_CARD_CONFIG = [
+  {
+    key: 'PRE_SALE',
+    title: 'PRE_SALE',
+    accentColor: '#3366CC',
+    iconBg: '#EBF1FF',
+    iconColor: '#3366CC',
+    valueColor: '#3366CC',
+    Icon: ShoppingCart
+  },
+  {
+    key: 'ORDER_CREATION',
+    title: 'ORDER_CREATION',
+    accentColor: '#2ECC71',
+    iconBg: '#E8F8F0',
+    iconColor: '#2ECC71',
+    valueColor: '#2ECC71',
+    Icon: CheckCircle2
+  },
+  {
+    key: 'ORDER_STATUS',
+    title: 'ORDER_STATUS',
+    accentColor: '#FF9800',
+    iconBg: '#FFF3E0',
+    iconColor: '#FF9800',
+    valueColor: '#FF9800',
+    Icon: Clock3
+  },
+  {
+    key: 'PAYMENT',
+    title: 'PAYMENT',
+    accentColor: '#F44336',
+    iconBg: '#FFEBEE',
+    iconColor: '#F44336',
+    valueColor: '#F44336',
+    Icon: FileX2
+  },
+  {
+    key: 'POST_SALE_CHANGE',
+    title: 'POST_SALE_CHANGE',
+    accentColor: '#9C27B0',
+    iconBg: '#F3E8FF',
+    iconColor: '#9C27B0',
+    valueColor: '#9C27B0',
+    Icon: TrendingUp
   }
+] as const
+
+function DashboardTable({
+  columns,
+  rows,
+  totalRow
+}: {
+  columns: string[]
+  rows: Array<Record<string, string | number>>
+  totalRow: Record<string, number>
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator>
+      <View>
+        <View style={tableStyles.headerRow}>
+          <Text style={[tableStyles.th, tableStyles.thFirst]}>Tháng</Text>
+          {columns.map((col) => (
+            <Text key={col} style={tableStyles.th}>
+              {col}
+            </Text>
+          ))}
+          <Text style={tableStyles.th}>Tổng</Text>
+        </View>
+        {rows.map((row) => (
+          <View key={String(row.monthLabel)} style={tableStyles.dataRow}>
+            <Text style={[tableStyles.td, tableStyles.tdFirst]}>{String(row.monthLabel)}</Text>
+            {columns.map((col) => (
+              <Text key={col} style={tableStyles.td}>
+                {Number(row[col] ?? 0).toLocaleString('vi-VN')}
+              </Text>
+            ))}
+            <Text style={[tableStyles.td, tableStyles.tdBold]}>
+              {Number(row.total ?? 0).toLocaleString('vi-VN')}
+            </Text>
+          </View>
+        ))}
+        <View style={tableStyles.totalRow}>
+          <Text style={[tableStyles.td, tableStyles.tdFirst, tableStyles.tdBold]}>Tổng kỳ</Text>
+          {columns.map((col) => (
+            <Text key={col} style={[tableStyles.td, tableStyles.tdBold]}>
+              {(totalRow[col] ?? 0).toLocaleString('vi-VN')}
+            </Text>
+          ))}
+          <Text style={[tableStyles.td, tableStyles.tdBold]}>
+            {Object.values(totalRow).reduce((a, b) => a + b, 0).toLocaleString('vi-VN')}
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  )
 }
 
-function collectIntentNames(rows: TaskIntentMonthRow[]): string[] {
-  const set = new Set<string>()
-  for (const row of rows) {
-    for (const item of row.intents ?? []) {
-      if (item.intentName) set.add(item.intentName)
-    }
-  }
-  const ordered = INTENT_KEYS.filter((name) => set.has(name))
-  const rest = [...set].filter((name) => !INTENT_KEYS.includes(name)).sort()
-  return [...ordered, ...rest]
-}
-
-function summarizeInventoryFromProducts(products: ProductType[], totalItems: number): InventorySummary {
-  const totalProducts = products.reduce((sum, item) => sum + Number(item.quantity ?? 0), 0)
-  return { totalProducts, totalItems }
-}
-
-function extractOrderStatusTotal(rows: OrderDashboardMonthRow[], status: string): number {
-  const key = status.toLowerCase()
-  return rows.reduce((sum, row) => {
-    const hit = (row.status ?? []).find((entry) => String(entry.status).toLowerCase() === key)
-    return sum + Number(hit?.count ?? 0)
-  }, 0)
-}
+const tableStyles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', backgroundColor: '#F5F7FA', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
+  th: { paddingHorizontal: 10, paddingVertical: 8, minWidth: 88, fontSize: 11, fontWeight: '700', color: '#003366' },
+  thFirst: { minWidth: 72 },
+  dataRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  totalRow: { flexDirection: 'row', borderTopWidth: 2, borderTopColor: '#00336633', backgroundColor: '#EBF1FF66' },
+  td: { paddingHorizontal: 10, paddingVertical: 8, minWidth: 88, fontSize: 12, color: '#374151' },
+  tdFirst: { minWidth: 72, fontWeight: '600', color: '#003366' },
+  tdBold: { fontWeight: '700', color: '#003366' }
+})
 
 export default function OverviewTab() {
-  const [summaryInput, setSummaryInput] = useState(DEFAULT_PERIOD)
-  const [summaryApplied, setSummaryApplied] = useState(DEFAULT_PERIOD)
-  const [inventoryDashboard, setInventoryDashboard] = useState<InventorySummary | null>(null)
-  const [inventoryLoading, setInventoryLoading] = useState(false)
-
-  const [taskRows, setTaskRows] = useState<TaskIntentMonthRow[]>([])
-  const [taskLoading, setTaskLoading] = useState(false)
-  const [taskPeriodInput, setTaskPeriodInput] = useState(DEFAULT_PERIOD)
-  const [taskPeriodApplied, setTaskPeriodApplied] = useState(DEFAULT_PERIOD)
-
-  const [orderRows, setOrderRows] = useState<OrderDashboardMonthRow[]>([])
-  const [orderLoading, setOrderLoading] = useState(false)
-  const [orderPeriodInput, setOrderPeriodInput] = useState(DEFAULT_PERIOD)
-  const [orderPeriodApplied, setOrderPeriodApplied] = useState(DEFAULT_PERIOD)
-
-  const [cancelReasonPage, setCancelReasonPage] = useState(1)
-  const pageSize = 8
-  const [cancelReasonRows, setCancelReasonRows] = useState<CancelReasonRow[]>([])
-  const [cancelReasonMeta, setCancelReasonMeta] = useState({
-    total_pages: 0,
-    total_items: 0,
-    current_page: 1,
-    page_size: pageSize
-  })
-  const [cancelReasonLoading, setCancelReasonLoading] = useState(false)
-
-  const intentNames = useMemo(() => collectIntentNames(taskRows), [taskRows])
-  const intentCardTotals = useMemo(() => {
-    const output: Record<string, number> = {}
-    for (const key of INTENT_KEYS) output[key] = sumTaskIntentByName(taskRows, key)
-    return output
-  }, [taskRows])
-
-  const orderSummary = useMemo(
-    () => ({
-      completed: extractOrderStatusTotal(orderRows, 'Completed'),
-      confirmed: extractOrderStatusTotal(orderRows, 'Confirmed'),
-      cancelled: extractOrderStatusTotal(orderRows, 'Cancelled'),
-      returned: extractOrderStatusTotal(orderRows, 'Returned')
-    }),
-    [orderRows]
+  const [intentSummaryPeriodInput, setIntentSummaryPeriodInput] = useState(DEFAULT_PERIOD)
+  const [intentSummaryAppliedPeriod, setIntentSummaryAppliedPeriod] = useState(DEFAULT_PERIOD)
+  const [intentCardAppliedByName, setIntentCardAppliedByName] = useState<Record<string, string>>(
+    Object.fromEntries(OVERVIEW_INTENT_CARD_CONFIG.map((item) => [item.key, DEFAULT_PERIOD]))
+  )
+  const [intentCardValueByName, setIntentCardValueByName] = useState<Record<string, number>>(
+    Object.fromEntries(OVERVIEW_INTENT_CARD_CONFIG.map((item) => [item.key, 0]))
+  )
+  const [intentCardLoadingByName, setIntentCardLoadingByName] = useState<Record<string, boolean>>(
+    Object.fromEntries(OVERVIEW_INTENT_CARD_CONFIG.map((item) => [item.key, false]))
   )
 
-  const loadInventory = useCallback(async () => {
-    setInventoryLoading(true)
-    try {
-      const pageSizeFetch = 100
-      let page = 1
-      let totalPages = 1
-      let totalItems = 0
-      const allProducts: ProductType[] = []
+  const [inventoryDashboard, setInventoryDashboard] = useState<{ totalProducts: number; totalItems: number } | null>(
+    null
+  )
+  const [inventoryDashboardLoading, setInventoryDashboardLoading] = useState(false)
 
-      while (page <= totalPages) {
-        const response = await ProductApi.getAllProducts(page, pageSizeFetch)
-        allProducts.push(...(extractArrayFromResponse(response) as ProductType[]))
-        totalPages = extractProductTotalPages(response)
-        if (page === 1) totalItems = extractProductTotalItems(response)
-        page += 1
+  const [taskDashboardRows, setTaskDashboardRows] = useState<TaskIntentMonthRow[]>([])
+  const [taskDashboardLoading, setTaskDashboardLoading] = useState(false)
+  const [taskDashboardPeriodInput, setTaskDashboardPeriodInput] = useState(DEFAULT_PERIOD)
+  const [taskDashboardAppliedPeriod, setTaskDashboardAppliedPeriod] = useState(DEFAULT_PERIOD)
+
+  const [orderDashboardRows, setOrderDashboardRows] = useState<OrderDashboardMonthRow[]>([])
+  const [orderDashboardLoading, setOrderDashboardLoading] = useState(false)
+  const [orderDashboardInput, setOrderDashboardInput] = useState(DEFAULT_PERIOD)
+  const [orderDashboardAppliedInput, setOrderDashboardAppliedInput] = useState(DEFAULT_PERIOD)
+
+  const taskIntentNames = useMemo(() => collectIntentNames(taskDashboardRows), [taskDashboardRows])
+  const taskChartData = useMemo(
+    () => buildTaskDashboardChartRows(taskDashboardRows, taskIntentNames),
+    [taskDashboardRows, taskIntentNames]
+  )
+  const taskIntentTotals = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const name of taskIntentNames) totals[name] = 0
+    for (const row of taskChartData) {
+      for (const name of taskIntentNames) {
+        totals[name] += Number(row[name] ?? 0)
       }
-
-      setInventoryDashboard(summarizeInventoryFromProducts(allProducts, totalItems))
-    } catch {
-      setInventoryDashboard(null)
-      notifyError('Không tải được dữ liệu tồn kho.')
-    } finally {
-      setInventoryLoading(false)
     }
+    return totals
+  }, [taskChartData, taskIntentNames])
+
+  const orderDashboardStatusNames = useMemo(
+    () => collectOrderDashboardStatusNames(orderDashboardRows),
+    [orderDashboardRows]
+  )
+  const orderChartData = useMemo(
+    () => buildOrderDashboardChartRows(orderDashboardRows, orderDashboardStatusNames),
+    [orderDashboardRows, orderDashboardStatusNames]
+  )
+  const orderDashboardTotals = useMemo(() => {
+    const totals: Record<string, number> = {}
+    for (const name of orderDashboardStatusNames) totals[name] = 0
+    for (const row of orderChartData) {
+      for (const name of orderDashboardStatusNames) {
+        totals[name] += Number(row[name] ?? 0)
+      }
+    }
+    return totals
+  }, [orderChartData, orderDashboardStatusNames])
+
+  useEffect(() => {
+    const fetchInventoryDashboard = async () => {
+      setInventoryDashboardLoading(true)
+      try {
+        const pageSize = 100
+        let page = 1
+        let totalPages = 1
+        let totalItems = 0
+        const allProducts: ProductType[] = []
+
+        while (page <= totalPages) {
+          const response = await ProductApi.getAllProducts(page, pageSize)
+          allProducts.push(...extractProductItems(response))
+          totalPages = extractProductTotalPages(response)
+          if (page === 1) totalItems = extractProductTotalItems(response)
+          page += 1
+        }
+
+        setInventoryDashboard(summarizeInventoryFromProducts(allProducts, totalItems))
+      } catch {
+        setInventoryDashboard(null)
+        notifyError('Không tải được dữ liệu tồn kho.')
+      } finally {
+        setInventoryDashboardLoading(false)
+      }
+    }
+    void fetchInventoryDashboard()
   }, [])
 
-  const loadTaskDashboard = useCallback(async (rawInput: string) => {
+  const fetchTaskDashboard = useCallback(async (rawInput: string) => {
     const normalized = normalizePeriodInput(rawInput)
     if (!normalized) {
-      notifyInfo('Nhập đúng định dạng yyyy hoặc mm/yyyy')
+      notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
       return
     }
-
-    setTaskPeriodInput(normalized)
-    setTaskPeriodApplied(normalized)
-    setTaskLoading(true)
+    setTaskDashboardPeriodInput(normalized)
+    setTaskDashboardAppliedPeriod(normalized)
+    setTaskDashboardLoading(true)
     try {
       const response = await SupportTaskApi.getTaskIntentDashboard(normalized)
       const rows = extractArrayFromResponse(response) as TaskIntentMonthRow[]
       if (rows.length > 0 || isApiSuccessLike(response)) {
-        setTaskRows(rows)
+        setTaskDashboardRows(rows)
+        if (rows.length === 0) {
+          notifyInfo('Không có dữ liệu task cho kỳ này.')
+        }
       } else {
-        setTaskRows([])
+        setTaskDashboardRows([])
+        notifyInfo('Không có dữ liệu task cho kỳ này.')
       }
-    } catch {
-      setTaskRows([])
-      notifyError('Không tải được task dashboard.')
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setTaskDashboardRows([])
+        notifyInfo('Không có dữ liệu task cho kỳ này.')
+        return
+      }
+      setTaskDashboardRows([])
+      notifyError('Không tải được task dashboard. Vui lòng thử lại.')
     } finally {
-      setTaskLoading(false)
+      setTaskDashboardLoading(false)
     }
   }, [])
 
-  const loadOrderDashboard = useCallback(async (rawInput: string) => {
+  useEffect(() => {
+    void fetchTaskDashboard(DEFAULT_PERIOD)
+  }, [fetchTaskDashboard])
+
+  const fetchIntentCardValue = useCallback(async (intentName: string, rawInput: string) => {
     const normalized = normalizePeriodInput(rawInput)
     if (!normalized) {
-      notifyInfo('Nhập đúng định dạng yyyy hoặc mm/yyyy')
+      notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
       return
     }
+    setIntentCardAppliedByName((prev) => ({ ...prev, [intentName]: normalized }))
+    setIntentCardLoadingByName((prev) => ({ ...prev, [intentName]: true }))
+    try {
+      const response = await SupportTaskApi.getTaskIntentDashboard(normalized)
+      const rows = extractArrayFromResponse(response) as TaskIntentMonthRow[]
+      if (rows.length > 0 || isApiSuccessLike(response)) {
+        setIntentCardValueByName((prev) => ({
+          ...prev,
+          [intentName]: sumTaskIntentByName(rows, intentName)
+        }))
+        if (rows.length === 0) {
+          notifyInfo(`Không có dữ liệu ${intentName} cho kỳ này.`)
+        }
+      } else {
+        setIntentCardValueByName((prev) => ({ ...prev, [intentName]: 0 }))
+        notifyInfo(`Không có dữ liệu ${intentName} cho kỳ này.`)
+      }
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setIntentCardValueByName((prev) => ({ ...prev, [intentName]: 0 }))
+        notifyInfo(`Không có dữ liệu ${intentName} cho kỳ này.`)
+        return
+      }
+      setIntentCardValueByName((prev) => ({ ...prev, [intentName]: 0 }))
+      notifyError(`Không tải được dữ liệu ${intentName}. Vui lòng thử lại.`)
+    } finally {
+      setIntentCardLoadingByName((prev) => ({ ...prev, [intentName]: false }))
+    }
+  }, [])
 
-    setOrderPeriodInput(normalized)
-    setOrderPeriodApplied(normalized)
-    setOrderLoading(true)
+  useEffect(() => {
+    OVERVIEW_INTENT_CARD_CONFIG.forEach((item) => {
+      void fetchIntentCardValue(item.key, DEFAULT_PERIOD)
+    })
+  }, [fetchIntentCardValue])
+
+  const applyIntentSummaryPeriod = useCallback(
+    (rawInput: string) => {
+      const normalized = normalizePeriodInput(rawInput)
+      if (!normalized) {
+        notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
+        return
+      }
+      setIntentSummaryPeriodInput(normalized)
+      setIntentSummaryAppliedPeriod(normalized)
+      OVERVIEW_INTENT_CARD_CONFIG.forEach((item) => {
+        void fetchIntentCardValue(item.key, normalized)
+      })
+    },
+    [fetchIntentCardValue]
+  )
+
+  const fetchOrderDashboard = useCallback(async (rawInput: string) => {
+    const normalized = normalizePeriodInput(rawInput)
+    if (!normalized) {
+      notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
+      return
+    }
+    setOrderDashboardInput(normalized)
+    setOrderDashboardAppliedInput(normalized)
+    setOrderDashboardLoading(true)
     try {
       const response = await OrderApi.getOrderDashboard(normalized)
       const rows = extractArrayFromResponse(response) as OrderDashboardMonthRow[]
       if (rows.length > 0 || isApiSuccessLike(response)) {
-        setOrderRows(rows)
+        setOrderDashboardRows(rows)
+        if (rows.length === 0) {
+          notifyInfo('Không có dữ liệu bảng tổng quan đơn hàng cho kỳ này.')
+        }
       } else {
-        setOrderRows([])
+        setOrderDashboardRows([])
+        notifyInfo('Không có dữ liệu bảng tổng quan đơn hàng cho kỳ này.')
       }
-    } catch {
-      setOrderRows([])
-      notifyError('Không tải được order dashboard.')
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setOrderDashboardRows([])
+        notifyInfo('Không có dữ liệu bảng tổng quan đơn hàng cho kỳ này.')
+        return
+      }
+      setOrderDashboardRows([])
+      notifyError('Không tải được bảng tổng quan đơn hàng. Vui lòng thử lại.')
     } finally {
-      setOrderLoading(false)
+      setOrderDashboardLoading(false)
     }
   }, [])
 
-  const loadCancelReasons = useCallback(async () => {
-    setCancelReasonLoading(true)
-    try {
-      const response = await TaskCancelReasonApi.getPaging(cancelReasonPage, pageSize)
-      const items = extractArrayFromResponse(response)
-      if (items.length > 0 || isApiSuccessLike(response)) {
-        setCancelReasonRows(items.map(mapCancelReasonRow))
-        const responseObj = response && typeof response === 'object' ? (response as Record<string, unknown>) : {}
-        const dataObj = responseObj.data && typeof responseObj.data === 'object' ? (responseObj.data as Record<string, unknown>) : {}
-        const metaSource =
-          dataObj.meta ??
-          dataObj.pagination ??
-          dataObj.pageInfo ??
-          responseObj.meta ??
-          responseObj.pagination ??
-          responseObj.pageInfo ??
-          null
-        setCancelReasonMeta(normalizeCancelReasonMeta(metaSource))
-      } else {
-        setCancelReasonRows([])
-      }
-    } catch {
-      setCancelReasonRows([])
-      notifyError('Không tải được danh sách lý do hủy task.')
-    } finally {
-      setCancelReasonLoading(false)
-    }
-  }, [cancelReasonPage])
-
   useEffect(() => {
-    void loadInventory()
-    void loadTaskDashboard(DEFAULT_PERIOD)
-    void loadOrderDashboard(DEFAULT_PERIOD)
-  }, [loadInventory, loadOrderDashboard, loadTaskDashboard])
-
-  useEffect(() => {
-    void loadCancelReasons()
-  }, [loadCancelReasons])
-
-  const applySummaryPeriod = () => {
-    const normalized = normalizePeriodInput(summaryInput)
-    if (!normalized) {
-      notifyInfo('Nhập đúng định dạng yyyy hoặc mm/yyyy')
-      return
-    }
-    setSummaryInput(normalized)
-    setSummaryApplied(normalized)
-    void loadTaskDashboard(normalized)
-    void loadOrderDashboard(normalized)
-  }
-
-  const cancelReasonTotalPages = Math.max(1, cancelReasonMeta.total_pages || 1)
+    void fetchOrderDashboard(DEFAULT_PERIOD)
+  }, [fetchOrderDashboard])
 
   return (
     <View style={styles.container}>
-      <View style={styles.filterRow}>
-        <Text style={styles.filterText}>Kỳ lọc: {summaryApplied}</Text>
-        <TextInput
-          value={summaryInput}
-          onChangeText={setSummaryInput}
-          placeholder="yyyy hoac mm/yyyy"
-          placeholderTextColor="#9CA3AF"
-          style={styles.filterInput}
+      <View style={styles.filterSection}>
+        <Text style={styles.filterHint}>
+          Nhập yyyy hoặc mm/yyyy (UTC). Đang xem:{' '}
+          <Text style={styles.filterPeriod}>{intentSummaryAppliedPeriod}</Text>
+        </Text>
+        <View style={styles.filterControls}>
+          <TextInput
+            value={intentSummaryPeriodInput}
+            onChangeText={setIntentSummaryPeriodInput}
+            placeholder="yyyy hoặc mm/yyyy"
+            placeholderTextColor="#9CA3AF"
+            style={styles.filterInput}
+          />
+          <TouchableOpacity
+            style={styles.filterBtn}
+            onPress={() => applyIntentSummaryPeriod(intentSummaryPeriodInput)}
+          >
+            <Text style={styles.filterBtnText}>Lấy</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.metricsGrid}>
+        <AdminDashboardMetricCard
+          accentColor="#3366CC"
+          iconBg="#EBF1FF"
+          iconColor="#3366CC"
+          valueColor="#3366CC"
+          Icon={Milk}
+          topRightIcon={TrendingUp}
+          title="Tổng tồn kho sản phẩm"
+          loading={inventoryDashboardLoading}
+          value={
+            inventoryDashboard != null
+              ? inventoryDashboard.totalProducts.toLocaleString('vi-VN')
+              : '—'
+          }
+          unit="sản phẩm"
+          footer={
+            inventoryDashboard
+              ? `Loại sản phẩm: ${inventoryDashboard.totalItems.toLocaleString('vi-VN')}`
+              : 'Chưa có dữ liệu kho'
+          }
         />
-        <TouchableOpacity style={styles.filterBtn} onPress={applySummaryPeriod}>
-          <Text style={styles.filterBtnText}>Lấy</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.grid2}>
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Package2 size={18} color="#3366CC" />
-            <Text style={styles.cardTitle}>Tổng tồn kho</Text>
-          </View>
-          {inventoryLoading ? (
-            <ActivityIndicator color="#3366CC" />
-          ) : (
-            <>
-              <Text style={styles.cardValue}>{inventoryDashboard?.totalProducts?.toLocaleString('vi-VN') ?? '0'}</Text>
-              <Text style={styles.cardSub}>Loại sản phẩm: {inventoryDashboard?.totalItems?.toLocaleString('vi-VN') ?? '0'}</Text>
-            </>
-          )}
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <CheckCircle2 size={18} color="#2ECC71" />
-            <Text style={styles.cardTitle}>Đơn hoàn thành</Text>
-          </View>
-          <Text style={styles.cardValue}>{orderSummary.completed.toLocaleString('vi-VN')}</Text>
-          <Text style={styles.cardSub}>Ky {orderPeriodApplied}</Text>
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <XCircle size={18} color="#F44336" />
-            <Text style={styles.cardTitle}>Đơn hủy</Text>
-          </View>
-          <Text style={styles.cardValue}>{orderSummary.cancelled.toLocaleString('vi-VN')}</Text>
-          <Text style={styles.cardSub}>Ky {orderPeriodApplied}</Text>
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Clock3 size={18} color="#FF9800" />
-            <Text style={styles.cardTitle}>Đơn xác nhận</Text>
-          </View>
-          <Text style={styles.cardValue}>{orderSummary.confirmed.toLocaleString('vi-VN')}</Text>
-          <Text style={styles.cardSub}>Ky {orderPeriodApplied}</Text>
-        </Card>
+        {OVERVIEW_INTENT_CARD_CONFIG.map((item) => {
+          const CardIcon = item.Icon
+          const currentApplied = intentCardAppliedByName[item.key] ?? DEFAULT_PERIOD
+          const currentValue = intentCardValueByName[item.key] ?? 0
+          const currentLoading = intentCardLoadingByName[item.key] ?? false
+          return (
+            <AdminDashboardMetricCard
+              key={item.key}
+              accentColor={item.accentColor}
+              iconBg={item.iconBg}
+              iconColor={item.iconColor}
+              valueColor={item.valueColor}
+              Icon={CardIcon}
+              title={item.title}
+              loading={currentLoading}
+              value={currentValue.toLocaleString('vi-VN')}
+              unit="nhiệm vụ"
+              footer={`Kỳ lọc: ${currentApplied || intentSummaryAppliedPeriod}`}
+            />
+          )
+        })}
       </View>
 
       <Card style={styles.block}>
-        <Text style={styles.blockTitle}>Dashboard task intent</Text>
+        <Text style={styles.blockTitle}>Bảng tổng quan nhiệm vụ</Text>
+        <Text style={styles.blockSub}>
+          Đang xem: <Text style={styles.filterPeriod}>{taskDashboardAppliedPeriod}</Text>
+        </Text>
         <View style={styles.inlineFilter}>
           <TextInput
-            value={taskPeriodInput}
-            onChangeText={setTaskPeriodInput}
-            placeholder="yyyy hoac mm/yyyy"
+            value={taskDashboardPeriodInput}
+            onChangeText={setTaskDashboardPeriodInput}
+            placeholder="yyyy hoặc mm/yyyy"
             placeholderTextColor="#9CA3AF"
             style={styles.filterInput}
           />
-          <TouchableOpacity style={styles.filterBtn} onPress={() => void loadTaskDashboard(taskPeriodInput)}>
-            <Text style={styles.filterBtnText}>Lọc</Text>   
+          <TouchableOpacity style={styles.filterBtn} onPress={() => void fetchTaskDashboard(taskDashboardPeriodInput)}>
+            <Text style={styles.filterBtnText}>Lấy dữ liệu</Text>
           </TouchableOpacity>
         </View>
-        {taskLoading ? (
-          <ActivityIndicator color="#3366CC" />
+        {taskDashboardLoading ? (
+          <ActivityIndicator color="#3366CC" style={styles.loader} />
+        ) : taskChartData.length === 0 ? (
+          <Text style={styles.emptyText}>Chưa có dữ liệu task dashboard.</Text>
         ) : (
-          <>
-            <View style={styles.intentRowWrap}>
-              {INTENT_KEYS.map((key) => (
-                <View key={key} style={styles.intentPill}>
-                  <Text style={styles.intentPillTitle}>{key}</Text>
-                  <Text style={styles.intentPillValue}>{(intentCardTotals[key] ?? 0).toLocaleString('vi-VN')}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.cardSub}>Có {intentNames.length} nhóm intent trong kỳ {taskPeriodApplied}</Text>
-          </>
+          <DashboardTable columns={taskIntentNames} rows={taskChartData} totalRow={taskIntentTotals} />
         )}
       </Card>
 
       <Card style={styles.block}>
-        <Text style={styles.blockTitle}>Dashboard order</Text>
+        <View style={styles.blockTitleRow}>
+          <Package2 size={18} color="#3366CC" />
+          <Text style={styles.blockTitle}>Bảng tổng quan đơn hàng</Text>
+        </View>
+        <Text style={styles.blockSub}>
+          Đang xem: <Text style={styles.filterPeriod}>{orderDashboardAppliedInput}</Text>
+        </Text>
         <View style={styles.inlineFilter}>
           <TextInput
-            value={orderPeriodInput}
-            onChangeText={setOrderPeriodInput}
-            placeholder="yyyy hoac mm/yyyy"
+            value={orderDashboardInput}
+            onChangeText={setOrderDashboardInput}
+            placeholder="yyyy hoặc mm/yyyy"
             placeholderTextColor="#9CA3AF"
             style={styles.filterInput}
           />
-          <TouchableOpacity style={styles.filterBtn} onPress={() => void loadOrderDashboard(orderPeriodInput)}>
-            <Text style={styles.filterBtnText}>Lọc</Text> 
+          <TouchableOpacity style={styles.filterBtn} onPress={() => void fetchOrderDashboard(orderDashboardInput)}>
+            <Text style={styles.filterBtnText}>Lấy dữ liệu</Text>
           </TouchableOpacity>
         </View>
-        {orderLoading ? (
-          <ActivityIndicator color="#3366CC" />
+        {orderDashboardLoading ? (
+          <ActivityIndicator color="#3366CC" style={styles.loader} />
+        ) : orderChartData.length === 0 ? (
+          <Text style={styles.emptyText}>Chưa có dữ liệu bảng tổng quan đơn hàng.</Text>
+        ) : orderDashboardStatusNames.length === 0 ? (
+          <Text style={styles.emptyText}>Có tháng nhưng chưa có trạng thái đơn (status rỗng).</Text>
         ) : (
-          <View style={styles.statusList}>
-            <View style={styles.statusItem}>
-              <ShoppingCart size={16} color="#3366CC" />
-              <Text style={styles.statusText}>Trả về: {orderSummary.returned.toLocaleString('vi-VN')}</Text>
-            </View>
-            <View style={styles.statusItem}>
-              <TrendingUp size={16} color="#2ECC71" />
-              <Text style={styles.statusText}>Hoàn thành: {orderSummary.completed.toLocaleString('vi-VN')}</Text>
-            </View>
-            <View style={styles.statusItem}>
-              <XCircle size={16} color="#F44336" />
-              <Text style={styles.statusText}>Hủy: {orderSummary.cancelled.toLocaleString('vi-VN')}</Text>
-            </View>
-          </View>
-        )}
-      </Card>
-
-      <Card style={styles.block}>
-        <Text style={styles.blockTitle}>Danh sách lý do hủy task</Text>
-        {cancelReasonLoading ? (
-          <ActivityIndicator color="#3366CC" />
-        ) : (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View>
-                {cancelReasonRows.map((row, idx) => (
-                  <View key={`${row.id}-${idx}`} style={styles.reasonRow}>
-                    <Text style={styles.reasonTitle}>{row.title}</Text>
-                    <Text style={styles.reasonDesc}>{row.description || 'Không có mô tả'}</Text>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-            <View style={styles.pager}>
-              <TouchableOpacity
-                disabled={cancelReasonPage <= 1}
-                onPress={() => setCancelReasonPage((p) => Math.max(1, p - 1))}
-                style={[styles.pagerBtn, cancelReasonPage <= 1 && styles.btnDisabled]}
-              >
-                <Text style={styles.pagerText}>Trước</Text>
-              </TouchableOpacity>
-              <Text style={styles.cardSub}>Trang {cancelReasonPage}/{cancelReasonTotalPages}</Text>
-              <TouchableOpacity
-                disabled={cancelReasonPage >= cancelReasonTotalPages}
-                onPress={() => setCancelReasonPage((p) => p + 1)}
-                style={[styles.pagerBtn, cancelReasonPage >= cancelReasonTotalPages && styles.btnDisabled]}
-              >
-                <Text style={styles.pagerText}>Tiếp</Text>
-              </TouchableOpacity>
-            </View>
-          </>
+          <DashboardTable
+            columns={orderDashboardStatusNames}
+            rows={orderChartData}
+            totalRow={orderDashboardTotals}
+          />
         )}
       </Card>
     </View>
@@ -440,41 +515,28 @@ export default function OverviewTab() {
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  filterText: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  filterSection: { gap: 8 },
+  filterHint: { fontSize: 12, color: '#6B7280', lineHeight: 18 },
+  filterPeriod: { fontWeight: '700', color: '#003366' },
+  filterControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   filterInput: {
+    flex: 1,
     height: 38,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 10,
-    minWidth: 130,
     color: '#111827',
     backgroundColor: '#fff'
   },
   filterBtn: { backgroundColor: '#3366CC', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9 },
   filterBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  grid2: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { width: '48%', minWidth: 150 },
-  cardTitleRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
-  cardTitle: { color: '#374151', fontWeight: '600', fontSize: 13 },
-  cardValue: { color: '#003366', fontSize: 24, fontWeight: '700' },
-  cardSub: { color: '#6B7280', fontSize: 12, marginTop: 4 },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   block: { paddingVertical: 14 },
-  blockTitle: { fontSize: 16, color: '#003366', fontWeight: '700', marginBottom: 10 },
-  inlineFilter: { flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'center' },
-  intentRowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  intentPill: { borderWidth: 1, borderColor: '#DBEAFE', borderRadius: 10, padding: 8, minWidth: 130, backgroundColor: '#F8FAFC' },
-  intentPillTitle: { color: '#6B7280', fontSize: 11, fontWeight: '600' },
-  intentPillValue: { color: '#1E3A8A', fontSize: 18, fontWeight: '700' },
-  statusList: { gap: 8 },
-  statusItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusText: { color: '#374151', fontSize: 13, fontWeight: '600' },
-  reasonRow: { borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 8, minWidth: 300 },
-  reasonTitle: { color: '#111827', fontWeight: '700' },
-  reasonDesc: { color: '#6B7280', marginTop: 4, fontSize: 12 },
-  pager: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pagerBtn: { backgroundColor: '#003366', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
-  btnDisabled: { opacity: 0.5 },
-  pagerText: { color: '#fff', fontWeight: '600' }
+  blockTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  blockTitle: { fontSize: 16, color: '#003366', fontWeight: '700' },
+  blockSub: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
+  inlineFilter: { flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' },
+  loader: { marginVertical: 12 },
+  emptyText: { fontSize: 13, color: '#6B7280', marginVertical: 8 }
 })

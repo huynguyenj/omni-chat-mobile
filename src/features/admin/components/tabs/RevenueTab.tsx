@@ -1,81 +1,90 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { LucideIcon } from 'lucide-react-native'
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native'
-import { CheckCircle2, Clock3, Receipt, RefreshCw, TrendingDown, TrendingUp, XCircle } from 'lucide-react-native'
+import {
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Clock3,
+  Copy,
+  DollarSign,
+  FileText,
+  Mail,
+  MapPin,
+  Package,
+  Phone,
+  Receipt,
+  RefreshCw,
+  TrendingDown,
+  Truck,
+  User,
+  Wallet,
+  XCircle
+} from 'lucide-react-native'
 import Card from '@/components/ui/cards/Card'
+import AdminDashboardMetricCard from '../AdminDashboardMetricCard'
 import { InvoiceApi } from '../../api/invoice-api'
 import { OrderApi } from '../../api/order-api'
-import type { AdminOrderDetail, AdminOrderItem, OrderDashboardMonthRow } from '../../types/order-type'
+import type { AdminOrderDetail, AdminOrderItem } from '../../types/order-type'
 import type { TotalRevenue } from '../../types/invoice-type'
-import { extractArrayFromResponse, isApiSuccessLike } from '../../utils/api-helpers'
-import { notifyError, notifyInfo } from '../../utils/notify'
+import {
+  extractArrayFromResponse,
+  extractOrderDashboardRowsFromResponse,
+  extractRevenueRowsFromResponse,
+  isApiSuccessLike,
+  isAxiosNoDataError,
+  normalizePeriodInput,
+  sumOrderStatus,
+  unwrapOrderDetailBody
+} from '../../utils/api-helpers'
+import { notifyError, notifyInfo, notifySuccess } from '../../utils/notify'
+import {
+  getDeliveryStatusDisplay,
+  getOrderStatusUi,
+  REVENUE_ORDER_STATUS_FILTERS
+} from '@/features/order/const/order-status'
 
-type RevenueOrderStatusFilter =
-  | 'all'
-  | 'Draft'
-  | 'Pending'
-  | 'Shipped'
-  | 'Completed'
-  | 'Cancelled'
-  | 'PendingReturn'
-  | 'Returned'
-  | 'ReturnedDefective'
+type RevenueOrderStatusFilter = (typeof REVENUE_ORDER_STATUS_FILTERS)[number]['value']
 
-const STATUS_FILTERS: Array<{ value: RevenueOrderStatusFilter; label: string }> = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'Draft', label: 'Bán nhập' },
-  { value: 'Pending', label: 'Cho xử lý' },
-  { value: 'Shipped', label: 'Đã giao' },
-  { value: 'Completed', label: 'Hoàn thành' },
-  { value: 'Cancelled', label: 'Đã hủy' },
-  { value: 'PendingReturn', label: 'Cho trả' },
-  { value: 'Returned', label: 'Đã trả' },
-  { value: 'ReturnedDefective', label: 'Trả lời' }
-]
+const ORDERS_PER_PAGE = 9
+const LOG_PREFIX = '[Admin/Revenue]'
 
-function normalizeRevenueInput(value: string): string | null {
-  const trimmed = value.trim()
-  if (/^\d{4}$/.test(trimmed)) return trimmed
-
-  const monthYearMatch = /^(\d{1,2})\/(\d{4})$/.exec(trimmed)
-  if (!monthYearMatch) return null
-
-  const month = Number(monthYearMatch[1])
-  if (month < 1 || month > 12) return null
-
-  return `${String(month).padStart(2, '0')}/${monthYearMatch[2]}`
+function logOrderListToTerminal(
+  event: string,
+  meta: Record<string, string | number>,
+  orders: AdminOrderItem[]
+) {
+  console.log(`${LOG_PREFIX} Danh sách đơn — ${event}`, meta)
+  if (orders.length === 0) {
+    console.log(`${LOG_PREFIX} Danh sách đơn — (trống)`)
+    return
+  }
+  console.table(
+    orders.map((order, index) => ({
+      stt: index + 1,
+      ma: order.code || order.id.slice(0, 8),
+      id: order.id,
+      khach: order.customerName || order.customerId,
+      trangThai: order.status,
+      tong: order.totalAmount
+    }))
+  )
 }
 
-function extractRevenueRowsFromResponse(response: unknown): TotalRevenue[] {
-  const rows = extractArrayFromResponse(response)
-  return rows.map((item) => {
-    const row = item && typeof item === 'object' ? (item as Record<string, unknown>) : {}
-    return {
-      month: String(row.month ?? row.Month ?? ''),
-      totalAmount: Number(row.totalAmount ?? row.total_amount ?? row.totalamount ?? 0)
-    }
-  })
-}
-
-function extractOrderDashboardRowsFromResponse(response: unknown): OrderDashboardMonthRow[] {
-  return extractArrayFromResponse(response) as OrderDashboardMonthRow[]
-}
-
-function sumOrderStatus(rows: OrderDashboardMonthRow[], statusLabel: string): number {
-  const target = statusLabel.toLowerCase()
-  return rows.reduce((sum, row) => {
-    const statuses = Array.isArray(row.status) ? row.status : []
-    const matched = statuses.find((item) => String(item.status ?? '').toLowerCase() === target)
-    return sum + Number(matched?.count ?? 0)
-  }, 0)
+function logOrderDetailToTerminal(event: string, payload: unknown) {
+  console.log(`${LOG_PREFIX} Chi tiết đơn — ${event}`, payload)
 }
 
 function readString(source: Record<string, unknown>, keys: string[]): string | undefined {
@@ -145,34 +154,383 @@ function revenueOrderMatchesStatus(filter: RevenueOrderStatusFilter, apiStatus: 
   return apiStatus.trim().toLowerCase() === filter.toLowerCase()
 }
 
-function statusBadge(statusRaw: string) {
-  const normalized = String(statusRaw).trim().toLowerCase().replace(/\s+/g, '')
-  switch (normalized) {
-    case 'draft':
-      return { text: 'Ban nhap', bg: '#6B7280' }
-    case 'pending':
-      return { text: 'Cho xu ly', bg: '#F59E0B' }
-    case 'shipped':
-      return { text: 'Da giao', bg: '#3366CC' }
-    case 'completed':
-      return { text: 'Hoan thanh', bg: '#2ECC71' }
-    case 'cancelled':
-      return { text: 'Da huy', bg: '#F44336' }
-    case 'pendingreturn':
-      return { text: 'Cho tra', bg: '#FB923C' }
-    case 'returned':
-      return { text: 'Da tra', bg: '#64748B' }
-    case 'returneddefective':
-      return { text: 'Tra loi', bg: '#92400E' }
-    default:
-      return { text: statusRaw || 'Unknown', bg: '#94A3B8' }
+function formatOrderDetailDateTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const time = d.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const date = d.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+  return `${time} - ${date}`
+}
+
+async function shareCopyText(label: string, value: string) {
+  if (!value.trim()) return
+  try {
+    await Share.share({ message: value })
+    notifySuccess(`Đã chia sẻ ${label}`)
+  } catch {
+    notifyInfo('Không thể sao chép.')
   }
 }
 
-export default function RevenueTab() {
-  const ORDERS_PER_PAGE = 8
+function DetailInfoRow({
+  Icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+  valueColor = '#111827',
+  onAction,
+  ActionIcon
+}: {
+  Icon: LucideIcon
+  iconBg: string
+  iconColor: string
+  label: string
+  value: string
+  valueColor?: string
+  onAction?: () => void
+  ActionIcon?: LucideIcon
+}) {
+  return (
+    <View style={detailStyles.infoRow}>
+      <View style={[detailStyles.infoIconWrap, { backgroundColor: iconBg }]}>
+        <Icon size={18} color={iconColor} />
+      </View>
+      <View style={detailStyles.infoContent}>
+        <Text style={detailStyles.infoLabel}>{label}</Text>
+        <Text style={[detailStyles.infoValue, { color: valueColor }]} numberOfLines={2}>
+          {value}
+        </Text>
+      </View>
+      {onAction && ActionIcon ? (
+        <TouchableOpacity style={detailStyles.infoAction} onPress={onAction} hitSlop={8}>
+          <ActionIcon size={18} color="#94A3B8" />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  )
+}
 
-  const [revenueOrderStatusFilter, setRevenueOrderStatusFilter] = useState<RevenueOrderStatusFilter>('Pending')
+function AdminOrderDetailModal({
+  order,
+  loading
+}: {
+  order: AdminOrderDetail | null
+  loading: boolean
+}) {
+  if (loading || !order) {
+    return (
+      <View style={detailStyles.loadingWrap}>
+        <ActivityIndicator color="#3366CC" size="large" />
+        <Text style={detailStyles.loadingText}>Đang tải chi tiết đơn hàng...</Text>
+      </View>
+    )
+  }
+
+  const statusUi = getOrderStatusUi(order.status)
+  const deliveryUi = getDeliveryStatusDisplay(order.deliveryStatus)
+  const phone = order.customerPhone?.trim() ?? ''
+
+  return (
+    <ScrollView style={detailStyles.scroll} contentContainerStyle={detailStyles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={detailStyles.infoCard}>
+        <DetailInfoRow
+          Icon={FileText}
+          iconBg="#EBF1FF"
+          iconColor="#3366CC"
+          label="Mã đơn hàng"
+          value={order.code || order.id}
+          valueColor="#3366CC"
+          ActionIcon={Copy}
+          onAction={() => void shareCopyText('mã đơn', order.code || order.id)}
+        />
+        <DetailInfoRow
+          Icon={User}
+          iconBg="#E8F8F0"
+          iconColor="#22C55E"
+          label="Khách hàng"
+          value={order.customerName || order.customerId || '—'}
+          valueColor="#22C55E"
+        />
+        <DetailInfoRow
+          Icon={Phone}
+          iconBg="#F3E8FF"
+          iconColor="#9333EA"
+          label="SĐT"
+          value={phone || '—'}
+          valueColor="#9333EA"
+          ActionIcon={Phone}
+          onAction={
+            phone
+              ? () => {
+                  void Linking.openURL(`tel:${phone}`)
+                }
+              : undefined
+          }
+        />
+        <DetailInfoRow
+          Icon={Mail}
+          iconBg="#EBF1FF"
+          iconColor="#3366CC"
+          label="Email"
+          value={order.customerEmail || '—'}
+          valueColor="#3366CC"
+          ActionIcon={Copy}
+          onAction={
+            order.customerEmail
+              ? () => void shareCopyText('email', order.customerEmail ?? '')
+              : undefined
+          }
+        />
+        <DetailInfoRow
+          Icon={MapPin}
+          iconBg="#FFF3E0"
+          iconColor="#FF9800"
+          label="Địa chỉ"
+          value={order.customerAddress || '—'}
+          valueColor="#FF9800"
+        />
+        <DetailInfoRow
+          Icon={Calendar}
+          iconBg="#FFEBEE"
+          iconColor="#F44336"
+          label="Ngày đặt"
+          value={formatOrderDetailDateTime(order.orderDate)}
+          valueColor="#F44336"
+        />
+        <DetailInfoRow
+          Icon={Clock}
+          iconBg="#F3E8FF"
+          iconColor="#9333EA"
+          label="Trạng thái"
+          value={statusUi.labelVi}
+          valueColor="#9333EA"
+        />
+        <DetailInfoRow
+          Icon={Truck}
+          iconBg="#EBF1FF"
+          iconColor="#3366CC"
+          label="Trạng thái giao"
+          value={deliveryUi.name}
+          valueColor="#3366CC"
+        />
+      </View>
+
+      <View style={detailStyles.totalBox}>
+        <View style={detailStyles.totalIconWrap}>
+          <Wallet size={22} color="#fff" />
+        </View>
+        <View>
+          <Text style={detailStyles.totalLabel}>Tổng tiền</Text>
+          <Text style={detailStyles.totalValue}>{order.totalAmount.toLocaleString('vi-VN')} đ</Text>
+        </View>
+      </View>
+
+      <View style={detailStyles.productsCard}>
+        <View style={detailStyles.productsHeader}>
+          <View style={detailStyles.productsIconWrap}>
+            <Package size={18} color="#3366CC" />
+          </View>
+          <Text style={detailStyles.productsTitle}>Sản phẩm</Text>
+        </View>
+        {order.orderItems.length > 0 ? (
+          <>
+            {order.orderItems.map((item) => (
+              <View key={item.id} style={detailStyles.productRow}>
+                <View style={detailStyles.productDot} />
+                <Text style={detailStyles.productName} numberOfLines={2}>
+                  {item.productName} x{item.quantity}
+                </Text>
+                <Text style={detailStyles.productPrice}>
+                  {item.itemsPrice != null ? `${item.itemsPrice.toLocaleString('vi-VN')} đ` : '—'}
+                </Text>
+              </View>
+            ))}
+            <View style={detailStyles.productFooter}>
+              <Text style={detailStyles.productFooterLabel}>Tổng cộng</Text>
+              <Text style={detailStyles.productFooterValue}>
+                {order.totalAmount.toLocaleString('vi-VN')} đ
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text style={detailStyles.productsEmpty}>Đơn hàng chưa có sản phẩm.</Text>
+        )}
+      </View>
+    </ScrollView>
+  )
+}
+
+const detailStyles = StyleSheet.create({
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 28, gap: 14 },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  loadingText: { marginTop: 12, color: '#6B7280', fontSize: 14 },
+  infoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  infoIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  infoContent: { flex: 1, minWidth: 0 },
+  infoLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+  infoValue: { fontSize: 15, fontWeight: '700' },
+  infoAction: { padding: 6 },
+  totalBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#E8F8F0',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0'
+  },
+  totalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  totalLabel: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+  totalValue: { fontSize: 22, fontWeight: '800', color: '#22C55E', marginTop: 2 },
+  productsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#F3F4F6'
+  },
+  productsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  productsIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EBF1FF',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  productsTitle: { fontSize: 16, fontWeight: '700', color: '#003366' },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6'
+  },
+  productDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#3366CC' },
+  productName: { flex: 1, fontSize: 14, fontWeight: '600', color: '#111827' },
+  productPrice: { fontSize: 14, fontWeight: '700', color: '#111827' },
+  productFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB'
+  },
+  productFooterLabel: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  productFooterValue: { fontSize: 16, fontWeight: '800', color: '#3366CC' },
+  productsEmpty: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', paddingVertical: 12 }
+})
+
+function MonthlyLineChart({
+  data,
+  color,
+  loading
+}: {
+  data: TotalRevenue[]
+  color: string
+  loading: boolean
+}) {
+  const max = Math.max(...data.map((d) => d.totalAmount), 1)
+  const chartHeight = 140
+
+  if (loading) {
+    return <ActivityIndicator color={color} style={{ marginVertical: 16 }} />
+  }
+  if (data.length === 0) {
+    return <Text style={chartStyles.empty}>Chưa có dữ liệu biểu đồ.</Text>
+  }
+
+  return (
+    <View>
+      <View style={[chartStyles.plot, { height: chartHeight }]}>
+        {data.map((point, index) => {
+          const barH = Math.max(4, (point.totalAmount / max) * (chartHeight - 24))
+          return (
+            <View key={`${point.month}-${index}`} style={chartStyles.barCol}>
+              <View style={[chartStyles.bar, { height: barH, backgroundColor: color }]} />
+              <Text style={chartStyles.monthLabel} numberOfLines={1}>
+                {point.month || `T${index + 1}`}
+              </Text>
+            </View>
+          )
+        })}
+      </View>
+      <ScrollView style={chartStyles.tableWrap}>
+        {data.map((point, index) => (
+          <View key={`row-${index}`} style={chartStyles.tableRow}>
+            <Text style={chartStyles.tableMonth}>{point.month}</Text>
+            <Text style={chartStyles.tableAmount}>{point.totalAmount.toLocaleString('vi-VN')} đ</Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
+
+const chartStyles = StyleSheet.create({
+  plot: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingBottom: 4,
+    marginBottom: 8
+  },
+  barCol: { alignItems: 'center', flex: 1, minWidth: 36 },
+  bar: { width: 12, borderTopLeftRadius: 4, borderTopRightRadius: 4, marginBottom: 4 },
+  monthLabel: { fontSize: 9, color: '#6B7280', maxWidth: 48, textAlign: 'center' },
+  tableWrap: { maxHeight: 120 },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6'
+  },
+  tableMonth: { color: '#374151', fontSize: 12, fontWeight: '600' },
+  tableAmount: { color: '#003366', fontSize: 12, fontWeight: '700' },
+  empty: { fontSize: 13, color: '#6B7280', marginVertical: 12 }
+})
+
+export default function RevenueTab() {
+  const [revenueOrderStatusFilter, setRevenueOrderStatusFilter] = useState<RevenueOrderStatusFilter>('all')
   const [summaryPeriodInput, setSummaryPeriodInput] = useState('2026')
   const [summaryAppliedPeriod, setSummaryAppliedPeriod] = useState('2026')
 
@@ -187,6 +545,14 @@ export default function RevenueTab() {
   const [returnedOrdersAmount, setReturnedOrdersAmount] = useState(0)
   const [returnedOrdersLoading, setReturnedOrdersLoading] = useState(false)
 
+  const [revenueChartInput, setRevenueChartInput] = useState('2026')
+  const [revenueChartData, setRevenueChartData] = useState<TotalRevenue[]>([])
+  const [revenueChartLoading, setRevenueChartLoading] = useState(false)
+
+  const [unpaidChartInput, setUnpaidChartInput] = useState('2026')
+  const [unpaidChartData, setUnpaidChartData] = useState<TotalRevenue[]>([])
+  const [unpaidChartLoading, setUnpaidChartLoading] = useState(false)
+
   const [apiOrders, setApiOrders] = useState<AdminOrderItem[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersPage, setOrdersPage] = useState(1)
@@ -195,15 +561,25 @@ export default function RevenueTab() {
   const [orderDetailLoading, setOrderDetailLoading] = useState(false)
   const [orderDetail, setOrderDetail] = useState<AdminOrderDetail | null>(null)
 
+  const revenueFilterLabel = useMemo(
+    () =>
+      REVENUE_ORDER_STATUS_FILTERS.find((item) => item.value === revenueOrderStatusFilter)?.label ??
+      revenueOrderStatusFilter,
+    [revenueOrderStatusFilter]
+  )
+
   useEffect(() => {
     const fetchOrders = async () => {
       setOrdersLoading(true)
       try {
         const response = await OrderApi.getOrders(1, 1000)
         const items = extractArrayFromResponse(response)
-        setApiOrders(items.map(mapApiOrderItem))
-      } catch {
-        notifyError('Không tải được danh sách đơn hàng.')
+        const mapped = items.map(mapApiOrderItem)
+        setApiOrders(mapped)
+        logOrderListToTerminal('tải API', { tong: mapped.length }, mapped)
+      } catch (error) {
+        console.error(`${LOG_PREFIX} Danh sách đơn — lỗi tải`, error)
+        notifyError('Không tải được danh sách đơn hàng. Vui lòng thử lại.')
       } finally {
         setOrdersLoading(false)
       }
@@ -211,11 +587,68 @@ export default function RevenueTab() {
     void fetchOrders()
   }, [])
 
+  const fetchRevenueChartData = useCallback(async (rawInput: string) => {
+    const normalizedInput = normalizePeriodInput(rawInput)
+    if (!normalizedInput) {
+      notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
+      return
+    }
+    setRevenueChartInput(normalizedInput)
+    setRevenueChartLoading(true)
+    try {
+      const response = await InvoiceApi.getTotalRevenue(normalizedInput)
+      const rows = extractRevenueRowsFromResponse(response)
+      if (!isApiSuccessLike(response) && rows.length === 0) {
+        setRevenueChartData([])
+        notifyInfo('Không có dữ liệu doanh thu cho bộ lọc này.')
+        return
+      }
+      setRevenueChartData(rows)
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setRevenueChartData([])
+        notifyInfo('Không có dữ liệu doanh thu cho bộ lọc này.')
+        return
+      }
+      notifyError('Không tải được dữ liệu doanh thu. Vui lòng thử lại.')
+    } finally {
+      setRevenueChartLoading(false)
+    }
+  }, [])
+
+  const fetchUnpaidChartData = useCallback(async (rawInput: string) => {
+    const normalizedInput = normalizePeriodInput(rawInput)
+    if (!normalizedInput) {
+      notifyError('Định dạng không hợp lệ. Nhập yyyy hoặc mm/yyyy.')
+      return
+    }
+    setUnpaidChartInput(normalizedInput)
+    setUnpaidChartLoading(true)
+    try {
+      const response = await InvoiceApi.getTotalUnpaid(normalizedInput)
+      const rows = extractRevenueRowsFromResponse(response)
+      if (!isApiSuccessLike(response) && rows.length === 0) {
+        setUnpaidChartData([])
+        notifyInfo('Không có dữ liệu chưa thanh toán cho bộ lọc này.')
+        return
+      }
+      setUnpaidChartData(rows)
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setUnpaidChartData([])
+        notifyInfo('Không có dữ liệu chưa thanh toán cho bộ lọc này.')
+        return
+      }
+      notifyError('Không tải được dữ liệu chưa thanh toán. Vui lòng thử lại.')
+    } finally {
+      setUnpaidChartLoading(false)
+    }
+  }, [])
+
   const fetchTotalRevenueData = useCallback(async (rawInput: string) => {
-    const normalizedInput = normalizeRevenueInput(rawInput)
+    const normalizedInput = normalizePeriodInput(rawInput)
     if (!normalizedInput) return
     setTotalRevenueLoading(true)
-
     try {
       const response = await InvoiceApi.getTotalRevenue(normalizedInput)
       const rows = extractRevenueRowsFromResponse(response)
@@ -224,19 +657,21 @@ export default function RevenueTab() {
         return
       }
       setTotalRevenueAmount(rows.reduce((sum, item) => sum + item.totalAmount, 0))
-    } catch {
-      setTotalRevenueAmount(0)
-      notifyError('Không tải được tổng doanh thu.')
+    } catch (error) {
+      if (isAxiosNoDataError(error)) {
+        setTotalRevenueAmount(0)
+        return
+      }
+      notifyError('Không tải được tổng doanh thu. Vui lòng thử lại.')
     } finally {
       setTotalRevenueLoading(false)
     }
   }, [])
 
   const fetchTotalUnpaidData = useCallback(async (rawInput: string) => {
-    const normalizedInput = normalizeRevenueInput(rawInput)
+    const normalizedInput = normalizePeriodInput(rawInput)
     if (!normalizedInput) return
     setTotalUnpaidLoading(true)
-
     try {
       const response = await InvoiceApi.getTotalUnpaid(normalizedInput)
       const rows = extractRevenueRowsFromResponse(response)
@@ -247,14 +682,14 @@ export default function RevenueTab() {
       setTotalUnpaidAmount(rows.reduce((sum, item) => sum + item.totalAmount, 0))
     } catch {
       setTotalUnpaidAmount(0)
-      notifyError('Không tải được tổng cho thanh toán.')
+      notifyError('Không tải được dữ liệu chưa thanh toán. Vui lòng thử lại.')
     } finally {
       setTotalUnpaidLoading(false)
     }
   }, [])
 
   const fetchOrderSummaryData = useCallback(async (rawInput: string) => {
-    const normalizedInput = normalizeRevenueInput(rawInput)
+    const normalizedInput = normalizePeriodInput(rawInput)
     if (!normalizedInput) return
 
     setCancelledOrdersLoading(true)
@@ -289,11 +724,19 @@ export default function RevenueTab() {
     void fetchTotalRevenueData('2026')
     void fetchTotalUnpaidData('2026')
     void fetchOrderSummaryData('2026')
-  }, [fetchOrderSummaryData, fetchTotalRevenueData, fetchTotalUnpaidData])
+    void fetchRevenueChartData('2026')
+    void fetchUnpaidChartData('2026')
+  }, [
+    fetchOrderSummaryData,
+    fetchRevenueChartData,
+    fetchTotalRevenueData,
+    fetchTotalUnpaidData,
+    fetchUnpaidChartData
+  ])
 
   const applySummaryPeriod = useCallback(
     (rawInput: string) => {
-      const normalizedInput = normalizeRevenueInput(rawInput)
+      const normalizedInput = normalizePeriodInput(rawInput)
       if (!normalizedInput) {
         notifyInfo('Nhập đúng định dạng yyyy hoặc mm/yyyy')
         return
@@ -326,118 +769,197 @@ export default function RevenueTab() {
     if (ordersPage > totalOrderPages) setOrdersPage(totalOrderPages)
   }, [ordersPage, totalOrderPages])
 
+  useEffect(() => {
+    logOrderListToTerminal(
+      'trang hiện tại',
+      {
+        loc: revenueFilterLabel,
+        trang: ordersPage,
+        tongTrang: totalOrderPages,
+        tongDon: filteredOrders.length
+      },
+      paginatedOrders
+    )
+  }, [filteredOrders.length, ordersPage, paginatedOrders, revenueFilterLabel, totalOrderPages])
+
   const openOrderDetail = (order: AdminOrderItem) => {
-    if (!order.id) return
+    if (!order.id) {
+      notifyError('Không tìm thấy ID đơn hàng.')
+      return
+    }
+
+    const listIndex = paginatedOrders.findIndex((o) => o.id === order.id)
+
     setOrderDetailModalOpen(true)
     setOrderDetailLoading(true)
     setOrderDetail(null)
 
+    logOrderDetailToTerminal('mở modal', {
+      id: order.id,
+      ma: order.code,
+      trangThai: order.status,
+      viTriTrang: listIndex >= 0 ? listIndex + 1 : null,
+      loc: revenueFilterLabel,
+      trang: ordersPage,
+      tongTrang: totalOrderPages
+    })
+
     void OrderApi.getOrderById(order.id)
       .then((res) => {
-        if (!res.is_success) {
-          notifyError(res.message || 'Không tải được chi tiết đơn hàng.')
+        logOrderDetailToTerminal('phản hồi API (raw)', res)
+        const unwrapped = unwrapOrderDetailBody(res)
+        if (!unwrapped.ok) {
+          console.warn(`${LOG_PREFIX} Chi tiết đơn — unwrap thất bại`, unwrapped.message)
+          notifyError(unwrapped.message || 'Không tải được chi tiết đơn hàng.')
           return
         }
-        setOrderDetail(mapApiOrderDetail(res.data))
+        const detail = mapApiOrderDetail(unwrapped.body)
+        setOrderDetail(detail)
+        logOrderDetailToTerminal('đã map', detail)
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error(`${LOG_PREFIX} Chi tiết đơn — lỗi`, error)
         notifyError('Không tải được chi tiết đơn hàng.')
       })
       .finally(() => setOrderDetailLoading(false))
   }
 
   const closeOrderDetailModal = () => {
+    logOrderDetailToTerminal('đóng modal', null)
     setOrderDetailModalOpen(false)
     setOrderDetail(null)
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.filterRow}>
-        <Text style={styles.filterText}>Kỳ lọc: {summaryAppliedPeriod}</Text>
-        <TextInput
-          value={summaryPeriodInput}
-          onChangeText={setSummaryPeriodInput}
-          placeholder="yyyy hoac mm/yyyy"
-          placeholderTextColor="#9CA3AF"
-          style={styles.filterInput}
-        />
-        <TouchableOpacity style={styles.filterBtn} onPress={() => applySummaryPeriod(summaryPeriodInput)}>
-          <Text style={styles.filterBtnText}>Lấy</Text> 
-        </TouchableOpacity>
+      <View style={styles.filterSection}>
+        <Text style={styles.filterText}>
+          Kỳ lọc KPI: <Text style={styles.filterPeriod}>{summaryAppliedPeriod}</Text>
+        </Text>
+        <View style={styles.filterControls}>
+          <TextInput
+            value={summaryPeriodInput}
+            onChangeText={setSummaryPeriodInput}
+            placeholder="yyyy hoặc mm/yyyy"
+            placeholderTextColor="#9CA3AF"
+            style={styles.filterInput}
+          />
+          <TouchableOpacity style={styles.filterBtn} onPress={() => applySummaryPeriod(summaryPeriodInput)}>
+            <Text style={styles.filterBtnText}>Lấy</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.grid2}>
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Receipt size={18} color="#2ECC71" />
-            <Text style={styles.cardTitle}>Tổng doanh thu</Text>
-          </View>
-          {totalRevenueLoading ? (
-            <ActivityIndicator color="#2ECC71" />
-          ) : (
-            <Text style={styles.cardValueMoney}>{Math.round(totalRevenueAmount / 1000).toLocaleString('vi-VN')}K</Text>
-          )}
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <Clock3 size={18} color="#FF9800" />
-            <Text style={styles.cardTitle}>Cho thanh toán</Text>
-          </View>
-          {totalUnpaidLoading ? (
-            <ActivityIndicator color="#FF9800" />
-          ) : (
-            <Text style={styles.cardValueMoney}>{Math.round(totalUnpaidAmount / 1000).toLocaleString('vi-VN')}K</Text>
-          )}
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <XCircle size={18} color="#F44336" />
-            <Text style={styles.cardTitle}>Đơn hủy</Text>
-          </View>
-          {cancelledOrdersLoading ? (
-            <ActivityIndicator color="#F44336" />
-          ) : (
-            <Text style={styles.cardValue}>{cancelledOrdersAmount.toLocaleString('vi-VN')}</Text>
-          )}
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <CheckCircle2 size={18} color="#3366CC" />
-            <Text style={styles.cardTitle}>Đơn hoàn thành</Text>
-          </View>
-          {completedOrdersLoading ? (
-            <ActivityIndicator color="#3366CC" />
-          ) : (
-            <Text style={styles.cardValue}>{completedOrdersAmount.toLocaleString('vi-VN')}</Text>
-          )}
-        </Card>
-
-        <Card style={styles.cardFull}>
-          <View style={styles.cardTitleRow}>
-            <RefreshCw size={18} color="#8B5CF6" />
-            <Text style={styles.cardTitle}>Đơn trả về</Text>
-          </View>
-          {returnedOrdersLoading ? (
-            <ActivityIndicator color="#8B5CF6" />
-          ) : (
-            <Text style={styles.cardValue}>{returnedOrdersAmount.toLocaleString('vi-VN')}</Text>
-          )}
-        </Card>
+      <View style={styles.metricsGrid}>
+        <AdminDashboardMetricCard
+          accentColor="#2ECC71"
+          iconBg="#E8F8F0"
+          iconColor="#2ECC71"
+          valueColor="#2ECC71"
+          Icon={Receipt}
+          title="Tổng doanh thu"
+          loading={totalRevenueLoading}
+          value={`${Math.round(totalRevenueAmount / 1000).toLocaleString('vi-VN')}K`}
+          unit="VNĐ"
+          footer={`Kỳ: ${summaryAppliedPeriod}`}
+        />
+        <AdminDashboardMetricCard
+          accentColor="#FF9800"
+          iconBg="#FFF3E0"
+          iconColor="#FF9800"
+          valueColor="#FF9800"
+          Icon={Clock3}
+          title="Tổng chưa thanh toán"
+          loading={totalUnpaidLoading}
+          value={`${Math.round(totalUnpaidAmount / 1000).toLocaleString('vi-VN')}K`}
+          unit="VNĐ"
+          footer={`Kỳ: ${summaryAppliedPeriod}`}
+        />
+        <AdminDashboardMetricCard
+          accentColor="#F44336"
+          iconBg="#FFEBEE"
+          iconColor="#F44336"
+          valueColor="#F44336"
+          Icon={XCircle}
+          title="Đơn hủy"
+          loading={cancelledOrdersLoading}
+          value={cancelledOrdersAmount.toLocaleString('vi-VN')}
+          footer={`Kỳ: ${summaryAppliedPeriod}`}
+        />
+        <AdminDashboardMetricCard
+          accentColor="#3366CC"
+          iconBg="#EBF1FF"
+          iconColor="#3366CC"
+          valueColor="#3366CC"
+          Icon={CheckCircle2}
+          title="Đơn hoàn thành"
+          loading={completedOrdersLoading}
+          value={completedOrdersAmount.toLocaleString('vi-VN')}
+          footer={`Kỳ: ${summaryAppliedPeriod}`}
+        />
+        <AdminDashboardMetricCard
+          accentColor="#8B5CF6"
+          iconBg="#F3E8FF"
+          iconColor="#8B5CF6"
+          valueColor="#8B5CF6"
+          Icon={RefreshCw}
+          title="Đơn trả"
+          loading={returnedOrdersLoading}
+          value={returnedOrdersAmount.toLocaleString('vi-VN')}
+          footer={`Kỳ: ${summaryAppliedPeriod}`}
+          style={{ width: '100%' }}
+        />
       </View>
 
       <Card style={styles.block}>
-        <Text style={styles.blockTitle}>Chi tiết đơn hàng ({filteredOrders.length})</Text>
+        <View style={styles.chartHeader}>
+          <DollarSign size={18} color="#2ECC71" />
+          <Text style={styles.blockTitle}>Doanh thu theo thời gian</Text>
+        </View>
+        <View style={styles.inlineFilter}>
+          <TextInput
+            value={revenueChartInput}
+            onChangeText={setRevenueChartInput}
+            placeholder="yyyy hoặc mm/yyyy"
+            placeholderTextColor="#9CA3AF"
+            style={styles.filterInput}
+          />
+          <TouchableOpacity style={styles.filterBtn} onPress={() => void fetchRevenueChartData(revenueChartInput)}>
+            <Text style={styles.filterBtnText}>Lấy</Text>
+          </TouchableOpacity>
+        </View>
+        <MonthlyLineChart data={revenueChartData} color="#2ECC71" loading={revenueChartLoading} />
+      </Card>
+
+      <Card style={styles.block}>
+        <View style={styles.chartHeader}>
+          <TrendingDown size={18} color="#FF9800" />
+          <Text style={styles.blockTitle}>Chưa thanh toán theo thời gian</Text>
+        </View>
+        <View style={styles.inlineFilter}>
+          <TextInput
+            value={unpaidChartInput}
+            onChangeText={setUnpaidChartInput}
+            placeholder="yyyy hoặc mm/yyyy"
+            placeholderTextColor="#9CA3AF"
+            style={styles.filterInput}
+          />
+          <TouchableOpacity style={styles.filterBtn} onPress={() => void fetchUnpaidChartData(unpaidChartInput)}>
+            <Text style={styles.filterBtnText}>Lấy</Text>
+          </TouchableOpacity>
+        </View>
+        <MonthlyLineChart data={unpaidChartData} color="#FF9800" loading={unpaidChartLoading} />
+      </Card>
+
+      <Card style={styles.block}>
+        <Text style={styles.blockTitle}>Danh sách đơn hàng ({filteredOrders.length})</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-          {STATUS_FILTERS.map((item) => {
+          {REVENUE_ORDER_STATUS_FILTERS.map((item) => {
             const active = item.value === revenueOrderStatusFilter
             return (
               <TouchableOpacity
                 key={item.value}
-                onPress={() => setRevenueOrderStatusFilter(item.value)}
+                onPress={() => setRevenueOrderStatusFilter(item.value as RevenueOrderStatusFilter)}
                 style={[styles.chip, active && styles.chipActive]}
               >
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
@@ -448,16 +970,22 @@ export default function RevenueTab() {
 
         {ordersLoading ? (
           <ActivityIndicator color="#3366CC" />
+        ) : paginatedOrders.length === 0 ? (
+          <Text style={styles.emptyText}>Không có đơn hàng cho bộ lọc này.</Text>
         ) : (
           <View style={styles.orderList}>
             {paginatedOrders.map((order) => {
-              const badge = statusBadge(order.status)
+              const statusUi = getOrderStatusUi(order.status)
               return (
-                <TouchableOpacity key={order.id} style={styles.orderCard} onPress={() => openOrderDetail(order)}>
+                <TouchableOpacity
+                  key={order.id}
+                  style={[styles.orderCard, { borderTopColor: statusUi.cardBorderColor, borderTopWidth: 3 }]}
+                  onPress={() => openOrderDetail(order)}
+                >
                   <View style={styles.orderHeader}>
                     <Text style={styles.orderCode}>{order.code || order.id.slice(0, 8)}</Text>
-                    <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-                      <Text style={styles.badgeText}>{badge.text}</Text>
+                    <View style={[styles.badge, { backgroundColor: statusUi.pillBg }]}>
+                      <Text style={styles.badgeText}>{statusUi.labelVi}</Text>
                     </View>
                   </View>
                   <Text style={styles.orderName} numberOfLines={1}>
@@ -466,7 +994,7 @@ export default function RevenueTab() {
                   <Text style={styles.orderMeta} numberOfLines={1}>
                     KH: {order.customerName || order.customerId}
                   </Text>
-                  <Text style={styles.orderAmount}>{order.totalAmount.toLocaleString('vi-VN')}d</Text>
+                  <Text style={styles.orderAmount}>{order.totalAmount.toLocaleString('vi-VN')} đ</Text>
                 </TouchableOpacity>
               )
             })}
@@ -481,7 +1009,9 @@ export default function RevenueTab() {
           >
             <Text style={styles.pagerText}>Trước</Text>
           </TouchableOpacity>
-          <Text style={styles.pageLabel}>Trang {ordersPage}/{totalOrderPages}</Text>
+          <Text style={styles.pageLabel}>
+            Trang {ordersPage}/{totalOrderPages}
+          </Text>
           <TouchableOpacity
             disabled={ordersPage === totalOrderPages}
             onPress={() => setOrdersPage((p) => Math.min(totalOrderPages, p + 1))}
@@ -492,33 +1022,30 @@ export default function RevenueTab() {
         </View>
       </Card>
 
-      <Modal visible={orderDetailModalOpen} transparent animationType="slide" onRequestClose={closeOrderDetailModal}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBody}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
-              <TouchableOpacity onPress={closeOrderDetailModal} style={styles.modalCloseBtn}>
-                <Text style={styles.modalCloseText}>Đóng</Text>
-              </TouchableOpacity>
-            </View>
-
-            {orderDetailLoading && <ActivityIndicator color="#3366CC" />}
-            {!orderDetailLoading && orderDetail && (
-              <ScrollView>
-                <Text style={styles.detailRow}>Ma: {orderDetail.code}</Text>
-                <Text style={styles.detailRow}>Tên: {orderDetail.name}</Text>
-                <Text style={styles.detailRow}>Khach hang: {orderDetail.customerName || orderDetail.customerId}</Text>
-                <Text style={styles.detailRow}>Trạng thái: {orderDetail.status}</Text>
-                <Text style={styles.detailRow}>Tổng tiền: {orderDetail.totalAmount.toLocaleString('vi-VN')}d</Text>
-                <Text style={styles.detailRow}>Sản phẩm:</Text>
-                {orderDetail.orderItems.map((item) => (
-                  <Text key={item.id} style={styles.detailSubRow}>
-                    - {item.productName} x{item.quantity} ({item.itemsPrice?.toLocaleString('vi-VN') ?? 'N/A'}d)
-                  </Text>
-                ))}
-              </ScrollView>
+      <Modal visible={orderDetailModalOpen} animationType="slide" onRequestClose={closeOrderDetailModal}>
+        <View style={styles.modalScreen}>
+          <View style={styles.modalTopBar}>
+            <TouchableOpacity style={styles.modalBackBtn} onPress={closeOrderDetailModal} hitSlop={12}>
+              <ChevronLeft size={24} color="#003366" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
+            {orderDetail && !orderDetailLoading ? (
+              <View style={[styles.modalStatusBadge, { backgroundColor: getOrderStatusUi(orderDetail.status).pillBg }]}>
+                <CheckCircle2 size={14} color="#fff" />
+                <Text style={styles.modalStatusText}>{getOrderStatusUi(orderDetail.status).labelVi}</Text>
+              </View>
+            ) : (
+              <View style={styles.modalHeaderSpacer} />
             )}
           </View>
+
+          {orderDetailLoading || orderDetail ? (
+            <AdminOrderDetailModal order={orderDetail} loading={orderDetailLoading} />
+          ) : (
+            <View style={detailStyles.loadingWrap}>
+              <Text style={styles.emptyText}>Không có dữ liệu đơn hàng.</Text>
+            </View>
+          )}
         </View>
       </Modal>
     </View>
@@ -527,36 +1054,40 @@ export default function RevenueTab() {
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  filterText: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  filterSection: { gap: 8 },
+  filterText: { fontSize: 12, color: '#4B5563', fontWeight: '600', lineHeight: 18 },
+  filterPeriod: { color: '#003366', fontWeight: '700' },
+  filterControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   filterInput: {
+    flex: 1,
     height: 38,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 10,
-    minWidth: 130,
     color: '#111827',
     backgroundColor: '#fff'
   },
   filterBtn: { backgroundColor: '#3366CC', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9 },
   filterBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  grid2: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  card: { width: '48%', minWidth: 150 },
-  cardFull: { width: '100%' },
-  cardTitleRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 },
-  cardTitle: { color: '#374151', fontWeight: '600', fontSize: 13 },
-  cardValue: { color: '#003366', fontSize: 22, fontWeight: '700' },
-  cardValueMoney: { color: '#003366', fontSize: 22, fontWeight: '700' },
+  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   block: { paddingVertical: 14 },
-  blockTitle: { fontSize: 16, color: '#003366', fontWeight: '700', marginBottom: 10 },
+  chartHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  blockTitle: { fontSize: 16, color: '#003366', fontWeight: '700' },
+  inlineFilter: { flexDirection: 'row', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' },
   filterChipsRow: { gap: 8, paddingBottom: 8 },
   chip: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
   chipActive: { backgroundColor: '#3366CC', borderColor: '#3366CC' },
   chipText: { color: '#334155', fontSize: 12, fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   orderList: { gap: 8 },
-  orderCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 10, backgroundColor: '#fff' },
+  orderCard: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: '#fff'
+  },
   orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderCode: { color: '#003366', fontWeight: '700' },
   badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
@@ -569,12 +1100,36 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   pagerText: { color: '#fff', fontWeight: '600' },
   pageLabel: { color: '#6B7280', fontSize: 12 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 16 },
-  modalBody: { backgroundColor: '#fff', borderRadius: 12, padding: 14, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalTitle: { color: '#003366', fontSize: 16, fontWeight: '700' },
-  modalCloseBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#E2E8F0' },
-  modalCloseText: { color: '#334155', fontWeight: '600' },
-  detailRow: { color: '#334155', marginBottom: 8 },
-  detailSubRow: { color: '#64748B', marginBottom: 6, paddingLeft: 6 }
+  emptyText: { color: '#6B7280', fontSize: 13, marginVertical: 8 },
+  modalScreen: { flex: 1, backgroundColor: '#F5F7FA' },
+  modalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 8
+  },
+  modalBackBtn: { padding: 4 },
+  modalTitle: {
+    flex: 1,
+    color: '#003366',
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginRight: -28
+  },
+  modalHeaderSpacer: { width: 72 },
+  modalStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    maxWidth: 120
+  },
+  modalStatusText: { color: '#fff', fontSize: 11, fontWeight: '700' }
 })

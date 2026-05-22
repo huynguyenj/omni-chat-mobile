@@ -4,7 +4,7 @@ export default function AdminDashboardHeader() {
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Admin Dashboard</Text>
-      <Text style={styles.subtitle}>Hệ thống OmniChat</Text>
+      <Text style={styles.subtitle}>Tổng quan hệ thống OmniChat</Text>
     </View>
   )
 }

@@ -11,7 +11,11 @@ export const OrderApi = {
   },
 
   getOrderById: async (id: string): Promise<ApiResponseStructure<AdminOrderDetail>> => {
-    const response = await apiPublic.get<ApiResponseStructure<AdminOrderDetail>>(`/orders/get/${id}`)
+    const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
+    const path = baseUrl.includes('/api/v1')
+      ? `/orders/get/${encodeURIComponent(id)}`
+      : `/api/v1/orders/get/${encodeURIComponent(id)}`
+    const response = await apiPublic.get<ApiResponseStructure<AdminOrderDetail>>(path)
     return response.data as unknown as ApiResponseStructure<AdminOrderDetail>
   },
 

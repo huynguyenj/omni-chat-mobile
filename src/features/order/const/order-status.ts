@@ -107,3 +107,66 @@ export function getDeliveryStatusDisplay(status: string | undefined): OrderStatu
   if (hit) return DELIVERY_STATUS[hit]
   return { name: raw, tagVariant: 'default' }
 }
+
+const STATUS_API_ALIASES: Record<string, string> = {
+  PendingReturned: 'PendingReturn',
+  ReturnDefective: 'ReturnedDefective'
+}
+
+export function resolveOrderStatusKey(status: string): string {
+  const raw = String(status ?? '').trim()
+  if (!raw) return ''
+  if (ORDER_STATUS[raw]) return raw
+  if (STATUS_API_ALIASES[raw]) return STATUS_API_ALIASES[raw]
+  const hit = Object.keys(ORDER_STATUS).find((k) => k.toLowerCase() === raw.toLowerCase())
+  return hit ?? raw
+}
+
+const PILL_BG_BY_VARIANT: Record<string, string> = {
+  gray: '#6B7280',
+  default: '#3366CC',
+  success: '#26C271',
+  danger: '#FB2C36',
+  warning: '#FF9800'
+}
+
+const CARD_BORDER_BY_VARIANT: Record<string, string> = {
+  gray: '#6B7280',
+  default: '#3366CC',
+  success: '#26C271',
+  danger: '#FB2C36',
+  warning: '#FF9800'
+}
+
+export function getOrderStatusUi(status: string): {
+  labelVi: string
+  pillBg: string
+  cardBorderColor: string
+} {
+  const key = resolveOrderStatusKey(status)
+  const meta = ORDER_STATUS[key]
+  if (meta) {
+    return {
+      labelVi: meta.name,
+      pillBg: PILL_BG_BY_VARIANT[meta.tagVariant] ?? '#94A3B8',
+      cardBorderColor: CARD_BORDER_BY_VARIANT[meta.tagVariant] ?? '#94A3B8'
+    }
+  }
+  return { labelVi: key || '—', pillBg: '#94A3B8', cardBorderColor: '#94A3B8' }
+}
+
+export const REVENUE_ORDER_STATUS_FILTERS: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'Draft', label: 'Bản nháp' },
+  { value: 'Pending', label: 'Chờ xử lý' },
+  { value: 'Shipped', label: 'Đã giao hàng' },
+  { value: 'Completed', label: 'Hoàn thành' },
+  { value: 'Cancelled', label: 'Đã hủy' },
+  { value: 'PendingReturn', label: 'Chờ trả hàng' },
+  { value: 'Returned', label: 'Đã trả hàng' },
+  { value: 'ReturnedDefective', label: 'Đã trả hàng do lỗi' },
+  { value: 'ReturnRejected', label: 'Từ chối trả hàng' },
+  { value: 'RefundRejected', label: 'Từ chối hoàn hàng' },
+  { value: 'RefundApproved', label: 'Chấp nhận hoàn hàng' },
+  { value: 'ReturnApproved', label: 'Chấp nhận trả hàng' }
+]
