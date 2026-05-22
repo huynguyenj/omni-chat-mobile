@@ -52,6 +52,11 @@ export function normalizeCustomerWallet(raw: unknown): ManagerCustomerWalletItem
     avatarUrl: pickStr(r.avatarUrl ?? r.avatar_url ?? r.avatar ?? r.imageUrl),
     facebookId: pickStr(r.facebookId ?? r.facebook_id),
     zaloId: pickStr(r.zaloId ?? r.zalo_id),
+    zaloSenderId: (() => {
+      const v = r.zaloSenderId ?? r.zalo_sender_id
+      if (v == null || v === '') return null
+      return String(v)
+    })(),
     googleId: pickStr(r.googleId ?? r.google_id),
     currentProviderName: pickStr(r.currentProviderName ?? r.current_provider_name ?? r.providerName ?? r.provider),
     totalOrder: pickNum(r.totalOrder ?? r.total_order ?? r.orderCount),
@@ -70,10 +75,30 @@ export function customerInitial(name: string): string {
 
 export function transactionTypeLabel(type: string): string {
   const t = type.toLowerCase()
-  if (t === 'deposit') return 'Nạp tiền'
-  if (t === 'credit') return 'Ghi có'
-  if (t === 'debit') return 'Ghi nợ'
-  return type || '—'
+  if (t === 'deposit') return 'Nạp tiền vào ví'
+  if (t === 'credit') return 'Hoàn tiền lại ví'
+  if (t === 'debit') return 'Debit'
+  return type || 'Khác'
+}
+
+export function formatWalletTxDateTime(rawDate: string): string {
+  if (!rawDate) return '—'
+  const d = new Date(rawDate)
+  if (Number.isNaN(d.getTime())) return rawDate
+  const time = d.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const date = d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })
+  return `${time} ${date}`
+}
+
+export function transactionAmountColor(type: string): string {
+  const t = type.toLowerCase()
+  if (t === 'debit') return '#dc2626'
+  return '#15803d'
 }
 
 export function formatWalletMoney(n: number): string {

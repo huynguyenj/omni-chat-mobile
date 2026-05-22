@@ -5,6 +5,7 @@ import type {
   ManagerClaimDashboardData,
   ManagerClaimListResponse
 } from '../types/claim-type'
+import { extractApiErrorMessage } from '../utils/api-error'
 
 function resolveClaimsEndpoint(mode: 'pending' | 'history') {
   const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
@@ -30,25 +31,21 @@ function resolvePendingChangeTasksEndpoint() {
   return '/api/v1/claims/pending-change-tasks'
 }
 
-function resolveReassignClaimEndpoint(conversationId: string, newStaffId: string) {
+function resolveReassignApproveEndpoint(claimId: string, conversationId: string, newStaffId: string) {
+  const c = encodeURIComponent(claimId)
+  const conv = encodeURIComponent(conversationId)
+  const staff = encodeURIComponent(newStaffId)
   const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
-  if (baseUrl.includes('/api/v1')) return `/claims/${conversationId}/reassign/${newStaffId}`
-  return `/api/v1/claims/${conversationId}/reassign/${newStaffId}`
+  if (baseUrl.includes('/api/v1')) return `/claims/${c}/reassign/${conv}/${staff}/approve`
+  return `/api/v1/claims/${c}/reassign/${conv}/${staff}/approve`
 }
 
-function extractApiErrorMessage(err: unknown, fallback: string) {
-  const e = err && typeof err === 'object' ? (err as Record<string, unknown>) : {}
-  const response = e.response && typeof e.response === 'object' ? (e.response as Record<string, unknown>) : {}
-  const data = response.data && typeof response.data === 'object' ? (response.data as Record<string, unknown>) : {}
-  const innerData = data.data && typeof data.data === 'object' ? (data.data as Record<string, unknown>) : {}
-
-  const reason = String(data.reason ?? '').trim()
-  if (reason) return reason
-  const exceptionMessage = String(innerData.exceptionMessage ?? '').trim()
-  if (exceptionMessage) return exceptionMessage
-  const message = String(data.message ?? '').trim()
-  if (message) return message
-  return fallback
+function resolveChangeTaskRejectEndpoint(claimId: string, managerId: string) {
+  const id = encodeURIComponent(claimId)
+  const mgr = encodeURIComponent(managerId)
+  const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
+  if (baseUrl.includes('/api/v1')) return `/claims/${id}/reject/${mgr}`
+  return `/api/v1/claims/${id}/reject/${mgr}`
 }
 
 function unwrapClaimList(raw: unknown): ManagerClaimListResponse {
@@ -116,23 +113,40 @@ export const ClaimApi = {
     await apiPrivate.patch(resolveClaimActionEndpoint(id, 'reject'))
   },
 
-  reassignClaimConversation: async (conversationId: string, newStaffId: string): Promise<string> => {
-    if (!conversationId) throw new Error('Thiếu conversationId để gán lại nhân viên.')
-    if (!newStaffId) throw new Error('Thiếu newStaffId để gán lại nhân viên.')
-    const endpoint = resolveReassignClaimEndpoint(conversationId, newStaffId)
+  approveReassignClaim: async (
+    claimId: string,
+    conversationId: string,
+    newStaffId: string
+  ): Promise<string> => {
+    if (!claimId) throw new Error('Thiếu claimId để duyệt chuyển giao.')
+    if (!conversationId) throw new Error('Thiếu conversationId để duyệt chuyển giao.')
+    if (!newStaffId) throw new Error('Thiếu newStaffId để duyệt chuyển giao.')
+    const endpoint = resolveReassignApproveEndpoint(claimId, conversationId, newStaffId)
     try {
       const raw: unknown = await apiPrivate.put(endpoint)
       const body = raw as ApiResponseStructure<unknown>
-      if (body && typeof body === 'object' && 'is_success' in body && body.is_success === false) {
-        throw new Error(body.reason || body.message || 'Không thể thay nhân viên xử lý.')
+      if (body?.is_success === false) {
+        throw new Error(body.reason || body.message || 'Không thể duyệt chuyển giao.')
       }
-      if (body && typeof body === 'object' && 'message' in body && typeof body.message === 'string') {
-        return body.message
-      }
-      return 'Thay nhân viên thành công.'
+      return body?.message?.trim() ? body.message : 'Duyệt chuyển giao thành công.'
     } catch (error) {
-      const msg = typeof error === 'string' ? error : extractApiErrorMessage(error, 'Không thể thay nhân viên xử lý.')
-      throw new Error(msg)
+      throw new Error(extractApiErrorMessage(error, 'Không thể duyệt chuyển giao.'))
+    }
+  },
+
+  rejectChangeTaskClaim: async (claimId: string, managerId: string): Promise<string> => {
+    if (!claimId) throw new Error('Thiếu claimId để từ chối yêu cầu.')
+    if (!managerId) throw new Error('Thiếu managerId để từ chối yêu cầu.')
+    const endpoint = resolveChangeTaskRejectEndpoint(claimId, managerId)
+    try {
+      const raw: unknown = await apiPrivate.put(endpoint)
+      const body = raw as ApiResponseStructure<unknown>
+      if (body?.is_success === false) {
+        throw new Error(body.reason || body.message || 'Không thể từ chối yêu cầu.')
+      }
+      return body?.message?.trim() ? body.message : 'Đã từ chối yêu cầu chuyển giao.'
+    } catch (error) {
+      throw new Error(extractApiErrorMessage(error, 'Không thể từ chối yêu cầu.'))
     }
   },
 

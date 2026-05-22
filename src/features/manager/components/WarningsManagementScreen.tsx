@@ -12,55 +12,35 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
-import {
-  Check,
-  Clock,
-  List,
-  Star,
-  Tag,
-  User
-} from 'lucide-react-native'
+import { AlertTriangle, Check, Clock, X } from 'lucide-react-native'
 import { WarningApi } from '../api/warning-api'
 import type { ManagerWarningDetailResponse, ManagerWarningItem } from '../types/warning-type'
-import { formatDateTime } from '../utils/claimsNormalize'
-import { severityTag, severityTheme, warningSeverity } from '../utils/warning-severity'
+import { warningSeverityFromType, warningTypeLabelVi } from '../utils/warning-type-helpers'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 9
+const SEVERITY_FETCH_PAGE_SIZE = 120
 
-type ReviewFilter = 'all' | 'unreviewed' | 'reviewed'
+type WarningListFilter = 'all' | 'unreviewed' | 'reviewed' | 'high' | 'medium'
 
-function reviewFilterToParam(f: ReviewFilter): boolean | undefined {
-  if (f === 'all') return undefined
+function reviewFilterToParam(f: WarningListFilter): boolean | undefined {
+  if (f === 'all' || f === 'high' || f === 'medium') return undefined
   if (f === 'unreviewed') return false
   return true
 }
 
-type LucideIconProps = { size?: number; color?: string; strokeWidth?: number }
+function formatWarningDateTime(raw: string): string {
+  if (!raw) return '—'
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return raw
+  return d.toLocaleString('vi-VN')
+}
 
-function DetailIconRow({
-  Icon,
-  label,
-  value
-}: {
-  Icon: React.ComponentType<LucideIconProps>
-  label: string
-  value: string
-}) {
-  return (
-    <View style={styles.detailIconRow}>
-      <View style={styles.iconBubble}>
-        <Icon size={14} color="#475569" strokeWidth={2} />
-      </View>
-      <View style={styles.detailIconTextWrap}>
-        <Text style={styles.detailIconLabel}>{label}</Text>
-        <Text style={styles.detailIconValue}>{value}</Text>
-      </View>
-    </View>
-  )
+function severityBorderColor(warningType: string | number): string {
+  return warningSeverityFromType(warningType) === 'high' ? '#FB2C36' : '#FF9800'
 }
 
 export default function WarningsManagementScreen() {
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all')
+  const [reviewFilter, setReviewFilter] = useState<WarningListFilter>('all')
   const [items, setItems] = useState<ManagerWarningItem[]>([])
   const [meta, setMeta] = useState({ total_pages: 1, current_page: 1 })
   const [loading, setLoading] = useState(true)
@@ -76,6 +56,15 @@ export default function WarningsManagementScreen() {
 
   const fetchPage = useCallback(
     async (p: number, reset: boolean) => {
+      if (reviewFilter === 'high' || reviewFilter === 'medium') {
+        const res = await WarningApi.getWarnings(1, SEVERITY_FETCH_PAGE_SIZE, undefined)
+        const nextItems = (res.items ?? []).filter(
+          (it) => warningSeverityFromType(it.warningType) === reviewFilter
+        )
+        setMeta({ total_pages: 1, current_page: 1 })
+        setItems(nextItems)
+        return
+      }
       const isReviewed = reviewFilterToParam(reviewFilter)
       const res = await WarningApi.getWarnings(p, PAGE_SIZE, isReviewed)
       const nextItems = res.items ?? []
@@ -110,7 +99,7 @@ export default function WarningsManagementScreen() {
         await fetchPage(1, true)
       } catch (e) {
         if (cancelled) return
-        const msg = typeof e === 'string' ? e : 'Không tải được danh sách cảnh báo.'
+        const msg = typeof e === 'string' ? e : 'Không thể tải danh sách cảnh báo. Vui lòng thử lại.'
         setListError(msg)
         Toast.show({ type: 'error', text1: msg })
       } finally {
@@ -136,6 +125,7 @@ export default function WarningsManagementScreen() {
   }, [fetchPage])
 
   const onLoadMore = useCallback(async () => {
+    if (reviewFilter === 'high' || reviewFilter === 'medium') return
     if (loading || loadingMore || refreshing || listSyncing) return
     if (meta.current_page >= meta.total_pages) return
     const next = meta.current_page + 1
@@ -148,7 +138,7 @@ export default function WarningsManagementScreen() {
     } finally {
       setLoadingMore(false)
     }
-  }, [loading, loadingMore, refreshing, listSyncing, meta, fetchPage])
+  }, [reviewFilter, loading, loadingMore, refreshing, listSyncing, meta, fetchPage])
 
   const closeDetail = useCallback(() => {
     setDetailOpen(false)
@@ -165,15 +155,16 @@ export default function WarningsManagementScreen() {
         return
       }
       setDetailOpen(true)
-      setDetail({ ...row, description: row.preview !== '—' ? row.preview : undefined })
+      setDetail({ ...row, description: row.reason || row.preview })
       setDetailError(null)
       setDetailLoading(true)
       try {
         const d = await WarningApi.getWarningDetail(row.id)
-        setDetail(d)
+        setDetail({ ...d, isReviewed: true })
+        setItems((prev) => prev.map((it) => (it.id === row.id ? { ...it, isReviewed: true } : it)))
         void reloadFirstPageSilent()
       } catch (e) {
-        const msg = typeof e === 'string' ? e : 'Không tải chi tiết.'
+        const msg = typeof e === 'string' ? e : 'Không tải nội dung cảnh báo. Vui lòng thử lại.'
         setDetailError(msg)
         Toast.show({ type: 'error', text1: msg })
       } finally {
@@ -186,47 +177,61 @@ export default function WarningsManagementScreen() {
   const filterSpecs = [
     { key: 'all' as const, label: 'Tất cả', onBg: '#dbeafe', onBorder: '#93c5fd', onText: '#1e40af' },
     { key: 'unreviewed' as const, label: 'Chưa xem', onBg: '#ffe4e6', onBorder: '#fda4af', onText: '#be123c' },
-    { key: 'reviewed' as const, label: 'Đã xem', onBg: '#dcfce7', onBorder: '#86efac', onText: '#166534' }
+    { key: 'reviewed' as const, label: 'Đã xem', onBg: '#dcfce7', onBorder: '#86efac', onText: '#166534' },
+    { key: 'high' as const, label: 'Nghiêm trọng', onBg: '#fee2e2', onBorder: '#fca5a5', onText: '#b91c1c' },
+    { key: 'medium' as const, label: 'Cảnh báo', onBg: '#ffedd5', onBorder: '#fdba74', onText: '#c2410c' }
   ]
 
   const renderRow = ({ item }: { item: ManagerWarningItem }) => {
-    const sev = warningSeverity(item)
-    const theme = severityTheme(sev)
-    const tag = severityTag(sev)
+    const isHigh = warningSeverityFromType(item.warningType) === 'high'
+    const typeLabel = warningTypeLabelVi(item.warningType)
+    const reasonText = item.reason || item.preview || '—'
     return (
       <Pressable
-        style={[styles.card, { borderColor: theme.borderTone }]}
+        style={[styles.card, { borderTopColor: severityBorderColor(item.warningType) }]}
         onPress={() => openDetail(item)}
       >
-        <View style={[styles.cardHead, { backgroundColor: theme.headerTint }]}>
-          <Text style={[styles.cardTitle, { color: theme.titleColor }]} numberOfLines={2}>
-            {item.title}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <AlertTriangle size={16} color={isHigh ? '#dc2626' : '#d97706'} strokeWidth={2.2} />
+            <Text style={styles.cardTypeTitle} numberOfLines={1}>
+              {typeLabel}
+            </Text>
+          </View>
+          <View style={[styles.sevBadge, isHigh ? styles.sevBadgeHigh : styles.sevBadgeMedium]}>
+            <Text style={styles.sevBadgeText}>{isHigh ? 'Nghiêm trọng' : 'Cảnh báo'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.metaGrid}>
+          <View style={styles.metaCol}>
+            <Text style={styles.metaLabel}>NHÂN VIÊN</Text>
+            <Text style={styles.metaValue} numberOfLines={1}>
+              {item.staffName}
+            </Text>
+          </View>
+          <View style={styles.metaCol}>
+            <Text style={styles.metaLabel}>KHÁCH HÀNG</Text>
+            <Text style={styles.metaValue} numberOfLines={1}>
+              {item.customerName}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.reasonBox}>
+          <Text style={styles.reasonText} numberOfLines={4}>
+            <Text style={styles.reasonBold}>Chi tiết: </Text>
+            {reasonText}
           </Text>
-          <View style={[styles.sevBadge, { backgroundColor: tag.bg }]}>
-            <Text style={styles.sevBadgeText}>{tag.label}</Text>
-          </View>
         </View>
-        <View style={styles.cardBody}>
-          <View style={styles.cardLine}>
-            <Tag size={15} color="#64748b" strokeWidth={2} />
-            <Text style={styles.cardLineText} numberOfLines={1}>
-              {item.warningType || '—'}
-            </Text>
+
+        <View style={styles.cardFooterRow}>
+          <View style={styles.timeTag}>
+            <Clock size={12} color="#fff" strokeWidth={2.2} />
+            <Text style={styles.timeTagText}>{formatWarningDateTime(item.createdAt)}</Text>
           </View>
-          <View style={styles.cardLine}>
-            <Clock size={15} color="#64748b" strokeWidth={2} />
-            <Text style={styles.cardLineText}>{formatDateTime(item.createdAt)}</Text>
-          </View>
-          <View style={styles.cardLine}>
-            <List size={15} color="#64748b" strokeWidth={2} />
-            <Text style={styles.cardPreview} numberOfLines={3}>
-              {item.preview}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.cardFooter}>
           <View style={[styles.readPill, item.isReviewed ? styles.readPillOn : styles.readPillOff]}>
-            {item.isReviewed ? <Check size={14} color="#15803d" strokeWidth={2.5} /> : null}
+            {item.isReviewed ? <Check size={12} color="#166534" strokeWidth={2.5} /> : null}
             <Text style={[styles.readPillText, item.isReviewed ? styles.readPillTextOn : styles.readPillTextOff]}>
               {item.isReviewed ? 'Đã xem' : 'Chưa xem'}
             </Text>
@@ -234,18 +239,6 @@ export default function WarningsManagementScreen() {
         </View>
       </Pressable>
     )
-  }
-
-  const extraThresholdLabel = (d: ManagerWarningDetailResponse): string | null => {
-    const ex = d.extra
-    if (!ex || typeof ex !== 'object') return null
-    const o = ex as Record<string, unknown>
-    const keys = ['alertThresholdMinutes', 'thresholdMinutes', 'responseThresholdMinutes', 'threshold']
-    for (const k of keys) {
-      const v = o[k]
-      if (v != null && v !== '') return `${v} phút`
-    }
-    return null
   }
 
   return (
@@ -313,112 +306,54 @@ export default function WarningsManagementScreen() {
       <Modal visible={detailOpen} animationType="slide" transparent onRequestClose={closeDetail}>
         <Pressable style={styles.modalBackdrop} onPress={closeDetail}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nội dung cảnh báo</Text>
+              <Pressable onPress={closeDetail} hitSlop={12} style={styles.modalCloseBtn}>
+                <X size={20} color="#64748b" strokeWidth={2} />
+              </Pressable>
+            </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalScreenTitle}>Chi tiết cảnh báo</Text>
-              {detailLoading ? <ActivityIndicator style={{ marginBottom: 12 }} /> : null}
+              {detailLoading ? <ActivityIndicator style={{ marginVertical: 16 }} /> : null}
               {detailError ? <Text style={styles.errText}>{detailError}</Text> : null}
-              {detail ? (
-                <>
-                  {(() => {
-                    const sev = warningSeverity(detail)
-                    const theme = severityTheme(sev)
-                    const tag = severityTag(sev)
-                    const summary = (detail.description ?? detail.preview ?? '—').trim()
-                    const threshold = extraThresholdLabel(detail)
-                    return (
-                      <>
-                        <View
-                          style={[
-                            styles.modalHead,
-                            { backgroundColor: theme.headerTint, borderColor: theme.borderTone }
-                          ]}
-                        >
-                          <View style={styles.modalHeadTop}>
-                            <Text style={[styles.modalHeadTitle, { color: theme.titleColor }]}>{detail.title}</Text>
-                            <View style={[styles.sevBadge, { backgroundColor: tag.bg }]}>
-                              <Text style={styles.sevBadgeText}>{tag.label}</Text>
-                            </View>
-                          </View>
-                          {detail.staffName ? (
-                            <View style={styles.modalHeadMeta}>
-                              <User size={15} color="#64748b" strokeWidth={2} />
-                              <Text style={styles.modalHeadMetaText}>Tên NV: {detail.staffName}</Text>
-                            </View>
-                          ) : null}
-                        </View>
+              {detail && !detailLoading ? (
+                <View style={styles.modalContent}>
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoBoxLabel}>LOẠI CẢNH BÁO</Text>
+                    <Text style={styles.infoBoxValue}>{warningTypeLabelVi(detail.warningType)}</Text>
+                  </View>
 
-                        <View style={styles.modalBody}>
-                          <View style={styles.modalTagRow}>
-                            <Tag size={15} color="#64748b" strokeWidth={2} />
-                            <Text style={styles.modalTagText}>{detail.warningType || '—'}</Text>
-                          </View>
+                  <View style={styles.metaGrid}>
+                    <View style={[styles.infoBox, styles.infoBoxHalf]}>
+                      <Text style={styles.infoBoxLabel}>NHÂN VIÊN</Text>
+                      <Text style={styles.infoBoxValue}>{detail.staffName ?? '—'}</Text>
+                    </View>
+                    <View style={[styles.infoBox, styles.infoBoxHalf]}>
+                      <Text style={styles.infoBoxLabel}>KHÁCH HÀNG</Text>
+                      <Text style={styles.infoBoxValue}>{detail.customerName ?? '—'}</Text>
+                    </View>
+                  </View>
 
-                          <View style={styles.modalSummary}>
-                            <Clock size={22} color="#64748b" strokeWidth={2} />
-                            <Text style={styles.modalSummaryText}>{summary}</Text>
-                          </View>
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoBoxLabel}>THỜI GIAN TẠO</Text>
+                    <Text style={styles.infoBoxValue}>{formatWarningDateTime(detail.createdAt)}</Text>
+                  </View>
 
-                          <View style={styles.modalDivider} />
+                  <View style={styles.infoBox}>
+                    <Text style={styles.infoBoxLabel}>TRẠNG THÁI</Text>
+                    <View style={[styles.readPill, detail.isReviewed ? styles.readPillOn : styles.readPillOff, styles.readPillInline]}>
+                      <Text style={[styles.readPillText, detail.isReviewed ? styles.readPillTextOn : styles.readPillTextOff]}>
+                        {detail.isReviewed ? 'Đã xem' : 'Chưa xem'}
+                      </Text>
+                    </View>
+                  </View>
 
-                          <View style={styles.modalGrid}>
-                            <View style={styles.modalGridCol}>
-                              <DetailIconRow Icon={Tag} label="Loại cảnh báo" value={detail.warningType || '—'} />
-                            </View>
-                            <View style={styles.modalGridCol}>
-                              <DetailIconRow
-                                Icon={User}
-                                label="Nhân viên"
-                                value={detail.staffName ?? '—'}
-                              />
-                            </View>
-                          </View>
-
-                          <View style={styles.modalGrid}>
-                            <View style={styles.modalGridCol}>
-                              <DetailIconRow
-                                Icon={Star}
-                                label="Khách hàng"
-                                value={detail.customerName ?? '—'}
-                              />
-                            </View>
-                            <View style={styles.modalGridCol}>
-                              <DetailIconRow
-                                Icon={Clock}
-                                label="Ngưỡng cảnh báo"
-                                value={threshold ?? '—'}
-                              />
-                            </View>
-                          </View>
-
-                          <DetailIconRow Icon={List} label="Nội dung chi tiết" value={summary} />
-
-                          {detail.conversationId ? (
-                            <DetailIconRow Icon={List} label="Hội thoại" value={detail.conversationId} />
-                          ) : null}
-                          {detail.conversationTitle ? (
-                            <DetailIconRow Icon={Tag} label="Tiêu đề hội thoại" value={detail.conversationTitle} />
-                          ) : null}
-
-                          <View style={styles.modalFooterBadge}>
-                            <View style={[styles.readPill, detail.isReviewed ? styles.readPillOn : styles.readPillOff]}>
-                              {detail.isReviewed ? (
-                                <Check size={14} color="#15803d" strokeWidth={2.5} />
-                              ) : null}
-                              <Text
-                                style={[
-                                  styles.readPillText,
-                                  detail.isReviewed ? styles.readPillTextOn : styles.readPillTextOff
-                                ]}
-                              >
-                                {detail.isReviewed ? 'Đã xem' : 'Chưa xem'}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      </>
-                    )
-                  })()}
-                </>
+                  <View style={styles.reasonBoxModal}>
+                    <Text style={styles.reasonBoxModalLabel}>NỘI DUNG CẢNH BÁO</Text>
+                    <Text style={styles.reasonBoxModalText}>
+                      {detail.reason || detail.description || detail.preview || '—'}
+                    </Text>
+                  </View>
+                </View>
               ) : null}
             </ScrollView>
           </Pressable>
@@ -462,45 +397,63 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 8 },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    overflow: 'hidden',
+    borderColor: '#e5e7eb',
+    borderTopWidth: 4,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2
   },
-  cardHead: {
+  cardHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10
+    marginBottom: 12
   },
-  cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', minWidth: 0 },
-  sevBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  sevBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
-  cardBody: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e2e8f0',
-    backgroundColor: '#fff'
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 },
+  cardTypeTitle: { flex: 1, fontSize: 14, fontWeight: '800', color: '#003366' },
+  sevBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  sevBadgeHigh: { backgroundColor: '#dc2626' },
+  sevBadgeMedium: { backgroundColor: '#ea580c' },
+  sevBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  metaGrid: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  metaCol: { flex: 1, minWidth: 0 },
+  metaLabel: { fontSize: 10, fontWeight: '600', color: '#6b7280', letterSpacing: 0.3 },
+  metaValue: { fontSize: 13, fontWeight: '600', color: '#003366', marginTop: 2 },
+  reasonBox: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 64,
+    marginBottom: 12
   },
-  cardLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 6 },
-  cardLineText: { flex: 1, fontSize: 13, color: '#334155', paddingTop: 1 },
-  cardPreview: { flex: 1, fontSize: 14, color: '#334155', lineHeight: 20, paddingTop: 1 },
-  cardFooter: {
+  reasonText: { fontSize: 12, color: '#374151', lineHeight: 18 },
+  reasonBold: { fontWeight: '800' },
+  cardFooterRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 12,
-    paddingBottom: 10,
-    paddingTop: 4,
-    backgroundColor: '#fff'
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8
   },
+  timeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f97316',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    maxWidth: '58%'
+  },
+  timeTagText: { fontSize: 10, fontWeight: '600', color: '#fff' },
   readPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,11 +462,12 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 10
   },
-  readPillOn: { backgroundColor: '#ccfbf1' },
-  readPillOff: { backgroundColor: '#ffe4e6' },
-  readPillText: { fontSize: 12, fontWeight: '700' },
-  readPillTextOn: { color: '#0f766e' },
-  readPillTextOff: { color: '#be123c' },
+  readPillOn: { backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#bbf7d0' },
+  readPillOff: { backgroundColor: '#fee2e2', borderWidth: 1, borderColor: '#fecaca' },
+  readPillText: { fontSize: 10, fontWeight: '700' },
+  readPillTextOn: { color: '#166534' },
+  readPillTextOff: { color: '#991b1b' },
+  readPillInline: { alignSelf: 'flex-start', marginTop: 6 },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 32, fontSize: 15 },
   errBox: {
     marginHorizontal: 16,
@@ -541,49 +495,32 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     maxHeight: '88%'
   },
-  modalScreenTitle: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 8, textAlign: 'center' },
-  modalHead: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1
-  },
-  modalHeadTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  modalHeadTitle: { flex: 1, fontSize: 17, fontWeight: '800', minWidth: 0 },
-  modalHeadMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
-  modalHeadMetaText: { fontSize: 13, color: '#475569', flex: 1 },
-  modalBody: { paddingBottom: 8 },
-  modalTagRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  modalTagText: { fontSize: 14, fontWeight: '600', color: '#334155', flex: 1 },
-  modalSummary: {
+  modalHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
+    justifyContent: 'space-between',
     marginBottom: 12
   },
-  modalSummaryText: {
-    fontSize: 14,
-    color: '#334155',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#003366', flex: 1 },
+  modalCloseBtn: { padding: 4 },
+  modalContent: { gap: 12, paddingBottom: 8 },
+  infoBox: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#f9fafb'
   },
-  modalDivider: { height: 1, backgroundColor: '#e2e8f0', marginBottom: 12 },
-  modalGrid: { flexDirection: 'row', gap: 10, marginBottom: 4 },
-  modalGridCol: { flex: 1, minWidth: 0 },
-  detailIconRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12 },
-  iconBubble: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center'
+  infoBoxHalf: { flex: 1, minWidth: 0 },
+  infoBoxLabel: { fontSize: 10, fontWeight: '600', color: '#6b7280', letterSpacing: 0.4 },
+  infoBoxValue: { fontSize: 14, fontWeight: '600', color: '#003366', marginTop: 4 },
+  reasonBoxModal: {
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2',
+    borderRadius: 10,
+    padding: 12
   },
-  detailIconTextWrap: { flex: 1, minWidth: 0 },
-  detailIconLabel: { fontSize: 11, fontWeight: '700', color: '#64748b', marginBottom: 2 },
-  detailIconValue: { fontSize: 13, color: '#0f172a', lineHeight: 18 },
-  modalFooterBadge: { alignItems: 'flex-end', marginTop: 8 }
+  reasonBoxModalLabel: { fontSize: 10, fontWeight: '700', color: '#b91c1c', letterSpacing: 0.4 },
+  reasonBoxModalText: { fontSize: 14, color: '#991b1b', marginTop: 6, lineHeight: 20 }
 })

@@ -21,10 +21,11 @@ function resolveOrderCancelPath(id: string) {
   return `/api/v1/orders/${encodeURIComponent(id)}/cancel`
 }
 
-function resolveSubmitDraftPath() {
+function resolveSubmitDraftPath(id: string) {
+  const enc = encodeURIComponent(id)
   const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
-  if (baseUrl.includes('/api/v1')) return '/orders/submit-draft'
-  return '/api/v1/orders/submit-draft'
+  if (baseUrl.includes('/api/v1')) return `/orders/${enc}/submit-draft`
+  return `/api/v1/orders/${enc}/submit-draft`
 }
 
 function buildOrderListParams(query: ManagerOrderListQuery) {
@@ -85,7 +86,7 @@ export const ManagerOrderApi = {
 
   submitDraftOrder: async (orderId: string): Promise<void> => {
     if (!orderId) throw new Error('Thiếu mã đơn.')
-    const raw: unknown = await apiPublic.post(resolveSubmitDraftPath(), { orderId })
+    const raw: unknown = await apiPublic.post(resolveSubmitDraftPath(orderId))
     assertManagerPublicSuccess(raw)
   },
 

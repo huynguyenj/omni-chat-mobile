@@ -69,6 +69,9 @@ export default function InvoicesManagementScreen() {
   const [listError, setListError] = useState<string | null>(null)
 
   const [uiPage, setUiPage] = useState(1)
+  const [simulateFrom, setSimulateFrom] = useState('')
+  const [simulateTo, setSimulateTo] = useState('')
+  const [simulating, setSimulating] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400)
@@ -167,6 +170,23 @@ export default function InvoicesManagementScreen() {
     const start = (page - 1) * INVOICE_PAGE_SIZE
     return filtered.slice(start, start + INVOICE_PAGE_SIZE)
   }, [filtered, uiPage, totalUiPages])
+
+  const handleRunInvoices = async () => {
+    setSimulating(true)
+    try {
+      const msg = await ManagerInvoiceApi.runInvoices({
+        from: simulateFrom.trim() || undefined,
+        to: simulateTo.trim() || undefined
+      })
+      Toast.show({ type: 'success', text1: msg })
+      await loadAll()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Chạy giả lập thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setSimulating(false)
+    }
+  }
 
   const selectStatus = (v: ManagerInvoiceStatusFilter) => {
     setStatusFilter(v)
@@ -317,6 +337,26 @@ export default function InvoicesManagementScreen() {
         })}
       </ScrollView>
 
+      <View style={styles.simulateRow}>
+        <TextInput
+          style={styles.simInput}
+          placeholder="Từ (ISO, vd 2026-05-01T00:00)"
+          placeholderTextColor="#94a3b8"
+          value={simulateFrom}
+          onChangeText={setSimulateFrom}
+        />
+        <TextInput
+          style={styles.simInput}
+          placeholder="Đến (ISO)"
+          placeholderTextColor="#94a3b8"
+          value={simulateTo}
+          onChangeText={setSimulateTo}
+        />
+        <Pressable style={styles.simBtn} onPress={handleRunInvoices} disabled={simulating}>
+          <Text style={styles.simBtnText}>{simulating ? '…' : 'Chạy'}</Text>
+        </Pressable>
+      </View>
+
       {listError ? <Text style={styles.bannerErr}>{listError}</Text> : null}
     </View>
   )
@@ -428,6 +468,20 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
   chipRow: { marginBottom: 8 },
+  simulateRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, marginBottom: 8, alignItems: 'center' },
+  simInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    fontSize: 11,
+    color: '#0f172a',
+    backgroundColor: '#fff'
+  },
+  simBtn: { backgroundColor: '#2563eb', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 },
+  simBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,

@@ -1,5 +1,5 @@
 export type ManagerOrderListQuery = {
-  /** Giống web: ưu tiên `pageNumber`. */
+  /** Ưu tiên `pageNumber`. */
   pageNumber?: number
   page?: number
   pageIndex?: number
@@ -7,7 +7,7 @@ export type ManagerOrderListQuery = {
   search?: string
   orderStatuses?: string[]
   sortBy?: string
-  /** Mặc định true (giống web). */
+  /** Mặc định true. */
   descending?: boolean
 }
 

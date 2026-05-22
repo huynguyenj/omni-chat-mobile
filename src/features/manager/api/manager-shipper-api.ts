@@ -17,7 +17,7 @@ function assertShipperDataPresent(root: Record<string, unknown>) {
 }
 
 /**
- * Sau interceptor: `{ is_success, data: { items, meta } }` — giống web ShippersTab.
+ * Sau interceptor: `{ is_success, data: { items, meta } }`.
  */
 function unwrapShipperListEnvelope(raw: unknown, pageSize: number): ManagerShipperListResponse {
   assertManagerPublicSuccess(raw)
@@ -67,7 +67,7 @@ export const ManagerShipperApi = {
     return result
   },
 
-  /** POST body null, orderId trong query string — giống web. */
+  /** POST body null, orderId trong query string. */
   assignOrderToShipper: async (shipperId: string, orderId: string): Promise<void> => {
     if (!shipperId) throw new Error('Thiếu shipper.')
     if (!orderId) throw new Error('Thiếu đơn hàng.')

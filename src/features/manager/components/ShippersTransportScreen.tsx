@@ -27,29 +27,12 @@ import {
 import { shipperActivityPill } from '../utils/managerShipperNormalize'
 
 const SHIPPER_PAGE_SIZE = 9
-const ORDER_PENDING_PAGE_SIZE = 9
-
-/** Giống màn Đơn hàng + Confirmed (web vận chuyển). */
-const TRANSPORT_ORDER_STATUS_FILTERS: { value: string | null; label: string }[] = [
-  { value: null, label: 'Tất cả' },
-  { value: 'Draft', label: 'Nháp' },
-  { value: 'Pending', label: 'Chờ xử lý' },
-  { value: 'Confirmed', label: 'Đã xác nhận' },
-  { value: 'Shipped', label: 'Đã gửi' },
-  { value: 'Completed', label: 'Hoàn tất' },
-  { value: 'Cancelled', label: 'Đã hủy' },
-  { value: 'PendingReturn', label: 'Chờ trả' },
-  { value: 'Returned', label: 'Đã trả' },
-  { value: 'ReturnedDefective', label: 'Trả lỗi' }
-]
+const ORDER_PENDING_PAGE_SIZE = 6
 
 type MainTab = 'orders' | 'shippers'
 
 export default function ShippersTransportScreen() {
   const [mainTab, setMainTab] = useState<MainTab>('orders')
-  /** Mặc định Pending — đúng tab «Đơn chờ giao»; có thể đổi «Tất cả». */
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string | null>('Pending')
-
   const [shippers, setShippers] = useState<ManagerShipperApiItem[]>([])
   const [shipperMeta, setShipperMeta] = useState({ total_pages: 1, current_page: 1 })
   const [shipperLoading, setShipperLoading] = useState(true)
@@ -80,30 +63,31 @@ export default function ShippersTransportScreen() {
     setShippers((prev) => (reset ? res.items : [...prev, ...res.items]))
   }, [])
 
-  const orderStatusesParam = useMemo(
-    () => (orderStatusFilter ? [orderStatusFilter] : undefined),
-    [orderStatusFilter]
-  )
+  const shipperKpi = useMemo(() => {
+    let active = 0
+    let shipping = 0
+    let delivered = 0
+    for (const s of shippers) {
+      if (String(s.shipperStatus ?? '').toLowerCase() === 'online') active += 1
+      shipping += Number(s.deliveringCount ?? 0)
+      delivered += Number(s.deliveredCount ?? 0)
+    }
+    return { active, shipping, delivered }
+  }, [shippers])
 
-  const fetchOrdersPage = useCallback(
-    async (pageNumber: number, reset: boolean) => {
-      const res = await ManagerOrderApi.getOrders({
-        pageNumber,
-        pageSize: ORDER_PENDING_PAGE_SIZE,
-        orderStatuses: orderStatusesParam,
-        sortBy: 'orderdate',
-        descending: true
-      })
-      const m = res.meta
-      setOrderMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
-      setOrders((prev) => (reset ? res.items : [...prev, ...res.items]))
-    },
-    [orderStatusesParam]
-  )
-
-  const selectOrderStatus = (v: string | null) => {
-    setOrderStatusFilter(v)
-  }
+  const fetchOrdersPage = useCallback(async (pageNumber: number, reset: boolean) => {
+    const res = await ManagerOrderApi.getOrders({
+      pageNumber,
+      pageSize: ORDER_PENDING_PAGE_SIZE,
+      orderStatuses: ['Pending'],
+      sortBy: 'orderdate',
+      descending: true
+    })
+    const pendingOnly = res.items.filter((o) => String(o.status ?? '').trim().toLowerCase() === 'pending')
+    const m = res.meta
+    setOrderMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
+    setOrders((prev) => (reset ? pendingOnly : [...prev, ...pendingOnly]))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -399,26 +383,7 @@ export default function ShippersTransportScreen() {
 
       {mainTab === 'orders' ? (
         <View style={styles.ordersPane}>
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterLabel}>Trạng thái đơn</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
-              {TRANSPORT_ORDER_STATUS_FILTERS.map((f) => {
-                const on = orderStatusFilter === f.value
-                return (
-                  <Pressable
-                    key={String(f.value ?? 'all')}
-                    onPress={() => selectOrderStatus(f.value)}
-                    style={[styles.chip, on && styles.chipOn]}
-                  >
-                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
-                  </Pressable>
-                )
-              })}
-            </ScrollView>
-            {orderStatusFilter === null ? (
-              <Text style={styles.filterHint}>Tất cả đơn — có thể chậm hơn khi lọc đầy dữ liệu.</Text>
-            ) : null}
-          </View>
+          <Text style={styles.filterHint}>Chỉ hiển thị đơn chờ giao (Pending).</Text>
           {orderError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{orderError}</Text>
@@ -437,7 +402,7 @@ export default function ShippersTransportScreen() {
               renderItem={renderOrder}
               contentContainerStyle={styles.listPad}
               refreshControl={<RefreshControl refreshing={orderRefreshing} onRefresh={onRefreshOrders} />}
-              ListEmptyComponent={<Text style={styles.emptySm}>Không có đơn với bộ lọc đã chọn.</Text>}
+              ListEmptyComponent={<Text style={styles.emptySm}>Không có đơn chờ giao.</Text>}
               onEndReached={onLoadMoreOrders}
               onEndReachedThreshold={0.35}
               ListFooterComponent={
@@ -450,6 +415,20 @@ export default function ShippersTransportScreen() {
         </View>
       ) : (
         <>
+          <View style={styles.kpiRow}>
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiVal}>{shipperKpi.active}</Text>
+              <Text style={styles.kpiLabel}>Shipper online</Text>
+            </View>
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiVal}>{shipperKpi.shipping}</Text>
+              <Text style={styles.kpiLabel}>Đang giao</Text>
+            </View>
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiVal}>{shipperKpi.delivered}</Text>
+              <Text style={styles.kpiLabel}>Đã giao</Text>
+            </View>
+          </View>
           {shipperError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{shipperError}</Text>
@@ -570,6 +549,18 @@ export default function ShippersTransportScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8fafc' },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a', paddingHorizontal: 16, marginBottom: 8 },
+  kpiRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 10 },
+  kpiCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center'
+  },
+  kpiVal: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
+  kpiLabel: { fontSize: 10, color: '#64748b', marginTop: 4, textAlign: 'center' },
   orderList: { flex: 1 },
   ordersPane: { flex: 1 },
   filterBlock: { paddingHorizontal: 16, marginTop: 4, marginBottom: 8 },
@@ -588,7 +579,14 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: '#1e293b', borderColor: '#1e293b' },
   chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
   chipTextOn: { color: '#fff' },
-  filterHint: { fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginTop: 6 },
+  filterHint: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontStyle: 'italic',
+    marginTop: 6,
+    textAlign: 'center',
+    alignSelf: 'stretch'
+  },
   mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, backgroundColor: '#e2e8f0', borderRadius: 12, padding: 4 },
   mainTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   mainTabLeft: { marginRight: 4 },

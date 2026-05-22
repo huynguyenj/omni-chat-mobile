@@ -29,7 +29,7 @@ export const ManagerWalletApi = {
   },
 
   /**
-   * Giống web: lặp trang pageSize 100, không truyền customerName; gộp + dedupe theo id (bản cuối).
+   * Lặp trang pageSize 100, không truyền customerName; gộp + dedupe theo id (bản cuối).
    */
   fetchAllCustomerWallets: async (): Promise<ManagerCustomerWalletItem[]> => {
     const byId = new Map<string, ManagerCustomerWalletItem>()

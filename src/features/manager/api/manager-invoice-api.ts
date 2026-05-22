@@ -1,5 +1,7 @@
 import { apiPrivate, apiPublic } from '@/configs/axios.config'
+import type { ApiResponseStructure } from '@/types/api.response'
 import type { ManagerInvoiceItem, ManagerInvoiceListQuery, ManagerInvoiceListResponse } from '../types/manager-invoice-type'
+import { extractApiErrorMessage } from '../utils/api-error'
 import { assertManagerPublicSuccess, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
 import { normalizeInvoice } from '../utils/managerInvoicesNormalize'
 
@@ -15,6 +17,12 @@ function resolveInvoiceExportPath(id: string) {
   const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
   if (baseUrl.includes('/api/v1')) return `/invoices/${encodeURIComponent(id)}/export`
   return `/api/v1/invoices/${encodeURIComponent(id)}/export`
+}
+
+function resolveInvoiceRunPath() {
+  const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
+  if (baseUrl.includes('/api/v1')) return '/invoices/run'
+  return '/api/v1/invoices/run'
 }
 
 function buildInvoiceListParams(query: ManagerInvoiceListQuery) {
@@ -66,7 +74,7 @@ export const ManagerInvoiceApi = {
   },
 
   /**
-   * Lặp theo trang API cho đến hết (pageSize 100, sortBy startedDate, descending true) — parity với web.
+   * Lặp theo trang API cho đến hết (pageSize 100, sortBy startedDate, descending true).
    */
   fetchAllInvoices: async (): Promise<ManagerInvoiceItem[]> => {
     let page = 1
@@ -87,7 +95,7 @@ export const ManagerInvoiceApi = {
   },
 
   /**
-   * GET export — trả ArrayBuffer xlsx hoặc ném Error(message) nếu server trả JSON/HTML lỗi (giống ý tưởng web).
+   * GET export — trả ArrayBuffer xlsx hoặc ném Error(message) nếu server trả JSON/HTML lỗi.
    */
   exportInvoiceExcelBuffer: async (invoiceId: string): Promise<ArrayBuffer> => {
     if (!invoiceId) throw new Error('Thiếu mã hóa đơn.')
@@ -110,5 +118,23 @@ export const ManagerInvoiceApi = {
   exportInvoiceExcelBase64: async (invoiceId: string): Promise<string> => {
     const buf = await ManagerInvoiceApi.exportInvoiceExcelBuffer(invoiceId)
     return arrayBufferToBase64(buf)
+  },
+
+  runInvoices: async (query?: { from?: string; to?: string }): Promise<string> => {
+    const params: Record<string, string> = {}
+    if (query?.from?.trim()) params.from = query.from.trim()
+    if (query?.to?.trim()) params.to = query.to.trim()
+    try {
+      const raw: unknown = await apiPrivate.post(resolveInvoiceRunPath(), null, {
+        params: Object.keys(params).length > 0 ? params : undefined
+      })
+      const body = raw as ApiResponseStructure<unknown>
+      if (body?.is_success === false) {
+        throw new Error(body.message || 'Không thể chạy giả lập hóa đơn.')
+      }
+      return body?.message?.trim() ? body.message : 'Đã chạy giả lập hóa đơn thành công.'
+    } catch (error) {
+      throw new Error(extractApiErrorMessage(error, 'Không thể chạy giả lập hóa đơn.'))
+    }
   }
 }

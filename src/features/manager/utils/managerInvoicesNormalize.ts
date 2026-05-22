@@ -11,7 +11,7 @@ function pickNum(v: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
-/** Thứ tự sort trạng thái giống web: pending → pendingrefund → completed → refunded */
+/** Thứ tự sort trạng thái: pending → pendingrefund → completed → refunded */
 export function normInvoiceStatus(status: string): string {
   return status.toLowerCase().replace(/\s+/g, '')
 }

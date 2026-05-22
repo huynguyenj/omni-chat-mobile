@@ -1,3 +1,4 @@
+import { getOrderStatusPill } from '../const/order-status'
 import type { ManagerOrderDetail, ManagerOrderItem, ManagerOrderLineItem } from '../types/manager-order-type'
 
 function num(v: unknown, fallback = 0): number {
@@ -55,7 +56,7 @@ function pickCustomerFromOrder(o: Record<string, unknown>) {
   return { customerName, customerPhone, customerAddress }
 }
 
-/** Chuẩn hoá item đơn (list + detail) — tương đương normalizeOrderItem trên web. */
+/** Chuẩn hoá item đơn (list + detail). */
 export function normalizeOrderItem(raw: unknown): ManagerOrderItem {
   return normalizeOrder(raw)
 }
@@ -137,24 +138,9 @@ export function canSubmitDraftOrder(detail: ManagerOrderItem, fromPostSaleList: 
   return String(detail.status) === 'Draft' && !fromPostSaleList
 }
 
+/** @deprecated Dùng `getOrderStatusPill` từ `const/order-status` — giữ alias cho import cũ. */
 export function orderStatusPill(status: string): { label: string; color: string; bg: string } {
-  const empty = { label: '—', color: '#64748b', bg: '#f1f5f9' }
-  const raw = String(status ?? '').trim()
-  if (!raw) return empty
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    Draft: { label: 'Nháp', color: '#0f172a', bg: '#cbd5e1' },
-    Pending: { label: 'Chờ xử lý', color: '#b45309', bg: '#fef3c7' },
-    Shipped: { label: 'Đã gửi', color: '#1e40af', bg: '#dbeafe' },
-    Confirmed: { label: 'Đã xác nhận', color: '#1d4ed8', bg: '#dbeafe' },
-    Completed: { label: 'Hoàn tất', color: '#15803d', bg: '#dcfce7' },
-    Cancelled: { label: 'Đã hủy', color: '#b91c1c', bg: '#fee2e2' },
-    PendingReturn: { label: 'Chờ trả hàng', color: '#c2410c', bg: '#ffedd5' },
-    Returned: { label: 'Đã trả', color: '#0369a1', bg: '#e0f2fe' },
-    ReturnedDefective: { label: 'Trả lỗi', color: '#9f1239', bg: '#fce7f3' }
-  }
-  const hit = (Object.keys(map) as (keyof typeof map)[]).find((k) => k.toLowerCase() === raw.toLowerCase())
-  if (hit) return map[hit]
-  return { label: raw, color: '#334155', bg: '#e2e8f0' }
+  return getOrderStatusPill(status)
 }
 
 export function deliveryStatusPill(deliveryStatus: unknown): { label: string; color: string; bg: string } {

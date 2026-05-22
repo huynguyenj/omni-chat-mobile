@@ -4,7 +4,7 @@ import type { ProductType } from '../types/product-type'
 import type { TaskIntentMonthRow } from '../types/support-task-type'
 import type { TotalRevenue } from '../types/invoice-type'
 
-/** Mirrors loose API envelopes used by admin endpoints (web parity). */
+/** Mirrors loose API envelopes used by admin endpoints. */
 
 export function isApiSuccessLike(response: unknown): boolean {
   const r = response && typeof response === 'object' ? (response as Record<string, unknown>) : {}

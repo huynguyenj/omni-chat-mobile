@@ -11,16 +11,30 @@ export function normalizeWarningItem(raw: unknown): ManagerWarningItem {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const id = String(o.id ?? o.warningId ?? o.warning_id ?? '')
   const conversationId = String(o.conversationId ?? o.conversation_id ?? o.conversationID ?? '')
-  const warningType = String(o.warningType ?? o.warning_type ?? o.type ?? '')
+  const warningTypeRaw = o.warningType ?? o.warning_type ?? o.type ?? ''
+  const warningType =
+    typeof warningTypeRaw === 'number' ? warningTypeRaw : String(warningTypeRaw ?? '')
   const isReviewed = toBool(o.isReviewed ?? o.is_reviewed ?? o.reviewed)
-  const createdAt = String(o.createdAt ?? o.created_at ?? o.submitDate ?? o.date ?? '')
-  const title = String(
-    o.title ?? o.name ?? o.subject ?? o.warningTypeName ?? (warningType || 'Cảnh báo')
+  const createdAt = String(o.createAt ?? o.createdAt ?? o.created_at ?? o.submitDate ?? o.date ?? '')
+  const staffName = String(o.staffName ?? o.staff_name ?? 'Chưa rõ')
+  const customerName = String(o.customerName ?? o.customer_name ?? 'Chưa rõ')
+  const reason = String(
+    o.reason ?? o.preview ?? o.message ?? o.description ?? o.content ?? o.note ?? 'Không có mô tả'
   )
-  const preview = String(
-    o.preview ?? o.message ?? o.description ?? o.content ?? o.reason ?? o.note ?? '—'
-  )
-  return { id, conversationId, warningType, isReviewed, createdAt, title, preview }
+  const title = String(o.title ?? o.name ?? o.subject ?? o.warningTypeName ?? 'Cảnh báo')
+  const preview = reason
+  return {
+    id,
+    conversationId,
+    warningType,
+    isReviewed,
+    createdAt,
+    staffName,
+    customerName,
+    reason,
+    title,
+    preview
+  }
 }
 
 export function normalizeWarningDetail(raw: unknown): ManagerWarningDetailResponse {
@@ -74,10 +88,12 @@ export function normalizeWarningDetail(raw: unknown): ManagerWarningDetailRespon
   }
   const detail: ManagerWarningDetailResponse = {
     ...base,
-    description: description ?? (base.preview !== '—' ? base.preview : undefined),
-    conversationTitle,
-    staffName,
-    customerName
+    staffName: staffName ?? base.staffName,
+    customerName: customerName ?? base.customerName,
+    reason: description ?? base.reason,
+    description: description ?? base.reason,
+    preview: description ?? base.reason,
+    conversationTitle
   }
   if (Object.keys(extra).length) detail.extra = extra
   return detail

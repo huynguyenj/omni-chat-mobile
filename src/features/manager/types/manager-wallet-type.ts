@@ -20,6 +20,7 @@ export type ManagerCustomerWalletItem = {
   avatarUrl: string
   facebookId: string
   zaloId: string
+  zaloSenderId: string | null
   googleId: string
   currentProviderName: string
   totalOrder: number

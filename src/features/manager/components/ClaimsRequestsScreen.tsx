@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import {
   ArrowLeftRight,
+  ChevronLeft,
   CircleCheck,
   Clock,
   FileText,
@@ -22,10 +23,14 @@ import {
   LayoutList,
   Search,
   Send,
+  X,
   XCircle
 } from 'lucide-react-native'
+import { useAuthStore } from '@/features/auth/store/auth-store'
 import { ClaimApi } from '../api/claim-api'
 import { ManagerStaffApi } from '../api/manager-staff-api'
+import { fetchMergedClaimsPageSlice } from '../utils/claimsMerged'
+import { enrichChangeTaskClaimsWithStaffIntents } from '../utils/changeTaskEnrich'
 import type {
   ManagerChangeTaskClaimItem,
   ManagerClaimDashboardData,
@@ -43,7 +48,7 @@ const CLAIM_PAGE = 9
 const CHANGE_TASK_PAGE = 10
 
 type MainTab = 'claims' | 'changeTasks'
-type ClaimMode = 'pending' | 'history'
+type ClaimMode = 'all' | 'pending' | 'history'
 
 function statusLabel(s: ManagerClaimStatus) {
   if (s === 'pending') return 'Chờ duyệt'
@@ -76,6 +81,28 @@ function claimTypeIcon(type: string) {
   return FileText
 }
 
+function changeTaskStatusUi(status: string): { label: string; color: string; bg: string } {
+  const s = String(status ?? '').toLowerCase()
+  if (s.includes('approve')) return { label: 'Đã duyệt', color: '#166534', bg: '#dcfce7' }
+  if (s.includes('reject')) return { label: 'Từ chối', color: '#991b1b', bg: '#fee2e2' }
+  return { label: 'Chờ duyệt', color: '#c2410c', bg: '#ffedd5' }
+}
+
+function IntentChips({ intents }: { intents: ManagerChangeTaskClaimItem['staffIntentTypes'] }) {
+  if (!intents?.length) {
+    return <Text style={styles.intentEmpty}>Chưa xác định IntentTypes cho staff.</Text>
+  }
+  return (
+    <View style={styles.intentChipRow}>
+      {intents.map((intent) => (
+        <View key={`${intent.id}-${intent.intentTypeName}`} style={styles.intentChip}>
+          <Text style={styles.intentChipText}>{intent.intentTypeName}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
 export default function ClaimsRequestsScreen() {
   const [mainTab, setMainTab] = useState<MainTab>('claims')
   const [claimMode, setClaimMode] = useState<ClaimMode>('pending')
@@ -103,9 +130,12 @@ export default function ClaimsRequestsScreen() {
   const [actionLoading, setActionLoading] = useState(false)
 
   const [staffPickerOpen, setStaffPickerOpen] = useState(false)
+  const [pickedStaff, setPickedStaff] = useState<StaffDetailType | null>(null)
   const [staffList, setStaffList] = useState<StaffDetailType[]>([])
   const [staffLoading, setStaffLoading] = useState(false)
   const [staffSearch, setStaffSearch] = useState('')
+  const [approvingReassign, setApprovingReassign] = useState(false)
+  const [rejectingChangeTask, setRejectingChangeTask] = useState(false)
 
   const loadDashboard = useCallback(async () => {
     setDashboardErr(null)
@@ -117,15 +147,26 @@ export default function ClaimsRequestsScreen() {
     }
   }, [])
 
-  const fetchClaimsPage = useCallback(
-    async (page: number, mode: ClaimMode) => {
-      const res = mode === 'pending' ? await ClaimApi.getPendingClaims(page, CLAIM_PAGE) : await ClaimApi.getHistoryClaims(page, CLAIM_PAGE)
-      const items = (res.items ?? []).map((raw) => normalizeClaim(raw, mode))
-      const meta = res.meta ?? { total_pages: 1, total_items: 0, current_page: page, page_size: CLAIM_PAGE }
-      return { items, meta }
-    },
-    []
-  )
+  const fetchClaimsPage = useCallback(async (page: number, mode: ClaimMode) => {
+    if (mode === 'all') {
+      const { items, total } = await fetchMergedClaimsPageSlice(page, CLAIM_PAGE)
+      const totalPages = Math.max(1, Math.ceil(total / CLAIM_PAGE))
+      return {
+        items,
+        meta: {
+          total_pages: totalPages,
+          total_items: total,
+          current_page: page,
+          page_size: CLAIM_PAGE
+        }
+      }
+    }
+    const res =
+      mode === 'pending' ? await ClaimApi.getPendingClaims(page, CLAIM_PAGE) : await ClaimApi.getHistoryClaims(page, CLAIM_PAGE)
+    const items = (res.items ?? []).map((raw) => normalizeClaim(raw, mode))
+    const meta = res.meta ?? { total_pages: 1, total_items: 0, current_page: page, page_size: CLAIM_PAGE }
+    return { items, meta }
+  }, [])
 
   useEffect(() => {
     loadDashboard()
@@ -160,7 +201,8 @@ export default function ClaimsRequestsScreen() {
 
   const fetchChangeTasks = useCallback(async (page: number) => {
     const res = await ClaimApi.getPendingChangeTaskClaims(page, CHANGE_TASK_PAGE)
-    const items = (res.items ?? []).map((raw) => normalizeChangeTaskClaim(raw))
+    const normalized = (res.items ?? []).map((raw) => normalizeChangeTaskClaim(raw))
+    const items = await enrichChangeTaskClaimsWithStaffIntents(normalized)
     const meta = res.meta ?? { total_pages: 1, total_items: 0, current_page: page, page_size: CHANGE_TASK_PAGE }
     return { items, meta }
   }, [])
@@ -333,25 +375,61 @@ export default function ClaimsRequestsScreen() {
     }
   }
 
-  const handleReassign = async (staff: StaffDetailType) => {
-    if (!detailTask?.conversationId) {
-      Toast.show({ type: 'error', text1: 'Thiếu conversationId (backend).' })
+  const closeDetailTask = useCallback(() => {
+    setDetailTask(null)
+    setPickedStaff(null)
+    setStaffPickerOpen(false)
+  }, [])
+
+  const handleConfirmReassign = async () => {
+    if (!detailTask?.id || !detailTask.conversationId) {
+      Toast.show({ type: 'error', text1: 'Thiếu claimId hoặc conversationId.' })
       return
     }
-    setActionLoading(true)
+    if (!pickedStaff?.id) {
+      Toast.show({ type: 'error', text1: 'Vui lòng chọn nhân viên mới trước khi duyệt.' })
+      return
+    }
+    setApprovingReassign(true)
     try {
-      const message = await ClaimApi.reassignClaimConversation(detailTask.conversationId, staff.id)
+      const message = await ClaimApi.approveReassignClaim(
+        detailTask.id,
+        detailTask.conversationId,
+        pickedStaff.id
+      )
       Toast.show({ type: 'success', text1: message })
-      setStaffPickerOpen(false)
-      setDetailTask(null)
+      closeDetailTask()
       await onRefreshChangeTasks()
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Gán lại thất bại.'
+      const msg = e instanceof Error ? e.message : 'Duyệt chuyển giao thất bại.'
       Toast.show({ type: 'error', text1: msg })
     } finally {
-      setActionLoading(false)
+      setApprovingReassign(false)
     }
   }
+
+  const handleRejectChangeTask = async () => {
+    if (!detailTask?.id) return
+    const managerId = useAuthStore.getState().staffId ?? useAuthStore.getState().accountId ?? ''
+    if (!managerId) {
+      Toast.show({ type: 'error', text1: 'Không xác định được manager. Vui lòng đăng nhập lại.' })
+      return
+    }
+    setRejectingChangeTask(true)
+    try {
+      const message = await ClaimApi.rejectChangeTaskClaim(detailTask.id, managerId)
+      Toast.show({ type: 'success', text1: message })
+      closeDetailTask()
+      await onRefreshChangeTasks()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Từ chối yêu cầu thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setRejectingChangeTask(false)
+    }
+  }
+
+  const changeTaskBusy = approvingReassign || rejectingChangeTask
 
   const renderKpi = () => {
     const specs = [
@@ -434,7 +512,13 @@ export default function ClaimsRequestsScreen() {
   }
 
   const renderTaskCard = ({ item }: { item: ManagerChangeTaskClaimItem }) => (
-    <Pressable style={styles.claimCard} onPress={() => setDetailTask(item)}>
+    <Pressable
+      style={styles.claimCard}
+      onPress={() => {
+        setPickedStaff(null)
+        setDetailTask(item)
+      }}
+    >
       <View style={styles.claimCardTop}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{staffInitials(item.staffName)}</Text>
@@ -489,6 +573,13 @@ export default function ClaimsRequestsScreen() {
         </View>
         {mainTab === 'claims' ? (
           <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.actionOutline, claimMode === 'all' && styles.actionOutlineOn]}
+              onPress={() => setClaimMode('all')}
+            >
+              <LayoutList size={18} color="#2563eb" strokeWidth={2.2} />
+              <Text style={styles.actionOutlineText}>Tất cả</Text>
+            </Pressable>
             <Pressable
               style={[styles.actionFilter, claimMode === 'pending' && styles.actionFilterOn]}
               onPress={() => setClaimMode('pending')}
@@ -629,36 +720,103 @@ export default function ClaimsRequestsScreen() {
         </Pressable>
       </Modal>
 
-      <Modal visible={!!detailTask} animationType="slide" transparent onRequestClose={() => setDetailTask(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setDetailTask(null)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>Đổi task</Text>
+      <Modal visible={!!detailTask} animationType="slide" transparent onRequestClose={closeDetailTask}>
+        <Pressable style={styles.modalBackdrop} onPress={closeDetailTask}>
+          <Pressable style={styles.ctModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.ctModalHeader}>
+              <Text style={styles.ctModalTitle}>Chi tiết ChangeTask Claim</Text>
+              <Pressable style={styles.ctCloseBtn} onPress={closeDetailTask} hitSlop={12}>
+                <X size={18} color="#003366" strokeWidth={2.2} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.ctModalScroll}>
               {detailTask ? (
                 <>
-                  <Text style={styles.modalLabel}>Nhân viên hiện tại</Text>
-                  <Text style={styles.modalValue}>{detailTask.staffName}</Text>
-                  <Text style={styles.modalLabel}>Conversation</Text>
-                  <Text style={styles.modalValue}>{detailTask.conversationId || '—'}</Text>
-                  <Text style={styles.modalLabel}>Mô tả</Text>
-                  <Text style={styles.modalValue}>{detailTask.description}</Text>
-                  <Text style={styles.modalLabel}>Lý do</Text>
-                  <Text style={styles.modalValue}>{detailTask.reason}</Text>
-                  {detailTask.staffIntentTypes?.length ? (
-                    <>
-                      <Text style={styles.modalLabel}>Intent gán</Text>
-                      <Text style={styles.modalValue}>
-                        {detailTask.staffIntentTypes.map((t) => t.intentTypeName).join(', ')}
-                      </Text>
-                    </>
-                  ) : null}
-                  <Pressable
-                    style={[styles.btn, styles.btnPrimary, { marginTop: 16 }]}
-                    onPress={openStaffPicker}
-                    disabled={actionLoading || !detailTask.conversationId}
-                  >
-                    <Text style={styles.btnPrimaryText}>Gán lại nhân viên</Text>
-                  </Pressable>
+                  <View style={styles.ctHeroRow}>
+                    <View style={styles.ctHeroLeft}>
+                      <Text style={styles.ctStaffName}>{detailTask.staffName || 'Chưa rõ'}</Text>
+                      <Text style={styles.ctClaimType}>{detailTask.claimTypeName || 'Claim'}</Text>
+                      <Text style={styles.ctIntentLabel}>INTENTTYPES (STAFF)</Text>
+                      <IntentChips intents={detailTask.staffIntentTypes} />
+                    </View>
+                    {(() => {
+                      const st = changeTaskStatusUi(detailTask.status)
+                      return (
+                        <View style={[styles.ctStatusBadge, { backgroundColor: st.bg }]}>
+                          <Text style={[styles.ctStatusBadgeText, { color: st.color }]}>{st.label}</Text>
+                        </View>
+                      )
+                    })()}
+                  </View>
+
+                  <View style={styles.ctGrid}>
+                    <View style={styles.ctInfoBox}>
+                      <Text style={styles.ctInfoLabel}>Submit date</Text>
+                      <Text style={styles.ctInfoValue}>{formatDateTime(detailTask.submitDate)}</Text>
+                    </View>
+                    <View style={styles.ctInfoBox}>
+                      <Text style={styles.ctInfoLabel}>Status</Text>
+                      <Text style={styles.ctInfoValue}>{detailTask.status || '—'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.ctInfoBoxFull}>
+                    <Text style={styles.ctInfoLabelUpper}>DESCRIPTION</Text>
+                    <Text style={styles.ctInfoValue}>{detailTask.description || '—'}</Text>
+                  </View>
+
+                  <View style={styles.ctInfoBoxFull}>
+                    <Text style={styles.ctInfoLabelUpper}>REASON</Text>
+                    <Text style={styles.ctInfoValue}>{detailTask.reason || '—'}</Text>
+                  </View>
+
+                  <View style={styles.ctReassignCard}>
+                    <View style={styles.ctReassignHead}>
+                      <Text style={styles.ctReassignHeadText}>THAY NHÂN VIÊN</Text>
+                    </View>
+                    <View style={styles.ctReassignBody}>
+                      {pickedStaff ? (
+                        <Text style={styles.ctPickedStaff}>
+                          {pickedStaff.name}
+                          {pickedStaff.phone ? ` · ${pickedStaff.phone}` : ''}
+                          {pickedStaff.email ? ` · ${pickedStaff.email}` : ''}
+                        </Text>
+                      ) : (
+                        <Text style={styles.ctPickedHint}>Chưa chọn nhân viên mới.</Text>
+                      )}
+                      <Pressable
+                        style={[styles.ctBtnAmber, changeTaskBusy && styles.btnDisabled]}
+                        disabled={changeTaskBusy}
+                        onPress={openStaffPicker}
+                      >
+                        <Text style={styles.ctBtnAmberText}>Chọn nhân viên mới</Text>
+                      </Pressable>
+                      {pickedStaff ? (
+                        <Pressable
+                          style={[styles.ctBtnApprove, changeTaskBusy && styles.btnDisabled]}
+                          disabled={changeTaskBusy}
+                          onPress={handleConfirmReassign}
+                        >
+                          {approvingReassign ? (
+                            <ActivityIndicator color="#fff" />
+                          ) : (
+                            <Text style={styles.ctBtnApproveText}>Duyệt chuyển giao</Text>
+                          )}
+                        </Pressable>
+                      ) : null}
+                      <Pressable
+                        style={[styles.ctBtnReject, changeTaskBusy && styles.btnDisabled]}
+                        disabled={changeTaskBusy}
+                        onPress={handleRejectChangeTask}
+                      >
+                        {rejectingChangeTask ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text style={styles.ctBtnRejectText}>Từ chối</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
                 </>
               ) : null}
             </ScrollView>
@@ -667,38 +825,71 @@ export default function ClaimsRequestsScreen() {
       </Modal>
 
       <Modal visible={staffPickerOpen} animationType="slide" transparent onRequestClose={() => setStaffPickerOpen(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setStaffPickerOpen(false)}>
-          <Pressable style={[styles.modalCard, { maxHeight: '85%' }]} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Chọn nhân viên</Text>
-            <TextInput
-              placeholder="Tìm tên…"
-              placeholderTextColor="#9ca3af"
-              value={staffSearch}
-              onChangeText={setStaffSearch}
-              style={styles.searchModal}
-            />
-            {staffLoading ? (
-              <ActivityIndicator style={{ marginVertical: 16 }} />
-            ) : (
-              <FlatList
-                data={filteredStaff}
-                keyExtractor={(s) => s.id}
-                style={{ flexGrow: 0 }}
-                renderItem={({ item }) => (
-                  <Pressable
-                    style={styles.staffRow}
-                    disabled={actionLoading || item.id === detailTask?.staffId}
-                    onPress={() => handleReassign(item)}
-                  >
-                    <Text style={styles.staffName}>{item.name}</Text>
-                    <Text style={styles.staffSub}>{item.email}</Text>
-                  </Pressable>
-                )}
-                ListEmptyComponent={<Text style={styles.empty}>Không có nhân viên.</Text>}
+        <View style={styles.spBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setStaffPickerOpen(false)} />
+          <View style={styles.spSheet}>
+            <View style={styles.spHeader}>
+              <Pressable style={styles.spBackBtn} onPress={() => setStaffPickerOpen(false)} hitSlop={12}>
+                <ChevronLeft size={22} color="#2563eb" strokeWidth={2.5} />
+              </Pressable>
+              <Text style={styles.spTitle}>Chọn nhân viên</Text>
+            </View>
+
+            <View style={styles.spSearchWrap}>
+              <Search size={18} color="#9ca3af" strokeWidth={2} />
+              <TextInput
+                placeholder="Tìm tên nhân viên..."
+                placeholderTextColor="#9ca3af"
+                value={staffSearch}
+                onChangeText={setStaffSearch}
+                style={styles.spSearchInput}
               />
+            </View>
+
+            {staffLoading ? (
+              <ActivityIndicator style={styles.spLoader} color="#2563eb" />
+            ) : (
+              <View style={styles.spListCard}>
+                <FlatList
+                  data={filteredStaff}
+                  keyExtractor={(s) => s.id}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => {
+                    const isCurrent = item.id === detailTask?.staffId
+                    const isSelected = pickedStaff?.id === item.id
+                    return (
+                      <Pressable
+                        style={[styles.spRow, isCurrent && styles.spRowDisabled]}
+                        disabled={changeTaskBusy || isCurrent}
+                        onPress={() => {
+                          setPickedStaff(item)
+                          setStaffPickerOpen(false)
+                        }}
+                      >
+                        <View style={styles.spRowText}>
+                          <Text style={styles.spName}>{item.name || '—'}</Text>
+                          <Text style={styles.spEmail}>{item.email || '—'}</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.spRadio,
+                            isSelected && styles.spRadioSelected,
+                            isCurrent && styles.spRadioDisabled
+                          ]}
+                        >
+                          {isSelected ? <View style={styles.spRadioDot} /> : null}
+                        </View>
+                      </Pressable>
+                    )
+                  }}
+                  ItemSeparatorComponent={() => <View style={styles.spDivider} />}
+                  ListEmptyComponent={<Text style={styles.spEmpty}>Không có nhân viên.</Text>}
+                />
+              </View>
             )}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   )
@@ -797,17 +988,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff'
   },
   searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
-  searchModal: {
-    marginVertical: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
-    fontSize: 15,
-    color: '#0f172a'
-  },
   listFlex: { flex: 1 },
   listContent: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 4 },
   claimCard: {
@@ -876,7 +1056,197 @@ const styles = StyleSheet.create({
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
   btnDanger: { backgroundColor: '#fee2e2' },
   btnDangerText: { color: '#b91c1c', fontWeight: '700' },
-  staffRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  staffName: { fontSize: 16, color: '#0f172a', fontWeight: '600' },
-  staffSub: { fontSize: 13, color: '#64748b' }
+  spBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-end'
+  },
+  spSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '92%',
+    minHeight: '72%',
+    paddingHorizontal: 16,
+    paddingBottom: 20
+  },
+  spHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 14,
+    paddingBottom: 12
+  },
+  spBackBtn: { padding: 4 },
+  spTitle: { fontSize: 18, fontWeight: '700', color: '#003366' },
+  spSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12
+  },
+  spSearchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  spLoader: { marginVertical: 24 },
+  spListCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    overflow: 'hidden'
+  },
+  spRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12
+  },
+  spRowDisabled: { opacity: 0.45 },
+  spRowText: { flex: 1, minWidth: 0 },
+  spName: { fontSize: 16, fontWeight: '700', color: '#003366' },
+  spEmail: { fontSize: 13, color: '#6b7280', marginTop: 2 },
+  spRadio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  spRadioSelected: { borderColor: '#2563eb' },
+  spRadioDisabled: { borderColor: '#cbd5e1' },
+  spRadioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#2563eb'
+  },
+  spDivider: { height: 1, backgroundColor: '#f1f5f9', marginLeft: 14 },
+  spEmpty: { textAlign: 'center', color: '#64748b', padding: 24, fontSize: 14 },
+  ctModalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '92%',
+    overflow: 'hidden'
+  },
+  ctModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6'
+  },
+  ctModalTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#003366' },
+  ctCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  ctModalScroll: { padding: 20, paddingBottom: 28 },
+  ctHeroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  ctHeroLeft: { flex: 1, minWidth: 0 },
+  ctStaffName: { fontSize: 18, fontWeight: '800', color: '#3366CC' },
+  ctClaimType: { fontSize: 14, color: '#6b7280', marginTop: 2 },
+  ctIntentLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6b7280',
+    letterSpacing: 0.5,
+    marginTop: 10,
+    textTransform: 'uppercase'
+  },
+  intentEmpty: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+  intentChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  intentChip: {
+    backgroundColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  intentChipText: { fontSize: 10, fontWeight: '700', color: '#374151' },
+  ctStatusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  ctStatusBadgeText: { fontSize: 11, fontWeight: '800' },
+  ctGrid: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  ctInfoBox: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+    borderRadius: 10,
+    padding: 12,
+    minWidth: 0
+  },
+  ctInfoBoxFull: {
+    backgroundColor: '#F5F7FA',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10
+  },
+  ctInfoLabel: { fontSize: 12, color: '#6b7280', marginBottom: 4 },
+  ctInfoLabelUpper: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6b7280',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    textTransform: 'uppercase'
+  },
+  ctInfoValue: { fontSize: 14, fontWeight: '600', color: '#003366' },
+  ctReassignCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    overflow: 'hidden',
+    marginTop: 4
+  },
+  ctReassignHead: { backgroundColor: '#d97706', paddingVertical: 10, paddingHorizontal: 14 },
+  ctReassignHeadText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase'
+  },
+  ctReassignBody: {
+    backgroundColor: '#fffbeb',
+    padding: 14,
+    gap: 10
+  },
+  ctPickedStaff: { fontSize: 14, color: '#1f2937', lineHeight: 20 },
+  ctPickedHint: { fontSize: 12, color: '#6b7280' },
+  ctBtnAmber: {
+    backgroundColor: '#d97706',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  ctBtnAmberText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  ctBtnApprove: {
+    backgroundColor: '#6FDFA0',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  ctBtnApproveText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  ctBtnReject: {
+    backgroundColor: '#F87171',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  ctBtnRejectText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  btnDisabled: { opacity: 0.6 }
 })

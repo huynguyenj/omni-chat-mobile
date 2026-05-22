@@ -30,6 +30,8 @@ import { ManagerPostSaleRequestApi } from '../api/manager-post-sale-request-api'
 import type { ManagerOrderDetail, ManagerOrderItem } from '../types/manager-order-type'
 import type { ManagerPostSaleRequestItem } from '../types/manager-post-sale-request-type'
 import { formatDateTime } from '../utils/claimsNormalize'
+import { MANAGER_ORDER_STATUS_FILTERS } from '../const/order-status'
+import type { ManagerOrderStatusFilter } from '../const/order-status'
 import {
   canCancelOrder,
   canSubmitDraftOrder,
@@ -38,20 +40,16 @@ import {
 } from '../utils/managerOrdersNormalize'
 
 const ORDER_PAGE = 6
-const PSR_PAGE = 6
+const PSR_PAGE = 9
 
 type MainTab = 'orders' | 'refund'
+type PostSaleFilterStatus = 'all' | 'Pending' | 'Approved' | 'Rejected'
 
-const ORDER_STATUS_FILTERS: { value: string | null; label: string }[] = [
-  { value: null, label: 'Tất cả' },
-  { value: 'Draft', label: 'Nháp' },
-  { value: 'Pending', label: 'Chờ xử lý' },
-  { value: 'Shipped', label: 'Đã gửi' },
-  { value: 'Completed', label: 'Hoàn tất' },
-  { value: 'Cancelled', label: 'Đã hủy' },
-  { value: 'PendingReturn', label: 'Chờ trả' },
-  { value: 'Returned', label: 'Đã trả' },
-  { value: 'ReturnedDefective', label: 'Trả lỗi' }
+const PSR_STATUS_FILTERS: Array<{ value: PostSaleFilterStatus; label: string }> = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'Pending', label: 'Chờ duyệt' },
+  { value: 'Approved', label: 'Đã duyệt' },
+  { value: 'Rejected', label: 'Đã từ chối' }
 ]
 
 function postSaleStatusLabel(status: string) {
@@ -99,7 +97,9 @@ export default function OrdersManagementScreen() {
   const [mainTab, setMainTab] = useState<MainTab>('orders')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'all' | ManagerOrderStatusFilter>('all')
+  const [psrStatusFilter, setPsrStatusFilter] = useState<PostSaleFilterStatus>('all')
+  const [psrActionId, setPsrActionId] = useState<string | null>(null)
 
   const [items, setItems] = useState<ManagerOrderItem[]>([])
   const [meta, setMeta] = useState({ total_pages: 1, current_page: 1 })
@@ -129,9 +129,14 @@ export default function OrdersManagementScreen() {
   }, [search])
 
   const orderStatusesParam = useMemo(
-    () => (statusFilter ? [statusFilter] : undefined),
+    () => (statusFilter === 'all' ? undefined : [statusFilter]),
     [statusFilter]
   )
+
+  const filteredPsrItems = useMemo(() => {
+    if (psrStatusFilter === 'all') return psrItems
+    return psrItems.filter((r) => String(r.status) === psrStatusFilter)
+  }, [psrItems, psrStatusFilter])
 
   const fetchOrdersPage = useCallback(
     async (pageNumber: number, reset: boolean) => {
@@ -259,8 +264,40 @@ export default function OrdersManagementScreen() {
     }
   }, [psrLoading, psrLoadingMore, psrMeta, fetchPsrPage])
 
-  const selectStatus = (v: string | null) => {
+  const selectStatus = (v: 'all' | ManagerOrderStatusFilter) => {
     setStatusFilter(v)
+  }
+
+  const handlePsrApprove = async (item: ManagerPostSaleRequestItem) => {
+    if (!item.id) return
+    setPsrActionId(item.id)
+    try {
+      const msg = await ManagerPostSaleRequestApi.approvePostSaleRequest(item.id)
+      Toast.show({ type: 'success', text1: msg })
+      setPsrRefreshKey((k) => k + 1)
+      await reloadList()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Duyệt thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setPsrActionId(null)
+    }
+  }
+
+  const handlePsrReject = async (item: ManagerPostSaleRequestItem) => {
+    if (!item.id) return
+    setPsrActionId(item.id)
+    try {
+      const msg = await ManagerPostSaleRequestApi.rejectPostSaleRequest(item.id)
+      Toast.show({ type: 'success', text1: msg })
+      setPsrRefreshKey((k) => k + 1)
+      await reloadList()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Từ chối thất bại.'
+      Toast.show({ type: 'error', text1: msg })
+    } finally {
+      setPsrActionId(null)
+    }
   }
 
   const openDetail = useCallback(async (orderId: string, opts?: { fromPostSale?: boolean }) => {
@@ -374,33 +411,52 @@ export default function OrdersManagementScreen() {
 
   const renderPsrCard = ({ item }: { item: ManagerPostSaleRequestItem }) => {
     const orderSt = orderStatusPill(item.orderStatus ?? '')
+    const isPending = String(item.status) === 'Pending'
+    const busy = psrActionId === item.id
     return (
-      <Pressable
-        style={styles.psrCard}
-        onPress={() => item.orderId && openDetail(item.orderId, { fromPostSale: true })}
-      >
-        <View style={styles.psrCardTop}>
-          <View style={styles.psrCardTopLeft}>
-            <Text style={styles.psrCodeLabel}>Mã</Text>
-            <Text style={styles.psrCardTitle} numberOfLines={1}>
-              {item.orderCode || '—'}
-            </Text>
-          </View>
-          {item.orderStatus ? (
-            <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: orderSt.bg }]}>
-              <Text style={[styles.pillText, { color: orderSt.color }]} numberOfLines={1}>
-                {orderSt.label}
+      <View style={styles.psrCard}>
+        <Pressable onPress={() => item.orderId && openDetail(item.orderId, { fromPostSale: true })}>
+          <View style={styles.psrCardTop}>
+            <View style={styles.psrCardTopLeft}>
+              <Text style={styles.psrCodeLabel}>Mã</Text>
+              <Text style={styles.psrCardTitle} numberOfLines={1}>
+                {item.orderCode || '—'}
               </Text>
             </View>
+            {item.orderStatus ? (
+              <View style={[styles.pill, styles.psrOrderPill, { backgroundColor: orderSt.bg }]}>
+                <Text style={[styles.pillText, { color: orderSt.color }]} numberOfLines={1}>
+                  {orderSt.label}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.psrCardMeta}>{postSaleStatusLabel(item.status)}</Text>
+          {item.reason ? (
+            <Text style={styles.psrReason} numberOfLines={2}>
+              {item.reason}
+            </Text>
           ) : null}
-        </View>
-        <Text style={styles.psrCardMeta}>{postSaleStatusLabel(item.status)}</Text>
-        {item.reason ? (
-          <Text style={styles.psrReason} numberOfLines={2}>
-            {item.reason}
-          </Text>
+        </Pressable>
+        {isPending && item.id ? (
+          <View style={styles.psrActions}>
+            <Pressable
+              style={[styles.psrBtn, styles.psrBtnReject]}
+              disabled={busy}
+              onPress={() => handlePsrReject(item)}
+            >
+              <Text style={styles.psrBtnRejectText}>{busy ? '…' : 'Từ chối'}</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.psrBtn, styles.psrBtnApprove]}
+              disabled={busy}
+              onPress={() => handlePsrApprove(item)}
+            >
+              <Text style={styles.psrBtnApproveText}>{busy ? '…' : 'Duyệt'}</Text>
+            </Pressable>
+          </View>
         ) : null}
-      </Pressable>
+      </View>
     )
   }
 
@@ -451,11 +507,11 @@ export default function OrdersManagementScreen() {
           <View style={styles.filterBlock}>
             <Text style={styles.filterLabel}>Trạng thái</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
-              {ORDER_STATUS_FILTERS.map((f) => {
+              {MANAGER_ORDER_STATUS_FILTERS.map((f) => {
                 const on = statusFilter === f.value
                 return (
                   <Pressable
-                    key={String(f.value ?? 'all')}
+                    key={f.value}
                     onPress={() => selectStatus(f.value)}
                     style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
                   >
@@ -494,7 +550,24 @@ export default function OrdersManagementScreen() {
         </View>
       ) : (
         <View style={styles.tabPane}>
-          <Text style={styles.psrSub}>Mở đơn từ đây sẽ không hiện nút xác nhận nháp (post-sale).</Text>
+          <Text style={styles.psrSub}>Yêu cầu hoàn tiền — lọc trạng thái trên trang đã tải.</Text>
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterLabel}>Trạng thái PSR</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipScroll}>
+              {PSR_STATUS_FILTERS.map((f) => {
+                const on = psrStatusFilter === f.value
+                return (
+                  <Pressable
+                    key={f.value}
+                    onPress={() => setPsrStatusFilter(f.value)}
+                    style={[styles.chip, on ? styles.chipOn : styles.chipOff]}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{f.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </ScrollView>
+          </View>
           {psrError ? (
             <View style={styles.errBox}>
               <Text style={styles.errText}>{psrError}</Text>
@@ -508,7 +581,7 @@ export default function OrdersManagementScreen() {
           ) : (
             <FlatList
               style={styles.list}
-              data={psrItems}
+              data={filteredPsrItems}
               keyExtractor={(r, idx) => r.id || `${r.orderId}-${idx}`}
               renderItem={renderPsrCard}
               contentContainerStyle={styles.listContent}
@@ -527,9 +600,6 @@ export default function OrdersManagementScreen() {
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <ScrollView>
               <Text style={styles.sheetTitle}>Chi tiết đơn</Text>
-              {fromPostSaleList ? (
-                <Text style={styles.psrBanner}>Đang xem từ yêu cầu hoàn/refund — không xác nhận nháp tại đây.</Text>
-              ) : null}
               {detailLoading ? <ActivityIndicator style={{ marginVertical: 16 }} /> : null}
               {detailError ? <Text style={styles.errText}>{detailError}</Text> : null}
               {detail ? (
@@ -734,6 +804,12 @@ const styles = StyleSheet.create({
   psrOrderPill: { flexShrink: 0, maxWidth: '46%', marginTop: 14 },
   psrCardMeta: { fontSize: 13, color: '#c2410c', marginTop: 8 },
   psrReason: { fontSize: 13, color: '#57534e', marginTop: 6 },
+  psrActions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  psrBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  psrBtnReject: { backgroundColor: '#fee2e2' },
+  psrBtnRejectText: { color: '#b91c1c', fontWeight: '700', fontSize: 13 },
+  psrBtnApprove: { backgroundColor: '#dcfce7' },
+  psrBtnApproveText: { color: '#15803d', fontWeight: '700', fontSize: 13 },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: '#fff',
@@ -743,14 +819,6 @@ const styles = StyleSheet.create({
     maxHeight: '92%'
   },
   sheetTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 12 },
-  psrBanner: {
-    fontSize: 12,
-    color: '#9a3412',
-    backgroundColor: '#ffedd5',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 8
-  },
   detailIntro: { marginBottom: 12 },
   statusPillMuted: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusPillMutedText: { fontSize: 12, fontWeight: '700' },

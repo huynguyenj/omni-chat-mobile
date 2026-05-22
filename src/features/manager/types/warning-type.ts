@@ -2,9 +2,12 @@
 export type ManagerWarningItem = {
   id: string
   conversationId: string
-  warningType: string
+  warningType: string | number
   isReviewed: boolean
   createdAt: string
+  staffName: string
+  customerName: string
+  reason: string
   title: string
   preview: string
 }

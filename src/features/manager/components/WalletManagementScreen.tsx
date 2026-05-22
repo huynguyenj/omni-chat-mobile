@@ -14,31 +14,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import {
-  Calculator,
+  ChevronLeft,
   ChevronRight,
-  Coins,
-  Scale,
+  CircleDollarSign,
+  Clock,
   Search,
-  TrendingDown,
+  Tag,
   User,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react-native'
 import { ManagerWalletApi } from '../api/manager-wallet-api'
 import type { ManagerCustomerWalletItem, ManagerWalletTransaction } from '../types/manager-wallet-type'
-import { formatDateTime } from '../utils/claimsNormalize'
 import {
   customerInitial,
   formatWalletMoney,
+  formatWalletTxDateTime,
+  transactionAmountColor,
   transactionTypeLabel
 } from '../utils/managerWalletNormalize'
 
 const PRIMARY = '#3b6ea5'
-
-function netAmountColor(net: number) {
-  if (net < 0) return '#dc2626'
-  if (net > 0) return '#16a34a'
-  return '#64748b'
-}
+const WALLET_PAGE_SIZE = 6
 
 function WalletAvatar({ name, url }: { name: string; url: string }) {
   const [failed, setFailed] = useState(false)
@@ -70,6 +67,7 @@ export default function WalletManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [historyCustomer, setHistoryCustomer] = useState<ManagerCustomerWalletItem | null>(null)
+  const [uiPage, setUiPage] = useState(1)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400)
@@ -125,33 +123,44 @@ export default function WalletManagementScreen() {
     })
   }, [allCustomers, debouncedSearch])
 
+  useEffect(() => {
+    setUiPage(1)
+  }, [debouncedSearch])
+
+  const totalUiPages = Math.max(1, Math.ceil(filtered.length / WALLET_PAGE_SIZE))
+  const pageSlice = useMemo(() => {
+    const page = Math.min(uiPage, totalUiPages)
+    const start = (page - 1) * WALLET_PAGE_SIZE
+    return filtered.slice(start, start + WALLET_PAGE_SIZE)
+  }, [filtered, uiPage, totalUiPages])
+
   const kpi = useMemo(() => {
     let totalWallet = 0
     let totalDebt = 0
-    let netSum = 0
+    let totalPaid = 0
     for (const c of filtered) {
       const w = c.getWalletResponse
       totalWallet += w.amount
       totalDebt += w.totalDebt
-      netSum += w.netAmount
+      totalPaid += c.totalPayment
     }
-    return { totalWallet, totalDebt, netSum }
+    return { totalWallet, totalDebt, totalPaid }
   }, [filtered])
 
   const renderTx = ({ item }: { item: ManagerWalletTransaction }) => (
-    <View style={styles.txRow}>
-      <View style={styles.txMain}>
-        <Text style={styles.txType}>{transactionTypeLabel(item.transactionType)}</Text>
-        <Text style={styles.txDate}>{formatDateTime(item.createDate)}</Text>
+    <View style={styles.txCard}>
+      <Text style={styles.txType}>{transactionTypeLabel(item.transactionType)}</Text>
+      <View style={styles.txMeta}>
+        <Clock size={14} color="#64748b" strokeWidth={2} />
+        <Text style={styles.txDate}>{formatWalletTxDateTime(item.createDate)}</Text>
       </View>
-      <Text style={styles.txAmount}>{formatWalletMoney(item.amount)} đ</Text>
+      <Text style={[styles.txAmount, { color: transactionAmountColor(item.transactionType) }]}>
+        {formatWalletMoney(item.amount)} đ
+      </Text>
     </View>
   )
 
   const renderCustomer = ({ item }: { item: ManagerCustomerWalletItem }) => {
-    const w = item.getWalletResponse
-    const netColor = netAmountColor(w.netAmount)
-
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -162,30 +171,6 @@ export default function WalletManagementScreen() {
               {item.email || '—'}
             </Text>
             <Text style={styles.subLine}>{item.phoneNumber || '—'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.walletRow}>
-          <View style={styles.walletBox}>
-            <View style={styles.walletBoxHead}>
-              <Wallet size={14} color={PRIMARY} strokeWidth={2.2} />
-              <Text style={styles.walletBoxLabel}>Số dư ví</Text>
-            </View>
-            <Text style={styles.walletBoxVal}>{formatWalletMoney(w.amount)} đ</Text>
-          </View>
-          <View style={styles.walletBox}>
-            <View style={styles.walletBoxHead}>
-              <Calculator size={14} color={PRIMARY} strokeWidth={2.2} />
-              <Text style={styles.walletBoxLabel}>Tổng nợ</Text>
-            </View>
-            <Text style={[styles.walletBoxVal, styles.walletDebtVal]}>{formatWalletMoney(w.totalDebt)} đ</Text>
-          </View>
-          <View style={styles.walletBox}>
-            <View style={styles.walletBoxHead}>
-              <Scale size={14} color={PRIMARY} strokeWidth={2.2} />
-              <Text style={styles.walletBoxLabel}>Số dư ròng</Text>
-            </View>
-            <Text style={[styles.walletBoxVal, { color: netColor }]}>{formatWalletMoney(w.netAmount)} đ</Text>
           </View>
         </View>
 
@@ -214,8 +199,8 @@ export default function WalletManagementScreen() {
       <View style={styles.kpiRow}>
         <View style={[styles.kpiCard, styles.kpiCardWallet]}>
           <View style={styles.kpiCardTop}>
-            <Coins size={18} color="#15803d" strokeWidth={2.2} />
-            <Text style={styles.kpiLabel} numberOfLines={2}>
+            <Wallet size={18} color="#1d4ed8" strokeWidth={2.2} />
+            <Text style={[styles.kpiLabel, styles.kpiLabelWallet]} numberOfLines={2}>
               Tổng ví
             </Text>
           </View>
@@ -225,8 +210,8 @@ export default function WalletManagementScreen() {
         </View>
         <View style={[styles.kpiCard, styles.kpiCardDebt]}>
           <View style={styles.kpiCardTop}>
-            <TrendingDown size={18} color="#b45309" strokeWidth={2.2} />
-            <Text style={styles.kpiLabel} numberOfLines={2}>
+            <Tag size={18} color="#dc2626" strokeWidth={2.2} />
+            <Text style={[styles.kpiLabel, styles.kpiLabelDebt]} numberOfLines={2}>
               Tổng công nợ
             </Text>
           </View>
@@ -234,15 +219,15 @@ export default function WalletManagementScreen() {
             {formatWalletMoney(kpi.totalDebt)} đ
           </Text>
         </View>
-        <View style={[styles.kpiCard, styles.kpiCardNet]}>
+        <View style={[styles.kpiCard, styles.kpiCardPaid]}>
           <View style={styles.kpiCardTop}>
-            <Scale size={18} color={PRIMARY} strokeWidth={2.2} />
-            <Text style={styles.kpiLabel} numberOfLines={2}>
-              Số dư ròng
+            <CircleDollarSign size={18} color="#15803d" strokeWidth={2.2} />
+            <Text style={[styles.kpiLabel, styles.kpiLabelPaid]} numberOfLines={2}>
+              Đã thanh toán
             </Text>
           </View>
-          <Text style={[styles.kpiVal, { color: netAmountColor(kpi.netSum) }]} numberOfLines={1} adjustsFontSizeToFit>
-            {formatWalletMoney(kpi.netSum)} đ
+          <Text style={[styles.kpiVal, styles.kpiValPaid]} numberOfLines={1} adjustsFontSizeToFit>
+            {formatWalletMoney(kpi.totalPaid)} đ
           </Text>
         </View>
       </View>
@@ -277,7 +262,7 @@ export default function WalletManagementScreen() {
         ) : (
           <FlatList
             style={styles.list}
-            data={filtered}
+            data={pageSlice}
             keyExtractor={(item, index) => item.id || `w-${index}`}
             renderItem={renderCustomer}
             ListEmptyComponent={
@@ -289,16 +274,64 @@ export default function WalletManagementScreen() {
         )}
       </View>
 
+      {!loading || refreshing ? (
+        <View style={styles.pagerFixed}>
+          <Text style={styles.footerMeta}>
+            {filtered.length} khách · Trang {Math.min(uiPage, totalUiPages)}/{totalUiPages}
+          </Text>
+          <View style={styles.pager}>
+            <Pressable
+              style={[styles.pageBtn, uiPage <= 1 && styles.pageBtnDisabled]}
+              disabled={uiPage <= 1}
+              onPress={() => setUiPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={18} color={uiPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+              <Text style={[styles.pageBtnText, uiPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.pageBtn, uiPage >= totalUiPages && styles.pageBtnDisabled]}
+              disabled={uiPage >= totalUiPages}
+              onPress={() => setUiPage((p) => Math.min(totalUiPages, p + 1))}
+            >
+              <Text style={[styles.pageBtnText, uiPage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
+              <ChevronRight size={18} color={uiPage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
       <Modal visible={!!historyCustomer} animationType="slide" transparent={false} onRequestClose={() => setHistoryCustomer(null)}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'left', 'right', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle} numberOfLines={1}>
-              Lịch sử — {historyCustomer?.customerName ?? ''}
+              Lịch sử giao dịch — {historyCustomer?.customerName ?? ''}
             </Text>
-            <Pressable hitSlop={12} onPress={() => setHistoryCustomer(null)} style={styles.modalClose}>
-              <Text style={styles.modalCloseText}>Đóng</Text>
+            <Pressable hitSlop={12} onPress={() => setHistoryCustomer(null)} style={styles.modalCloseBtn}>
+              <X size={18} color="#003366" strokeWidth={2.2} />
             </Pressable>
           </View>
+          {historyCustomer ? (
+            <View style={styles.histSummary}>
+              <View style={styles.histSummaryCol}>
+                <Text style={styles.histSummaryLabel}>Số dư ví</Text>
+                <Text style={styles.histSummaryValWallet}>
+                  {formatWalletMoney(historyCustomer.getWalletResponse.amount)} đ
+                </Text>
+              </View>
+              <View style={styles.histSummaryCol}>
+                <Text style={styles.histSummaryLabel}>Tổng nợ</Text>
+                <Text style={styles.histSummaryValDebt}>
+                  {formatWalletMoney(historyCustomer.getWalletResponse.totalDebt)} đ
+                </Text>
+              </View>
+              <View style={styles.histSummaryCol}>
+                <Text style={styles.histSummaryLabel}>Đã thanh toán</Text>
+                <Text style={styles.histSummaryValPaid}>
+                  {formatWalletMoney(historyCustomer.totalPayment)} đ
+                </Text>
+              </View>
+            </View>
+          ) : null}
           {txList.length === 0 ? (
             <Text style={styles.emptyModal}>Chưa có giao dịch.</Text>
           ) : (
@@ -332,24 +365,26 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   kpiCardWallet: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#bbf7d0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#16a34a'
-  },
-  kpiCardDebt: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#fed7aa'
-  },
-  kpiCardNet: {
     backgroundColor: '#eff6ff',
     borderColor: '#bfdbfe'
   },
+  kpiCardDebt: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca'
+  },
+  kpiCardPaid: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#bbf7d0'
+  },
   kpiCardTop: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  kpiLabel: { fontSize: 10, fontWeight: '600', color: '#64748b', flex: 1, minWidth: 0 },
+  kpiLabel: { fontSize: 10, fontWeight: '700', flex: 1, minWidth: 0, textTransform: 'uppercase' },
+  kpiLabelWallet: { color: '#1d4ed8' },
+  kpiLabelDebt: { color: '#dc2626' },
+  kpiLabelPaid: { color: '#15803d' },
   kpiVal: { fontSize: 14, fontWeight: '800', color: '#0f172a' },
-  kpiValWallet: { color: '#15803d' },
-  kpiValDebt: { color: '#b45309' },
+  kpiValWallet: { color: '#1d4ed8' },
+  kpiValDebt: { color: '#dc2626' },
+  kpiValPaid: { color: '#15803d' },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -406,19 +441,6 @@ const styles = StyleSheet.create({
   cardHeaderText: { flex: 1, marginLeft: 12, justifyContent: 'center', minWidth: 0 },
   customerName: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
   subLine: { fontSize: 13, color: '#64748b', marginTop: 2 },
-  walletRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  walletBox: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1.5,
-    borderColor: '#bfdbfe'
-  },
-  walletBoxHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  walletBoxLabel: { fontSize: 10, fontWeight: '600', color: '#64748b', flex: 1 },
-  walletBoxVal: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
-  walletDebtVal: { color: '#b45309' },
   activityBlock: {
     backgroundColor: '#f8fafc',
     borderRadius: 12,
@@ -451,21 +473,69 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e2e8f0'
   },
-  modalTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#0f172a', paddingRight: 12 },
-  modalClose: { paddingVertical: 6, paddingHorizontal: 10 },
-  modalCloseText: { fontSize: 16, color: PRIMARY, fontWeight: '600' },
-  emptyModal: { textAlign: 'center', color: '#64748b', marginTop: 40, fontSize: 15 },
-  txListContent: { padding: 16, paddingBottom: 32 },
-  txRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  modalTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: '#003366', paddingRight: 12 },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e2e8f0'
+    justifyContent: 'center'
   },
-  txMain: { flex: 1, paddingRight: 12 },
-  txType: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
-  txDate: { fontSize: 12, color: '#64748b', marginTop: 4 },
-  txAmount: { fontSize: 15, fontWeight: '700', color: '#0f172a' }
+  emptyModal: { textAlign: 'center', color: '#64748b', marginTop: 40, fontSize: 15 },
+  histSummary: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 8
+  },
+  histSummaryCol: { flex: 1, minWidth: 0, alignItems: 'center' },
+  histSummaryLabel: { fontSize: 11, fontWeight: '600', color: '#64748b', marginBottom: 4, textAlign: 'center' },
+  histSummaryValWallet: { fontSize: 14, fontWeight: '800', color: '#0f172a', textAlign: 'center' },
+  histSummaryValDebt: { fontSize: 14, fontWeight: '800', color: '#dc2626', textAlign: 'center' },
+  histSummaryValPaid: { fontSize: 14, fontWeight: '800', color: '#15803d', textAlign: 'center' },
+  txListContent: { paddingHorizontal: 16, paddingBottom: 32 },
+  txCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  txType: { fontSize: 15, fontWeight: '700', color: '#003366' },
+  txMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  txDate: { fontSize: 12, color: '#64748b' },
+  txAmount: { fontSize: 16, fontWeight: '800', marginTop: 8 },
+  pagerFixed: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    alignItems: 'center'
+  },
+  footerMeta: { fontSize: 13, color: '#64748b', marginBottom: 10, fontWeight: '500' },
+  pager: { flexDirection: 'row', gap: 12 },
+  pageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1'
+  },
+  pageBtnDisabled: { opacity: 0.5 },
+  pageBtnText: { fontSize: 14, fontWeight: '600', color: '#0f172a' },
+  pageBtnTextDisabled: { color: '#94a3b8' }
 })
