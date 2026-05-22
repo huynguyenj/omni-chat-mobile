@@ -16,7 +16,6 @@ import Toast from 'react-native-toast-message'
 import {
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   Clock,
   Search,
   Tag,
@@ -135,16 +134,14 @@ export default function WalletManagementScreen() {
   }, [filtered, uiPage, totalUiPages])
 
   const kpi = useMemo(() => {
-    let totalWallet = 0
+    let totalWalletAmount = 0
     let totalDebt = 0
-    let totalPaid = 0
     for (const c of filtered) {
       const w = c.getWalletResponse
-      totalWallet += w.amount
+      totalWalletAmount += w.amount
       totalDebt += w.totalDebt
-      totalPaid += c.totalPayment
     }
-    return { totalWallet, totalDebt, totalPaid }
+    return { totalWalletAmount, totalDebt }
   }, [filtered])
 
   const renderTx = ({ item }: { item: ManagerWalletTransaction }) => (
@@ -201,33 +198,22 @@ export default function WalletManagementScreen() {
           <View style={styles.kpiCardTop}>
             <Wallet size={18} color="#1d4ed8" strokeWidth={2.2} />
             <Text style={[styles.kpiLabel, styles.kpiLabelWallet]} numberOfLines={2}>
-              Tổng ví
+              Ví tiền
             </Text>
           </View>
           <Text style={[styles.kpiVal, styles.kpiValWallet]} numberOfLines={1} adjustsFontSizeToFit>
-            {formatWalletMoney(kpi.totalWallet)} đ
+            {formatWalletMoney(kpi.totalWalletAmount)} đ
           </Text>
         </View>
         <View style={[styles.kpiCard, styles.kpiCardDebt]}>
           <View style={styles.kpiCardTop}>
             <Tag size={18} color="#dc2626" strokeWidth={2.2} />
             <Text style={[styles.kpiLabel, styles.kpiLabelDebt]} numberOfLines={2}>
-              Tổng công nợ
+              Tổng nợ
             </Text>
           </View>
           <Text style={[styles.kpiVal, styles.kpiValDebt]} numberOfLines={1} adjustsFontSizeToFit>
             {formatWalletMoney(kpi.totalDebt)} đ
-          </Text>
-        </View>
-        <View style={[styles.kpiCard, styles.kpiCardPaid]}>
-          <View style={styles.kpiCardTop}>
-            <CircleDollarSign size={18} color="#15803d" strokeWidth={2.2} />
-            <Text style={[styles.kpiLabel, styles.kpiLabelPaid]} numberOfLines={2}>
-              Đã thanh toán
-            </Text>
-          </View>
-          <Text style={[styles.kpiVal, styles.kpiValPaid]} numberOfLines={1} adjustsFontSizeToFit>
-            {formatWalletMoney(kpi.totalPaid)} đ
           </Text>
         </View>
       </View>
@@ -313,7 +299,7 @@ export default function WalletManagementScreen() {
           {historyCustomer ? (
             <View style={styles.histSummary}>
               <View style={styles.histSummaryCol}>
-                <Text style={styles.histSummaryLabel}>Số dư ví</Text>
+                <Text style={styles.histSummaryLabel}>Ví tiền</Text>
                 <Text style={styles.histSummaryValWallet}>
                   {formatWalletMoney(historyCustomer.getWalletResponse.amount)} đ
                 </Text>
@@ -322,12 +308,6 @@ export default function WalletManagementScreen() {
                 <Text style={styles.histSummaryLabel}>Tổng nợ</Text>
                 <Text style={styles.histSummaryValDebt}>
                   {formatWalletMoney(historyCustomer.getWalletResponse.totalDebt)} đ
-                </Text>
-              </View>
-              <View style={styles.histSummaryCol}>
-                <Text style={styles.histSummaryLabel}>Đã thanh toán</Text>
-                <Text style={styles.histSummaryValPaid}>
-                  {formatWalletMoney(historyCustomer.totalPayment)} đ
                 </Text>
               </View>
             </View>

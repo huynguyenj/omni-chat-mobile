@@ -28,9 +28,9 @@ function normalizeWalletResponse(raw: unknown): ManagerWalletResponse {
   const txRaw = r.transactions ?? r.transactionList ?? r.transaction_list
   const transactions = Array.isArray(txRaw) ? txRaw.map(normalizeTransaction) : []
   return {
-    amount: pickNum(r.amount ?? r.balance ?? r.walletAmount),
+    amount: pickNum(r.amount),
     totalDebt: pickNum(r.totalDebt ?? r.total_debt ?? r.debt),
-    netAmount: pickNum(r.netAmount ?? r.net_amount ?? r.net),
+    netAmount: pickNum(r.netAmount ?? r.net_amount ?? r.net ?? r.balance),
     transactions
   }
 }
