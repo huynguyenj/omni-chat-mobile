@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React from 'react'
 import OverviewCardKeyword from './OverviewCardKeyword'
 import useGetListKeywords from '../hooks/useGetListKeywords'
@@ -24,14 +24,14 @@ export default function KeywordContent() {
   
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !keyWordList ?
         <OverviewKeywordCardSkeleton/>
         :
         <OverviewCardKeyword totalKeywords={keyWordList?.meta.total_items ?? 0}/>
       }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
       <View style={styles.listContainer}>
-        { loading ?
+        { loading && !keyWordList ?
             Array.from({ length: 3 }).map((_, i) => (
                       <KeywordItemSkeleton key={i}/>
                   ))
@@ -45,6 +45,13 @@ export default function KeywordContent() {
                    onEndReachedThreshold={0.1}
                    refreshing={loading}
                    onRefresh={handleRefreshKeywordList}
+                   ListFooterComponent={
+                        currentPage < keyWordList.meta.total_pages ? (
+                            <View style={{ paddingVertical: 16 }}>
+                                {loading ? <ActivityIndicator /> : null}
+                            </View>
+                        ) : null
+                   }
                 />
                 :
                 <NoDataCard/>

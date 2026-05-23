@@ -50,7 +50,6 @@ export default function CustomerInfoMainContent({ conversationId }: CustomerInfo
       <CustomerMainContentSkeleton/>
       :
       <>
-      
             <Card style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <Image

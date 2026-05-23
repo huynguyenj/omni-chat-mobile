@@ -1,10 +1,9 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React, { useRef } from 'react'
 import useGetShipperOrder from '../hooks/useGetShipperOrder'
 import usePagination from '@/hooks/usePagination'
 import OrderShipperHeader from './OrderShipperHeader'
 import OrderShipperItem from './OrderShipperItem'
-import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 export default function ShipperMainContent() {
   const { loading, orderShipperList, setCurrentPage, currentPage, setOnRefresh, handleRefresh } = useGetShipperOrder()
@@ -24,7 +23,13 @@ export default function ShipperMainContent() {
                         onEndReachedThreshold={0.1}
                         refreshing={loading}
                         onRefresh={handleRefresh}
-                        ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
+                        ListFooterComponent={
+                              currentPage < orderShipperList.meta.total_pages ? (
+                                    <View style={{ paddingVertical: 16 }}>
+                                          {loading ? <ActivityIndicator /> : null}
+                                    </View>
+                              ) : null
+                  }
                   />
                }
             </View>

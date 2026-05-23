@@ -1,13 +1,11 @@
 import { View, Text, StyleSheet } from 'react-native'
 import React from 'react'
-import TaskHeader from '@/features/task/components/TaskHeader'
-import TaskList from '@/features/task/components/TaskList'
+import ChatTemplateMainContent from '@/features/chat-template-manager/components/ChatTemplateMainContent'
 
-export default function TaskScreen() {
+export default function ChatTemplateScreen() {
   return (
     <View style={styles.container}>
-      <TaskHeader/>
-      <TaskList/>
+      <ChatTemplateMainContent/>
     </View>
   )
 }

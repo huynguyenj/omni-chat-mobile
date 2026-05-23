@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native'
 import React from 'react'
 import Card from '@/components/ui/cards/Card'
 import { FILTER_LIST } from '../const/order-status'
@@ -18,7 +18,7 @@ export default function CustomerOrderMainContent({ customerId }: CustomerOrderMa
   const { loadMore } = usePagination({ currentPage: currentPage, setPage: setCurrentPage, loading: loading, totalPage: listOrders?.meta.total_pages ?? 1 })  
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !listOrders ?
             <CustomerOrderMainContentSkeleton/>
             :
             <>
@@ -63,6 +63,13 @@ export default function CustomerOrderMainContent({ customerId }: CustomerOrderMa
                                     onEndReachedThreshold={0.1}
                                     onRefresh={handleRefresh}
                                     refreshing={loading}
+                                    ListFooterComponent={
+                                          currentPage < listOrders.meta.total_pages ? (
+                                                <View style={{ paddingVertical: 16 }}>
+                                                      {loading ? <ActivityIndicator /> : null}
+                                                </View>
+                                          ) : null
+                  }
                               />
                               :
                               <NoDataCard description='Không có đơn đặt nào phù hợp'/>

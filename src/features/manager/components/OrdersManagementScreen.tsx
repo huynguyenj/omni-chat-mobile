@@ -40,6 +40,9 @@ import {
   deliveryStatusPill,
   orderStatusPill
 } from '../utils/managerOrdersNormalize'
+import Input from '@/components/ui/inputs/Input'
+import ManagerOrderCardSkeletonV2 from './ui/ManagerOrderItemSkeletonV2'
+import ManagerPostSaleItemSkeleton from './ui/ManagerPostSaleItemSkeleton'
 
 const ORDER_PAGE = 6
 const PSR_PAGE = 9
@@ -519,9 +522,7 @@ export default function OrdersManagementScreen() {
     ) : null
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <Text style={styles.title}>Đơn hàng</Text>
-
+    <View style={styles.safe}>
       <View style={styles.mainTabs}>
         <Pressable
           style={[styles.mainTab, mainTab === 'orders' && styles.mainTabOn]}
@@ -542,14 +543,14 @@ export default function OrdersManagementScreen() {
       {mainTab === 'orders' ? (
         <View style={styles.tabPane}>
           <View style={styles.searchWrap}>
-            <TextInput
+            <Input
+              icon={{ iconName: Search, iconDirection: 'left' }}
               placeholder="Tìm đơn…"
               placeholderTextColor="#9ca3af"
               value={search}
               onChangeText={setSearch}
               style={styles.searchInput}
             />
-            <Search size={20} color="#64748b" strokeWidth={2} />
           </View>
 
           <View style={styles.filterBlock}>
@@ -580,7 +581,9 @@ export default function OrdersManagementScreen() {
           ) : null}
 
           {loading && items.length === 0 ? (
-            <ActivityIndicator style={{ marginTop: 24 }} />
+            Array.from({ length: 4 }).map((_, i) => (
+              <ManagerOrderCardSkeletonV2 key={i}/>
+            ))
           ) : (
             <FlatList
               style={styles.list}
@@ -623,7 +626,9 @@ export default function OrdersManagementScreen() {
             </View>
           ) : null}
           {psrLoading && psrItems.length === 0 ? (
-            <ActivityIndicator style={{ marginTop: 24 }} />
+             Array.from({ length: 4 }).map((_, i) => (
+              <ManagerPostSaleItemSkeleton key={i}/>
+          ))
           ) : (
             <FlatList
               style={styles.list}
@@ -742,7 +747,7 @@ export default function OrdersManagementScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -752,6 +757,7 @@ const styles = StyleSheet.create({
   mainTabs: {
     flexDirection: 'row',
     marginHorizontal: 16,
+    marginTop: 10,
     marginBottom: 10,
     backgroundColor: '#e2e8f0',
     borderRadius: 12,
@@ -772,18 +778,10 @@ const styles = StyleSheet.create({
   mainTabTextOn: { color: '#0f172a' },
   tabPane: { flex: 1, minHeight: 0 },
   searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginHorizontal: 16,
-    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
-    gap: 10
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  searchInput: { height: 50 },
   filterBlock: { paddingHorizontal: 16, marginTop: 10, marginBottom: 4 },
   filterLabel: { fontSize: 12, fontWeight: '600', color: '#64748b', marginBottom: 6 },
   chipRow: { maxHeight: 40 },

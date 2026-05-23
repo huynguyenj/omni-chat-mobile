@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React from 'react'
 import useGetChatTemplate from '../hooks/useGetChatTemplate'
 import usePagination from '@/hooks/usePagination'
@@ -22,14 +22,14 @@ export default function ChatTemplateMainContent() {
   const debounce = useDebounce(handleSearch, 500)  
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !listChatTemplate ?
             <OverviewChatTemplateCardSkeleton/>
       :
             <OverviewChatTemplateCard totalItems={listChatTemplate?.meta.total_items ?? 0}/>
       }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên, mã...'/>
       <View style={styles.listContainer}>
-         { loading  ?
+         { loading && !listChatTemplate ?
                Array.from({ length: 3 }).map((_, i) => (
                   <ChatTemplateItemSkeleton key={i}/>
             )) 
@@ -43,6 +43,13 @@ export default function ChatTemplateMainContent() {
                   onEndReachedThreshold={0.1}
                   onRefresh={handleRefresh}
                   refreshing={loading}
+                  ListFooterComponent={
+                        currentPage < listChatTemplate.meta.total_pages ? (
+                              <View style={{ paddingVertical: 16 }}>
+                                    {loading ? <ActivityIndicator /> : null}
+                              </View>
+                        ) : null
+                  }
                   />
             :
                   <NoDataCard title='Không có dữ liệu' description='Dữ liệu từ khóa mẫu không có'/>

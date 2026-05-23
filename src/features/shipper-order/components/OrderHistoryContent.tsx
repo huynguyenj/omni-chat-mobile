@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React, { useState } from 'react'
 import OrderHistoryHeader from './OrderHistoryHeader'
 import InputDate from '@/components/ui/inputs/InputDate'
@@ -6,7 +6,6 @@ import Card from '@/components/ui/cards/Card'
 import usePagination from '@/hooks/usePagination'
 import useGetOrderHistory from '../hooks/useGetOrderHistory'
 import OrderHistoryItem from './OrderHistoryItem'
-import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 import Button from '@/components/ui/buttons/Button'
 import { History } from 'lucide-react-native'
 import NoDataCard from '@/components/ui/cards/NodataCard'
@@ -50,7 +49,13 @@ export default function OrderHistoryContent() {
                               onEndReachedThreshold={0.1}
                               refreshing={loading}
                               onRefresh={handleRefreshOrderHistory}
-                              ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
+                              ListFooterComponent={
+                                    currentPage < orderHistory.orders.meta.total_pages ? (
+                                          <View style={{ paddingVertical: 16 }}>
+                                                {loading ? <ActivityIndicator /> : null}
+                                          </View>
+                                    ) : null
+                              }
                         />
                      }
                   </View>

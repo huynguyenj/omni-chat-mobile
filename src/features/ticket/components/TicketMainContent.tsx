@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import React from 'react'
-import { TicketType } from '../types/ticket-type';
 import Card from '@/components/ui/cards/Card';
 import useGetTicket from '../hooks/useGetTicket';
 import NoDataCard from '@/components/ui/cards/NodataCard';
@@ -18,7 +17,7 @@ export default function TicketMainContent({ customerId }: TicketMainContentProps
   if (!listTickets) return <NoDataCard title='Chưa có lịch sử hỗ trợ' description='Khách hàng này chưa hỗ trợ qua lần nào cả'/>
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !listTickets ?
             <TicketMainContentSkeleton/>
       :
         <View>
