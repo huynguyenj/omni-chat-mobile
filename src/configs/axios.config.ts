@@ -30,10 +30,11 @@ apiPrivate.interceptors.request.use((config) => {
 apiPrivate.interceptors.response.use((response) => {
   return response.data
 }, async (error: AxiosError) => {
+  
   // Get specific error to check whether it is TOKEN expired or not
   const apiPreviousConfig = error.config as AxiosRequestConfig
   const apiErrorResponse = error.response?.data as ApiResponseStructure<null>
-
+ 
   if (apiErrorResponse.status_code !== 401) return Promise.reject(apiErrorResponse.reason)
 
   // Logic refresh token

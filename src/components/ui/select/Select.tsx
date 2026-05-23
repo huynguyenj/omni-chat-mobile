@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
       },
        label: {
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 12,
             color: '#6F7379',
       },
       trigger: {

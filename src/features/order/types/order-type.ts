@@ -44,7 +44,7 @@ export type RefundOrderRequest = {
   customerId: string
   orderId: string
   presentByStaffId: string
-  type: 'Refund' | 'Return' | 'Cancel' | 'Replacement'
+  type: string
   reason: string
   postSaleItems: PostSaleItem[]
 }

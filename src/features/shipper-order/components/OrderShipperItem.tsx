@@ -9,15 +9,17 @@ import Button from '@/components/ui/buttons/Button'
 import ModalCustom from '@/components/ui/modal/ModalCustom'
 import useUpdateCompleteOrder from '../hooks/useUpdateCompleteOrder'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
+import { getDeliveryStatusDisplay } from '@/features/order/const/order-status'
 
 type OrderShipperItemProps = {
    data: OrderShipperType
-   onRefresh: Dispatch<SetStateAction<boolean>>
+   onRefresh: () => void
 }
 
 export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { handleCompleteOrder, loading } = useUpdateCompleteOrder({ onRefresh: onRefresh })
+  const delivery = getDeliveryStatusDisplay(data.deliveryStatus)
   const handleOpenModal = () => {
     setIsModalOpen(prev => !prev)
   }
@@ -26,8 +28,8 @@ export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemPr
     <Card style={styles.container}>
       <View style={styles.orderHeaderContainer}>
         <Text style={styles.orderCode}>#{data.code}</Text>
-          <Tag variant={ data.deliveryStatus === 'Pending' ? 'warning' : 'default' }>
-            <Text style={{ color: '#ffffff', fontWeight: 600 }}>{data.deliveryStatus === 'Pending' ? 'Chờ ship' : data.deliveryStatus}</Text>
+          <Tag variant={delivery.tagVariant}>
+            <Text style={{ color: '#ffffff', fontWeight: 600 }}>{delivery.name}</Text>
           </Tag>
       </View>
       <View style={styles.tagContainer}>
@@ -53,11 +55,11 @@ export default function OrderShipperItem({ data, onRefresh }: OrderShipperItemPr
         </View>
       </View>
       <View style={styles.btnContainer}>
-        <Button variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
+        <Button style={styles.btn} variant='outline' content='Xem chi tiết đơn hàng' onPress={handleOpenModal}/>
         { loading ?
             <LoadingCircle size={40}/>
           :
-          <Button variant='secondary' content='Hoàn thành' onPress={() => handleCompleteOrder(data.id)}/>
+          <Button style={styles.btn} variant='secondary' content='Hoàn thành' onPress={() => handleCompleteOrder(data.id)}/>
         }
       </View>
         <ModalCustom isOpen={isModalOpen} onClose={handleOpenModal}>
@@ -205,5 +207,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#3366CC'
+  },
+  btn: {
+    width: '100%'
   }
 })

@@ -14,7 +14,7 @@ export default function TaskScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 0.9,
+    flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 10,
   }

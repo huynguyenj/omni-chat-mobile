@@ -15,7 +15,6 @@ export default function usePagination({ currentPage, loading, setPage, totalPage
       if (loading || !hasMore) return
       
       if (currentPage === totalPage) {      
-            console.log('In condition');
                   
             setHasMore(false)
             return

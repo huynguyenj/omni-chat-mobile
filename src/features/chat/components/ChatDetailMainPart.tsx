@@ -134,7 +134,6 @@ export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPar
                       <Button variant='outline' style={styles.btnSettings} icon={{ iconName: Link, iconDirection: 'left' }} content='Lấy link thông tin sản phẩm' onPress={handleLinkProductMessage}/>
                       <Button variant='outline' style={styles.btnSettings} icon={{ iconName: Link, iconDirection: 'left' }} content='Lấy link điền thông tin' onPress={handleLinkCustomerFormMessage}/>
                       <Button variant='outline' style={styles.btnSettings} icon={{ iconName: ShoppingCart, iconDirection: 'left' }} content='Tạo đơn hàng' onPress={handleNavigate}/>
-                      <Button variant='outline' style={styles.btnSettings} icon={{ iconName: History, iconDirection: 'left' }} content='Xem lịch sử đơn hàng'/>
                 </View>
               }
             </View>
@@ -235,7 +234,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: '#ececec',
     width: 300,
-    top: -250,
+    top: -210,
     borderRadius: 15,
     paddingHorizontal: 10,
     paddingVertical: 10

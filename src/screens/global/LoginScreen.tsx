@@ -5,6 +5,7 @@ import { LockKeyhole, MoveRight, UserRound } from 'lucide-react-native'
 import Button from '@components/ui/buttons/Button'
 import useLogin from '@/features/auth/hooks/useLogin'
 import { Controller } from 'react-hook-form'
+import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 export default function LoginScreen() {
   const { errors, handleSubmit, loading, onSubmit, control } = useLogin()
@@ -54,13 +55,18 @@ export default function LoginScreen() {
         />
        
       </View>
-      <Button 
-        icon={{ iconName: MoveRight, iconDirection: 'right' }}
-        content='Đăng nhập' 
-        variant='primary'
-        onPress={handleSubmit(onSubmit)}
-        disabled={loading}
-      />
+      { loading ?
+        <LoadingCircle/>
+        :
+        <Button 
+          icon={{ iconName: MoveRight, iconDirection: 'right' }}
+          content='Đăng nhập' 
+          variant='primary'
+          onPress={handleSubmit(onSubmit)}
+          disabled={loading}
+          style={{ width: '100%', height: 50 }}
+        />
+      }
     </View>
   )
 }

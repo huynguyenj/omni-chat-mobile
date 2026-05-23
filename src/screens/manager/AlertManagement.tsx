@@ -1,10 +1,11 @@
-import { View, Text } from 'react-native'
 import React from 'react'
+import { View } from 'react-native'
+import WarningsManagementScreen from '@/features/manager/components/WarningsManagementScreen'
 
 export default function AlertManagement() {
   return (
-    <View>
-      <Text>AlertManagement</Text>
+    <View style={{ flex: 1 }}>
+      <WarningsManagementScreen />
     </View>
   )
 }

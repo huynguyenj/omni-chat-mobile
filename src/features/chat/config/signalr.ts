@@ -15,3 +15,14 @@ export const signalrConnection = (hubPath: string) => {
     .build()
   return connection
 }
+
+export const signalrSidebarConnection = (providerName: string, accessToken: string) => {
+  const connection = new signalr.HubConnectionBuilder()
+    .withUrl(ENV.apiURL+`/SidebarHub?providerName=${providerName}`,
+      {
+        accessTokenFactory: () => accessToken as string
+      })
+    .withAutomaticReconnect()
+    .build()
+  return connection
+}

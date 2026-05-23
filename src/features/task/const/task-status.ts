@@ -16,6 +16,10 @@ export const TASK_STATUS: Record<string, TaskStatusType> = {
     name: 'Đang chuyển hướng',
     tagVariant: 'warning'
   },
+  Reassign: {
+    name: 'Phân công lại',
+    tagVariant: 'warning'
+  },
   Done: {
     name: 'Hoàn thành',
     tagVariant: 'success'
