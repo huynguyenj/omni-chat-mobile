@@ -23,7 +23,7 @@ export function normalizeTransaction(raw: unknown): ManagerWalletTransaction {
   }
 }
 
-function normalizeWalletResponse(raw: unknown): ManagerWalletResponse {
+export function normalizeWalletResponse(raw: unknown): ManagerWalletResponse {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const txRaw = r.transactions ?? r.transactionList ?? r.transaction_list
   const transactions = Array.isArray(txRaw) ? txRaw.map(normalizeTransaction) : []
