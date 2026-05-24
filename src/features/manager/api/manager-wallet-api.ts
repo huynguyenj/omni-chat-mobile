@@ -1,4 +1,4 @@
-import { apiPublic } from '@/configs/axios.config'
+import { apiPrivate, apiPublic } from '@/configs/axios.config'
 import type { ManagerCustomerWalletItem, ManagerWalletPagingQuery, ManagerWalletPagingResponse } from '../types/manager-wallet-type'
 import { assertManagerPublicSuccess, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
 import { normalizeCustomerWallet } from '../utils/managerWalletNormalize'
@@ -9,6 +9,12 @@ function resolveCustomerProfilePagingPath() {
   const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
   if (baseUrl.includes('/api/v1')) return '/customer-profile/paging'
   return '/api/v1/customer-profile/paging'
+}
+
+function resolveWalletPaymentPath() {
+  const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
+  if (baseUrl.includes('/api/v1')) return '/wallets/payment'
+  return '/api/v1/wallets/payment'
 }
 
 function buildPagingParams(query: ManagerWalletPagingQuery) {
@@ -47,5 +53,10 @@ export const ManagerWalletApi = {
       page += 1
     }
     return Array.from(byId.values())
+  },
+
+  payCash: async (customerId: string, amount: number): Promise<void> => {
+    const raw: unknown = await apiPrivate.post(resolveWalletPaymentPath(), { customerId, amount })
+    assertManagerPublicSuccess(raw)
   }
 }

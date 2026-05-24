@@ -66,6 +66,9 @@ export default function WalletManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [historyCustomer, setHistoryCustomer] = useState<ManagerCustomerWalletItem | null>(null)
+  const [topUpCustomer, setTopUpCustomer] = useState<ManagerCustomerWalletItem | null>(null)
+  const [topUpAmount, setTopUpAmount] = useState('')
+  const [topUpSubmitting, setTopUpSubmitting] = useState(false)
   const [uiPage, setUiPage] = useState(1)
 
   useEffect(() => {
@@ -185,6 +188,15 @@ export default function WalletManagementScreen() {
           <Text style={styles.historyBtnText}>Lịch sử giao dịch</Text>
           <ChevronRight size={20} color="#fff" strokeWidth={2.5} />
         </Pressable>
+        <Pressable
+          style={styles.topUpBtn}
+          onPress={() => {
+            setTopUpAmount('')
+            setTopUpCustomer(item)
+          }}
+        >
+          <Text style={styles.topUpBtnText}>Nạp tiền</Text>
+        </Pressable>
       </View>
     )
   }
@@ -285,6 +297,75 @@ export default function WalletManagementScreen() {
           </View>
         </View>
       ) : null}
+
+      <Modal
+        visible={!!topUpCustomer}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          if (!topUpSubmitting) setTopUpCustomer(null)
+        }}
+      >
+        <View style={styles.topUpOverlay}>
+          <View style={styles.topUpCard}>
+            <Text style={styles.topUpTitle}>Nạp tiền — {topUpCustomer?.customerName ?? ''}</Text>
+            <Text style={styles.topUpHint}>Xác nhận khách trả tiền mặt.</Text>
+            <TextInput
+              style={styles.topUpInput}
+              placeholder="Số tiền (VNĐ)"
+              placeholderTextColor="#94a3b8"
+              keyboardType="number-pad"
+              value={topUpAmount}
+              onChangeText={setTopUpAmount}
+              editable={!topUpSubmitting}
+            />
+            <View style={styles.topUpActions}>
+              <Pressable
+                style={[styles.topUpCancel, topUpSubmitting && styles.btnDisabled]}
+                disabled={topUpSubmitting}
+                onPress={() => setTopUpCustomer(null)}
+              >
+                <Text style={styles.topUpCancelText}>Hủy</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.topUpConfirm, topUpSubmitting && styles.btnDisabled]}
+                disabled={topUpSubmitting}
+                onPress={() => {
+                  if (!topUpCustomer) return
+                  const digits = topUpAmount.replace(/[^\d]/g, '')
+                  const amount = Number(digits)
+                  if (!Number.isFinite(amount) || amount <= 0) {
+                    Toast.show({ type: 'error', text1: 'Vui lòng nhập số tiền hợp lệ.' })
+                    return
+                  }
+                  void (async () => {
+                    setTopUpSubmitting(true)
+                    try {
+                      await ManagerWalletApi.payCash(topUpCustomer.id, amount)
+                      Toast.show({
+                        type: 'success',
+                        text1: `Đã nạp ${formatWalletMoney(amount)} đ`
+                      })
+                      setTopUpCustomer(null)
+                      setTopUpAmount('')
+                      await loadAll()
+                    } catch (e) {
+                      Toast.show({
+                        type: 'error',
+                        text1: typeof e === 'string' ? e : 'Không thể nạp tiền.'
+                      })
+                    } finally {
+                      setTopUpSubmitting(false)
+                    }
+                  })()
+                }}
+              >
+                <Text style={styles.topUpConfirmText}>{topUpSubmitting ? 'Đang xử lý...' : 'Xác nhận'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!historyCustomer} animationType="slide" transparent={false} onRequestClose={() => setHistoryCustomer(null)}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'left', 'right', 'bottom']}>
@@ -442,6 +523,61 @@ const styles = StyleSheet.create({
     gap: 8
   },
   historyBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  topUpBtn: {
+    marginTop: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#86efac'
+  },
+  topUpBtnText: { color: '#166534', fontWeight: '700', fontSize: 15 },
+  topUpOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  topUpCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  topUpTitle: { fontSize: 17, fontWeight: '800', color: '#003366', marginBottom: 8 },
+  topUpHint: { fontSize: 13, color: '#64748b', marginBottom: 12 },
+  topUpInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#0f172a',
+    marginBottom: 16
+  },
+  topUpActions: { flexDirection: 'row', gap: 10 },
+  topUpCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  topUpCancelText: { fontWeight: '700', color: '#64748b' },
+  topUpConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#16a34a'
+  },
+  topUpConfirmText: { fontWeight: '700', color: '#fff' },
+  btnDisabled: { opacity: 0.6 },
   empty: { textAlign: 'center', color: '#64748b', marginTop: 24, fontSize: 15 },
   modalSafe: { flex: 1, backgroundColor: '#fff' },
   modalHeader: {
