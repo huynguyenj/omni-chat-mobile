@@ -24,7 +24,11 @@ import {
   X
 } from 'lucide-react-native'
 import { ManagerWalletApi } from '../api/manager-wallet-api'
-import type { ManagerCustomerWalletItem, ManagerWalletTransaction } from '../types/manager-wallet-type'
+import type {
+  ManagerCustomerWalletItem,
+  ManagerWalletResponse,
+  ManagerWalletTransaction
+} from '../types/manager-wallet-type'
 import {
   customerInitial,
   formatWalletMoney,
@@ -37,6 +41,13 @@ import CustomerWalletItemSkeleton from './ui/CustomerWalletItemSkeleton'
 
 const PRIMARY = '#3b6ea5'
 const WALLET_PAGE_SIZE = 6
+
+function parseTopUpAmountInput(raw: string): number {
+  const digits = raw.replace(/[^\d]/g, '')
+  if (!digits) return NaN
+  const n = Number(digits)
+  return Number.isFinite(n) ? n : NaN
+}
 
 function WalletAvatar({ name, url }: { name: string; url: string }) {
   const [failed, setFailed] = useState(false)
@@ -68,6 +79,9 @@ export default function WalletManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [historyCustomer, setHistoryCustomer] = useState<ManagerCustomerWalletItem | null>(null)
+  const [historyWallet, setHistoryWallet] = useState<ManagerWalletResponse | null>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [topUpCustomer, setTopUpCustomer] = useState<ManagerCustomerWalletItem | null>(null)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpSubmitting, setTopUpSubmitting] = useState(false)
@@ -117,6 +131,75 @@ export default function WalletManagementScreen() {
       setRefreshing(false)
     }
   }, [loadAll])
+
+  const refreshCustomerWallet = useCallback(async (customerId: string) => {
+    const wallet = await ManagerWalletApi.getWalletByCustomerId(customerId)
+    setAllCustomers((prev) =>
+      prev.map((c) => (c.id === customerId ? { ...c, getWalletResponse: wallet } : c))
+    )
+    return wallet
+  }, [])
+
+  const openTransactionHistory = useCallback(async (customer: ManagerCustomerWalletItem) => {
+    setHistoryCustomer(customer)
+    setHistoryWallet(null)
+    setHistoryError(null)
+    setHistoryLoading(true)
+    try {
+      const wallet = await ManagerWalletApi.getWalletByCustomerId(customer.id)
+      setHistoryWallet(wallet)
+    } catch (e) {
+      const msg = typeof e === 'string' ? e : 'Không thể tải lịch sử giao dịch.'
+      setHistoryError(msg)
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
+  const closeTransactionHistory = useCallback(() => {
+    setHistoryCustomer(null)
+    setHistoryWallet(null)
+    setHistoryError(null)
+    setHistoryLoading(false)
+  }, [])
+
+  const openTopUp = useCallback((customer: ManagerCustomerWalletItem) => {
+    setTopUpAmount('')
+    setTopUpCustomer(customer)
+  }, [])
+
+  const closeTopUp = useCallback(() => {
+    if (topUpSubmitting) return
+    setTopUpCustomer(null)
+    setTopUpAmount('')
+  }, [topUpSubmitting])
+
+  const handleTopUpSubmit = useCallback(async () => {
+    if (!topUpCustomer) return
+    const amount = parseTopUpAmountInput(topUpAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Toast.show({ type: 'error', text1: 'Vui lòng nhập số tiền hợp lệ (lớn hơn 0).' })
+      return
+    }
+    setTopUpSubmitting(true)
+    try {
+      await ManagerWalletApi.payCash({ customerId: topUpCustomer.id, amount })
+      Toast.show({
+        type: 'success',
+        text1: `Đã nạp ${formatWalletMoney(amount)}đ cho ${topUpCustomer.customerName}.`
+      })
+      await refreshCustomerWallet(topUpCustomer.id)
+      setTopUpCustomer(null)
+      setTopUpAmount('')
+    } catch (e) {
+      Toast.show({
+        type: 'error',
+        text1: typeof e === 'string' ? e : 'Không thể nạp tiền. Vui lòng thử lại.'
+      })
+    } finally {
+      setTopUpSubmitting(false)
+    }
+  }, [topUpAmount, topUpCustomer, refreshCustomerWallet])
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.toLowerCase()
@@ -186,16 +269,18 @@ export default function WalletManagementScreen() {
           </Text>
         </View>
 
-        <Pressable style={styles.historyBtn} onPress={() => setHistoryCustomer(item)}>
+        <Pressable
+          style={[styles.historyBtn, historyLoading && historyCustomer?.id === item.id && styles.btnDisabled]}
+          disabled={historyLoading && historyCustomer?.id === item.id}
+          onPress={() => void openTransactionHistory(item)}
+        >
           <Text style={styles.historyBtnText}>Lịch sử giao dịch</Text>
           <ChevronRight size={20} color="#fff" strokeWidth={2.5} />
         </Pressable>
         <Pressable
-          style={styles.topUpBtn}
-          onPress={() => {
-            setTopUpAmount('')
-            setTopUpCustomer(item)
-          }}
+          style={[styles.topUpBtn, topUpSubmitting && topUpCustomer?.id === item.id && styles.btnDisabled]}
+          disabled={topUpSubmitting && topUpCustomer?.id === item.id}
+          onPress={() => openTopUp(item)}
         >
           <Text style={styles.topUpBtnText}>Nạp tiền</Text>
         </Pressable>
@@ -245,7 +330,8 @@ export default function WalletManagementScreen() {
     </View>
   )
 
-  const txList = historyCustomer?.getWalletResponse?.transactions ?? []
+  const historyWalletData = historyWallet ?? historyCustomer?.getWalletResponse ?? null
+  const txList = historyWalletData?.transactions ?? []
 
   return (
     <View style={styles.safe}>
@@ -301,98 +387,80 @@ export default function WalletManagementScreen() {
         visible={!!topUpCustomer}
         animationType="fade"
         transparent
-        onRequestClose={() => {
-          if (!topUpSubmitting) setTopUpCustomer(null)
-        }}
+        onRequestClose={closeTopUp}
       >
-        <View style={styles.topUpOverlay}>
-          <View style={styles.topUpCard}>
+        <Pressable style={styles.topUpOverlay} onPress={closeTopUp}>
+          <View style={styles.topUpCard} onStartShouldSetResponder={() => true}>
             <Text style={styles.topUpTitle}>Nạp tiền — {topUpCustomer?.customerName ?? ''}</Text>
-            <Text style={styles.topUpHint}>Xác nhận khách trả tiền mặt.</Text>
+            <Text style={styles.topUpHint}>
+              Xác nhận khách trả tiền mặt. Số tiền sẽ được ghi nhận vào ví khách hàng.
+            </Text>
+            <Text style={styles.topUpLabel}>Số tiền (VNĐ)</Text>
             <TextInput
               style={styles.topUpInput}
-              placeholder="Số tiền (VNĐ)"
+              placeholder="VD: 500000"
               placeholderTextColor="#94a3b8"
               keyboardType="number-pad"
               value={topUpAmount}
-              onChangeText={setTopUpAmount}
+              onChangeText={(v) => setTopUpAmount(v.replace(/[^\d]/g, ''))}
               editable={!topUpSubmitting}
             />
             <View style={styles.topUpActions}>
               <Pressable
                 style={[styles.topUpCancel, topUpSubmitting && styles.btnDisabled]}
                 disabled={topUpSubmitting}
-                onPress={() => setTopUpCustomer(null)}
+                onPress={closeTopUp}
               >
                 <Text style={styles.topUpCancelText}>Hủy</Text>
               </Pressable>
               <Pressable
                 style={[styles.topUpConfirm, topUpSubmitting && styles.btnDisabled]}
                 disabled={topUpSubmitting}
-                onPress={() => {
-                  if (!topUpCustomer) return
-                  const digits = topUpAmount.replace(/[^\d]/g, '')
-                  const amount = Number(digits)
-                  if (!Number.isFinite(amount) || amount <= 0) {
-                    Toast.show({ type: 'error', text1: 'Vui lòng nhập số tiền hợp lệ.' })
-                    return
-                  }
-                  void (async () => {
-                    setTopUpSubmitting(true)
-                    try {
-                      await ManagerWalletApi.payCash(topUpCustomer.id, amount)
-                      Toast.show({
-                        type: 'success',
-                        text1: `Đã nạp ${formatWalletMoney(amount)} đ`
-                      })
-                      setTopUpCustomer(null)
-                      setTopUpAmount('')
-                      await loadAll()
-                    } catch (e) {
-                      Toast.show({
-                        type: 'error',
-                        text1: typeof e === 'string' ? e : 'Không thể nạp tiền.'
-                      })
-                    } finally {
-                      setTopUpSubmitting(false)
-                    }
-                  })()
-                }}
+                onPress={() => void handleTopUpSubmit()}
               >
-                <Text style={styles.topUpConfirmText}>{topUpSubmitting ? 'Đang xử lý...' : 'Xác nhận'}</Text>
+                <Text style={styles.topUpConfirmText}>
+                  {topUpSubmitting ? 'Đang xử lý...' : 'Xác nhận nạp tiền'}
+                </Text>
               </Pressable>
             </View>
           </View>
-        </View>
+        </Pressable>
       </Modal>
 
-      <Modal visible={!!historyCustomer} animationType="slide" transparent={false} onRequestClose={() => setHistoryCustomer(null)}>
+      <Modal visible={!!historyCustomer} animationType="slide" transparent={false} onRequestClose={closeTransactionHistory}>
         <SafeAreaView style={styles.modalSafe} edges={['top', 'left', 'right', 'bottom']}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle} numberOfLines={1}>
               Lịch sử giao dịch — {historyCustomer?.customerName ?? ''}
             </Text>
-            <Pressable hitSlop={12} onPress={() => setHistoryCustomer(null)} style={styles.modalCloseBtn}>
+            <Pressable hitSlop={12} onPress={closeTransactionHistory} style={styles.modalCloseBtn}>
               <X size={18} color="#003366" strokeWidth={2.2} />
             </Pressable>
           </View>
-          {historyCustomer ? (
+          {historyCustomer && historyWalletData ? (
             <View style={styles.histSummary}>
               <View style={styles.histSummaryCol}>
                 <Text style={styles.histSummaryLabel}>Ví tiền</Text>
                 <Text style={styles.histSummaryValWallet}>
-                  {formatWalletMoney(historyCustomer.getWalletResponse.amount)} đ
+                  {formatWalletMoney(historyWalletData.amount)} đ
                 </Text>
               </View>
               <View style={styles.histSummaryCol}>
                 <Text style={styles.histSummaryLabel}>Tổng nợ</Text>
                 <Text style={styles.histSummaryValDebt}>
-                  {formatWalletMoney(historyCustomer.getWalletResponse.totalDebt)} đ
+                  {formatWalletMoney(historyWalletData.totalDebt)} đ
                 </Text>
               </View>
             </View>
           ) : null}
-          {txList.length === 0 ? (
+          {historyLoading ? (
+            <View style={styles.centerPad}>
+              <ActivityIndicator size="large" />
+              <Text style={styles.hint}>Đang tải lịch sử…</Text>
+            </View>
+          ) : historyError ? (
+            <Text style={styles.emptyModal}>{historyError}</Text>
+          ) : txList.length === 0 ? (
             <Text style={styles.emptyModal}>Chưa có giao dịch.</Text>
           ) : (
             <FlatList
@@ -543,7 +611,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0'
   },
   topUpTitle: { fontSize: 17, fontWeight: '800', color: '#003366', marginBottom: 8 },
-  topUpHint: { fontSize: 13, color: '#64748b', marginBottom: 12 },
+  topUpHint: { fontSize: 13, color: '#64748b', marginBottom: 12, lineHeight: 18 },
+  topUpLabel: { fontSize: 14, fontWeight: '600', color: '#003366', marginBottom: 6 },
   topUpInput: {
     borderWidth: 1,
     borderColor: '#e2e8f0',
