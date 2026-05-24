@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native'
 import React, { useState } from 'react'
 import Input from '@/components/ui/inputs/Input'
 import { CalendarDays, CircleCheck, Loader, LucideIcon, Search, TriangleAlert } from 'lucide-react-native'
@@ -103,7 +103,7 @@ export default function TaskList() {
                   ))}
             </ScrollView>
       </View>
-      { loading ?
+      { loading && !listTasks ?
             Array.from({ length: 3 }).map((_, i) => (
             <TaskHistoryItemSkeleton key={i}/>
       )) 
@@ -119,7 +119,13 @@ export default function TaskList() {
                   onEndReachedThreshold={0.1}
                   refreshing={loading}
                   onRefresh={handleRefreshTaskList}
-                  ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
+                  ListFooterComponent={
+                        currentPage < listTasks.meta.total_pages ? (
+                              <View style={{ paddingVertical: 16 }}>
+                                    {loading ? <ActivityIndicator /> : null}
+                              </View>
+                        ) : null
+                  }
                   
             />
             :

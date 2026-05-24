@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native'
 import React from 'react'
 import useGetProductBatchAudit from '../hooks/useGetProductBatchAudit'
 import usePagination from '@/hooks/usePagination'
@@ -18,7 +18,7 @@ export default function BatchAuditMainContent() {
 
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !listBatchAudit ?
         <OverviewCardAuditSkeleton/>
         :
         <OverviewCardAudit totalItems={listBatchAudit?.meta.total_items ?? 0}/>
@@ -61,7 +61,7 @@ export default function BatchAuditMainContent() {
         </View>
       </View>
       <View style={styles.listContainer}>
-        { loading ?
+        { loading && !listBatchAudit ?
            Array.from({ length: 2 }).map((_, i) => (
             <ProductAuditItemSkeleton key={i}/>
           )) 
@@ -75,6 +75,13 @@ export default function BatchAuditMainContent() {
                 onEndReachedThreshold={0.1}
                 onRefresh={handleRefresh}
                 refreshing={loading}
+                ListFooterComponent={
+                    currentPage < listBatchAudit.meta.total_pages ? (
+                          <View style={{ paddingVertical: 16 }}>
+                                {loading ? <ActivityIndicator /> : null}
+                          </View>
+                    ) : null
+                }
               />
             :
             <NoDataCard title='Không có sự thay đổi' description='Không có bất kỳ sự thay đổi nào về số lượng các các lô hàng'/>

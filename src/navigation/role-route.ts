@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Hash, History, LayoutDashboard, MessageSquare, MessageSquareText, Newspaper, Package, ReceiptText, ShoppingCart, Truck, Users, Wallet } from "lucide-react-native";
+import { AlertTriangle, Archive, BanknoteArrowUp, ClipboardClock, FileText, Form, Hash, History, LayoutDashboard, MessageSquare, MessageSquareText, Newspaper, Package, ReceiptText, ShoppingCart, Truck, Users, Wallet } from "lucide-react-native";
 import { TAB_LIST_ITEMS_TYPES } from "../types/route-type";
 import StaffManagement from "@screens/manager/StaffManagement";
 import KeywordManagement from "@screens/manager/KeywordManagement";
@@ -22,13 +22,13 @@ import WalletManagement from "@/screens/manager/WalletManagement";
 
 const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
-  { route: 'Keywords',   label: 'Từ khóa',   icon: Hash,          screen: KeywordManagement },
+  { route: 'Từ khóa',   label: 'Từ khóa',   icon: Hash,          screen: KeywordManagement },
   { route: 'Sản phẩm',  label: 'Sản phẩm',  icon: ShoppingCart,  screen: ProductManagement },
   { route: 'Kho hàng',  label: 'Kho hàng',  icon: Archive,       screen: StorageManagement },
   { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
-  { route: 'Claim',      label: 'Yêu cầu',    icon: FileText,      screen: ClaimManagement },
+  { route: 'Đơn',      label: 'Yêu cầu',    icon: FileText,      screen: ClaimManagement },
   { route: 'Cảnh báo',  label: 'Cảnh báo',  icon: AlertTriangle, screen: AlertManagement },
-  { route: 'Shipper',    label: 'Vận chuyển', icon: Truck,         screen: ShippersTransportScreen },
+  { route: 'Vận chuyển',    label: 'Vận chuyển', icon: Truck,         screen: ShippersTransportScreen },
   { route: 'Đơn hàng',  label: 'Đơn hàng',  icon: Package,       screen: OrderManagement },
   { route: 'Phiếu thanh toán', label: "Phiếu thanh toán", icon: ReceiptText, screen: InvoiceManagement },
   { route: 'Ví tiền', label: 'Ví tiền', icon: Wallet, screen: WalletManagement }
@@ -43,7 +43,8 @@ const adminTabs: TAB_LIST_ITEMS_TYPES[] = [
 const staffTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Chat', label: 'Chat', icon: MessageSquare, screen: ChatScreen},
   { route: 'Claim', label: 'Yêu cầu', icon: Newspaper, screen: ClaimScreen},
-  { route: 'Task History', label: 'Lịch sử task', icon: ClipboardClock, screen: TaskScreen }
+  { route: 'Task History', label: 'Nhiệm vụ', icon: ClipboardClock, screen: TaskScreen },
+  { route: 'Chat Templates', label: 'Mẫu chat', icon: Form, screen: ChatTemplateManagement},
 ]
 
 const shipperTabs: TAB_LIST_ITEMS_TYPES[] = [

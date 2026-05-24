@@ -29,6 +29,8 @@ import { ManagerInvoiceApi } from '../api/manager-invoice-api'
 import type { ManagerInvoiceItem, ManagerInvoiceStatusFilter } from '../types/manager-invoice-type'
 import { formatDateTime } from '../utils/claimsNormalize'
 import { formatKpiMoney, normInvoiceStatus } from '../utils/managerInvoicesNormalize'
+import InvoiceItemSkeleton from './ui/InvoiceItemSkeleton'
+import Input from '@/components/ui/inputs/Input'
 
 const INVOICE_PAGE_SIZE = 10
 
@@ -262,8 +264,6 @@ export default function InvoicesManagementScreen() {
 
   const fixedHeader = (
     <View style={styles.fixedTop}>
-      <Text style={styles.screenTitle}>Phiếu thanh toán</Text>
-
       <View style={styles.kpiPrimaryRow}>
         <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
@@ -312,8 +312,8 @@ export default function InvoicesManagementScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Search size={20} color="#64748b" strokeWidth={2} />
-        <TextInput
+        <Input
+          icon={{ iconName: Search, iconDirection: 'left' }}
           style={styles.searchInput}
           placeholder="Tìm theo mã, khách, email, SĐT..."
           placeholderTextColor="#94a3b8"
@@ -362,15 +362,14 @@ export default function InvoicesManagementScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <View style={styles.safe}>
       {fixedHeader}
 
       <View style={styles.listPane}>
         {loading && !refreshing ? (
-          <View style={styles.centerPad}>
-            <ActivityIndicator size="large" />
-            <Text style={styles.hint}>Đang tải toàn bộ hóa đơn…</Text>
-          </View>
+         Array.from({ length: 4 }).map((_, i) => (
+          <InvoiceItemSkeleton key={i}/>
+         ))
         ) : (
           <FlatList
             style={styles.list}
@@ -411,7 +410,7 @@ export default function InvoicesManagementScreen() {
           </View>
         </View>
       ) : null}
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -457,16 +456,11 @@ const styles = StyleSheet.create({
   kpiLabelSm: { fontSize: 11, fontWeight: '600', color: '#64748b', marginLeft: 4, flex: 1 },
   kpiValSm: { fontSize: 14, fontWeight: '700', color: '#0f172a', marginTop: 4 },
   searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  searchInput: { height: 50 },
   chipRow: { marginBottom: 8 },
   simulateRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, marginBottom: 8, alignItems: 'center' },
   simInput: {

@@ -1,8 +1,7 @@
-import { View, StyleSheet, FlatList } from 'react-native'
+import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React, { Dispatch, SetStateAction } from 'react'
 import { ClaimType } from '../types/claim-type';
 import usePagination from '@/hooks/usePagination';
-import LoadingCircle from '@/components/ui/loading/LoadingCircle';
 import { PaginationStructure } from '@/types/api.response';
 import NoDataCard from '@/components/ui/cards/NodataCard';
 import ClaimItem from './ClaimItem';
@@ -23,12 +22,12 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: totalPage })
   return (
     <View style={styles.container}>
-      { loading ?
+      { loading && !listClaims ?
             <OverviewCardClaimSkeleton/>
             :
             <OverviewCardClaim totalItem={listClaims?.meta.total_items ?? 0}/>
       }
-        { loading ? 
+        { loading && !listClaims ? 
             Array.from({ length: 3 }).map((_, i) => (
                   <ClaimItemSkeleton key={i}/>
             ))
@@ -44,7 +43,13 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
                               onEndReachedThreshold={0.1}
                               refreshing={loading}
                               onRefresh={onRefresh}
-                              ListFooterComponent={ loading ? <LoadingCircle size={40}/> : null }
+                              ListFooterComponent={
+                                    currentPage < listClaims.meta.total_pages ? (
+                                          <View style={{ paddingVertical: 16 }}>
+                                                {loading ? <ActivityIndicator /> : null}
+                                          </View>
+                                    ) : null
+                              }
                         />
                   </>
                   :

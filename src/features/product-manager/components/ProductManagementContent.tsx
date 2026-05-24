@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, FlatList, ActivityIndicator } from 'react-native'
 import React, { useState } from 'react'
 import useGetProductListManager from '../hooks/useGetProductListManager'
 import usePagination from '@/hooks/usePagination'
@@ -35,10 +35,10 @@ export default function ProductManagementContent() {
   const debounce = useDebounce(handleSearch, 500)
   return (
     <View style={styles.container}>
-     { loading ?
+     { loading && !listProducts ?
         <OverviewProductManagementCardSkeleton/>
         :
-        <OverviewProductManagementCard totalItems={listProducts?.items.length ?? 0}/>
+        <OverviewProductManagementCard totalItems={listProducts?.meta.total_items ?? 0}/>
       }
       <View style={styles.searchContainer}>
             <Input style={styles.searchInput} onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
@@ -94,7 +94,7 @@ export default function ProductManagementContent() {
       </ScrollView>
     </ModalCustom>
     <View style={styles.listContainer}>
-    { loading ?
+    { loading && !listProducts ?
       <ProductManagementItemSkeleton/>
       :
       <>
@@ -106,6 +106,13 @@ export default function ProductManagementContent() {
                   onRefresh={handleRefresh}
                   refreshing={loading}
                   onEndReachedThreshold={0.1}
+                  ListFooterComponent={
+                        currentPage < listProducts.meta.total_pages ? (
+                              <View style={{ paddingVertical: 16 }}>
+                                    {loading ? <ActivityIndicator /> : null}
+                              </View>
+                        ) : null
+                  }
             />
            :
            <NoDataCard title='Không có sản phẩm' description='Không có bất kì sản phẩm nào tồn tại'/>

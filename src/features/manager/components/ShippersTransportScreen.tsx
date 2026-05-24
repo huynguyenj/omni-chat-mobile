@@ -25,6 +25,7 @@ import {
   orderStatusPill
 } from '../utils/managerOrdersNormalize'
 import { shipperActivityPill } from '../utils/managerShipperNormalize'
+import ManagerOrderItemSkeleton from './ui/ManagerOrderItemSkeleton'
 
 const SHIPPER_PAGE_SIZE = 9
 const ORDER_PENDING_PAGE_SIZE = 6
@@ -366,9 +367,7 @@ export default function ShippersTransportScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <Text style={styles.title}>Vận chuyển</Text>
-
+    <View style={styles.safe}>
       <View style={styles.mainTabs}>
         <Pressable
           onPress={() => setMainTab('orders')}
@@ -393,7 +392,9 @@ export default function ShippersTransportScreen() {
             </View>
           ) : null}
           {orderLoading && orders.length === 0 ? (
-            <ActivityIndicator style={{ marginTop: 24 }} />
+            Array.from({ length: 4 }).map((_,i) => (
+              <ManagerOrderItemSkeleton key={i}/>
+            ))
           ) : (
             <FlatList
               style={styles.orderList}
@@ -542,7 +543,7 @@ export default function ShippersTransportScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -587,7 +588,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     alignSelf: 'stretch'
   },
-  mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, backgroundColor: '#e2e8f0', borderRadius: 12, padding: 4 },
+  mainTabs: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, backgroundColor: '#e2e8f0', borderRadius: 12, padding: 4, marginTop: 10 },
   mainTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   mainTabLeft: { marginRight: 4 },
   mainTabOn: { backgroundColor: '#fff' },

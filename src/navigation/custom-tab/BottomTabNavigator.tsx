@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
                                        
   },
   tabButtonInner: {
-    width: 110,
+    width: 90,
     height: 65,
     alignItems: 'center',
     justifyContent: 'center',

@@ -16,6 +16,7 @@ import { AlertTriangle, Check, Clock, X } from 'lucide-react-native'
 import { WarningApi } from '../api/warning-api'
 import type { ManagerWarningDetailResponse, ManagerWarningItem } from '../types/warning-type'
 import { warningSeverityFromType, warningTypeLabelVi } from '../utils/warning-type-helpers'
+import ManagerWarningItemSkeleton from './ui/ManagerWarningItemSkeleton'
 
 const PAGE_SIZE = 9
 const SEVERITY_FETCH_PAGE_SIZE = 120
@@ -242,27 +243,25 @@ export default function WarningsManagementScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>Cảnh báo</Text>
-      </View>
-
-      <View style={styles.filterRow}>
-        {filterSpecs.map((x) => {
-          const on = reviewFilter === x.key
-          return (
-            <Pressable
-              key={x.key}
-              onPress={() => setReviewFilter(x.key)}
-              style={[
-                styles.filterChip,
-                on && { backgroundColor: x.onBg, borderColor: x.onBorder }
-              ]}
-            >
-              <Text style={[styles.filterChipText, on && { color: x.onText, fontWeight: '700' }]}>{x.label}</Text>
-            </Pressable>
-          )
-        })}
+    <View style={styles.safe}>
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+          {filterSpecs.map((x) => {
+            const on = reviewFilter === x.key
+            return (
+              <Pressable
+                key={x.key}
+                onPress={() => setReviewFilter(x.key)}
+                style={[
+                  styles.filterChip,
+                  on && { backgroundColor: x.onBg, borderColor: x.onBorder }
+                ]}
+              >
+                <Text style={[styles.filterChipText, on && { color: x.onText, fontWeight: '700' }]}>{x.label}</Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
       </View>
 
       {listError ? (
@@ -275,7 +274,9 @@ export default function WarningsManagementScreen() {
       ) : null}
 
       {loading && items.length === 0 ? (
-        <ActivityIndicator style={{ marginTop: 24 }} />
+        Array.from({ length: 4 }).map((_, i) => (
+          <ManagerWarningItemSkeleton key={i}/>
+        ) )
       ) : (
         <FlatList
           style={styles.listFlex}
@@ -359,13 +360,13 @@ export default function WarningsManagementScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  header: { paddingHorizontal: 16, paddingBottom: 4 },
   screenTitle: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
   filterRow: {
     flexDirection: 'row',
@@ -377,15 +378,16 @@ const styles = StyleSheet.create({
   filterChip: {
     flex: 1,
     paddingVertical: 9,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     borderRadius: 20,
     backgroundColor: '#fff',
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    marginRight: 5
   },
-  filterChipText: { fontSize: 12, fontWeight: '600', color: '#64748b', textAlign: 'center' },
+  filterChipText: { fontSize: 14, fontWeight: '600', color: '#64748b', textAlign: 'center' },
   listFlex: { flex: 1 },
   syncBar: {
     flexDirection: 'row',

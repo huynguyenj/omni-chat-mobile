@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import React, { useState } from 'react'
 import useGetIntentType from '@/features/task/hooks/useGetIntentType'
 import useGetListStaff from '../hooks/useGetListStaff'
@@ -39,7 +39,7 @@ export default function StaffManagementContent() {
       }
       <Input onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
       <View style={styles.listContainer}>
-        { loading ?
+        { loading && !listStaffs ?
           Array.from({ length: 2 }).map((_, i) => (
             <StaffItemSkeleton key={i}/>
         ))
@@ -53,6 +53,13 @@ export default function StaffManagementContent() {
                     onEndReachedThreshold={0.1}
                     refreshing={loading}
                     onRefresh={handleRefreshStaffList}
+                    ListFooterComponent={
+                                    currentPage < listStaffs.meta.total_pages ? (
+                                      <View style={{ paddingVertical: 16 }}>
+                                        {loading ? <ActivityIndicator /> : null}
+                                      </View>
+                                    ) : null
+                    }
               />
               :
               <NoDataCard/>

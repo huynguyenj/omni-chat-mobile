@@ -32,6 +32,8 @@ import {
   transactionAmountColor,
   transactionTypeLabel
 } from '../utils/managerWalletNormalize'
+import Input from '@/components/ui/inputs/Input'
+import CustomerWalletItemSkeleton from './ui/CustomerWalletItemSkeleton'
 
 const PRIMARY = '#3b6ea5'
 const WALLET_PAGE_SIZE = 6
@@ -203,8 +205,6 @@ export default function WalletManagementScreen() {
 
   const fixedHeader = (
     <View style={styles.fixedTop}>
-      <Text style={styles.screenTitle}>Ví tiền</Text>
-
       <View style={styles.kpiRow}>
         <View style={[styles.kpiCard, styles.kpiCardWallet]}>
           <View style={styles.kpiCardTop}>
@@ -231,8 +231,8 @@ export default function WalletManagementScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Search size={20} color="#64748b" strokeWidth={2} />
-        <TextInput
+        <Input
+          icon={{ iconName: Search, iconDirection: 'left' }}
           style={styles.searchInput}
           placeholder="Tìm theo tên, mã, email, SĐT..."
           placeholderTextColor="#94a3b8"
@@ -248,15 +248,14 @@ export default function WalletManagementScreen() {
   const txList = historyCustomer?.getWalletResponse?.transactions ?? []
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <View style={styles.safe}>
       {fixedHeader}
 
       <View style={styles.listPane}>
         {loading && !refreshing ? (
-          <View style={styles.centerPad}>
-            <ActivityIndicator size="large" />
-            <Text style={styles.hint}>Đang tải danh sách ví…</Text>
-          </View>
+          Array.from({ length: 4 }).map((_, index) => (
+            <CustomerWalletItemSkeleton key={index} />
+          ))
         ) : (
           <FlatList
             style={styles.list}
@@ -405,7 +404,7 @@ export default function WalletManagementScreen() {
           )}
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -447,16 +446,12 @@ const styles = StyleSheet.create({
   kpiValDebt: { color: '#dc2626' },
   kpiValPaid: { color: '#15803d' },
   searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
-    backgroundColor: '#e2e8f0',
     borderRadius: 12,
-    paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 12
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
+  searchInput: { height: 50 },
   bannerErr: { color: '#b91c1c', marginBottom: 8, fontSize: 13 },
   centerPad: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   hint: { marginTop: 8, color: '#64748b', fontSize: 13 },
@@ -609,7 +604,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    gap: 8
+    gap: 8,
   },
   histSummaryCol: { flex: 1, minWidth: 0, alignItems: 'center' },
   histSummaryLabel: { fontSize: 11, fontWeight: '600', color: '#64748b', marginBottom: 4, textAlign: 'center' },

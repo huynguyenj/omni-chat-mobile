@@ -48,6 +48,8 @@ import {
   claimTypeLabelVi,
   intentTypeLabelVi
 } from '../utils/manager-ui-labels'
+import Input from '@/components/ui/inputs/Input'
+import ManagerClaimItemSkeleton from './ui/ManagerClaimItemSkeleton'
 
 const CLAIM_PAGE = 9
 const CHANGE_TASK_PAGE = 10
@@ -469,12 +471,14 @@ export default function ClaimsRequestsScreen() {
           const Icon = x.Icon
           return (
             <View key={x.key} style={[styles.kpiCard, { backgroundColor: x.bg }]}>
-              <Icon size={14} color="#fff" strokeWidth={2} />
+              <View style={{ flexDirection: 'row', gap: 5 }}>
+                <Icon size={14} color="#fff" strokeWidth={2} />
+                <Text style={styles.kpiCardKey} numberOfLines={2}>
+                  {x.key}
+                </Text>
+              </View>
               <Text style={styles.kpiCardVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                 {x.val}
-              </Text>
-              <Text style={styles.kpiCardKey} numberOfLines={2}>
-                {x.key}
               </Text>
             </View>
           )
@@ -554,11 +558,7 @@ export default function ClaimsRequestsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>Yêu cầu</Text>
-      </View>
-
+    <View style={styles.safe}>
       {dashboardErr ? <Text style={styles.warn}>{dashboardErr}</Text> : null}
       {renderKpi()}
 
@@ -568,54 +568,54 @@ export default function ClaimsRequestsScreen() {
             style={mainTab === 'claims' ? styles.actionPrimary : styles.actionOutline}
             onPress={() => setMainTab('claims')}
           >
-            <FileText size={18} color={mainTab === 'claims' ? '#fff' : '#2563eb'} strokeWidth={2.2} />
+            <FileText size={18} color={mainTab === 'claims' ? '#fff' : '#000000'} strokeWidth={2.2} />
             <Text style={mainTab === 'claims' ? styles.actionPrimaryText : styles.actionOutlineText}>Yêu cầu</Text>
           </Pressable>
           <Pressable
             style={mainTab === 'changeTasks' ? styles.actionPrimary : styles.actionOutline}
             onPress={() => setMainTab('changeTasks')}
           >
-            <ArrowLeftRight size={18} color={mainTab === 'changeTasks' ? '#fff' : '#2563eb'} strokeWidth={2.2} />
+            <ArrowLeftRight size={18} color={mainTab === 'changeTasks' ? '#fff' : '#000000'} strokeWidth={2.2} />
             <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>Đổi task</Text>
           </Pressable>
         </View>
         {mainTab === 'claims' ? (
-          <View style={styles.actionRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: 500}}>
             <Pressable
-              style={[styles.actionOutline, claimMode === 'all' && styles.actionOutlineOn]}
+              style={[styles.actionOutline, claimMode === 'all' && styles.actionOutlineOn, { marginRight: 5, paddingHorizontal: 8 }]}
               onPress={() => setClaimMode('all')}
             >
-              <LayoutList size={18} color="#2563eb" strokeWidth={2.2} />
-              <Text style={styles.actionOutlineText}>Tất cả</Text>
+              <LayoutList size={18} color={claimMode === 'all' ? '#2563eb' : '#000000'} strokeWidth={2.2} />
+              <Text style={[styles.actionOutlineText, claimMode === 'all' && { color: '#2563eb' }]}>Tất cả</Text>
             </Pressable>
             <Pressable
-              style={[styles.actionFilter, claimMode === 'pending' && styles.actionFilterOn]}
+              style={[styles.actionFilter, claimMode === 'pending' && styles.actionOutlineOn, { marginRight: 5, paddingHorizontal: 8 }]}
               onPress={() => setClaimMode('pending')}
             >
-              <Clock size={18} color={claimMode === 'pending' ? '#c2410c' : '#64748b'} strokeWidth={2.2} />
-              <Text style={[styles.actionFilterText, claimMode === 'pending' && styles.actionFilterTextOn]}>Chờ duyệt</Text>
+              <Clock size={18} color={claimMode === 'pending' ? '#2563eb' : '#000000'} strokeWidth={2.2} />
+              <Text style={[styles.actionFilterText, claimMode === 'pending' && { color: '#2563eb' }]}>Chờ duyệt</Text>
             </Pressable>
             <Pressable
-              style={[styles.actionOutline, claimMode === 'history' && styles.actionOutlineOn]}
+              style={[styles.actionOutline, claimMode === 'history' && styles.actionOutlineOn, { marginRight: 5, paddingHorizontal: 8 }]}
               onPress={() => setClaimMode('history')}
             >
-              <History size={18} color="#2563eb" strokeWidth={2.2} />
-              <Text style={styles.actionOutlineText}>Lịch sử</Text>
+              <History size={18} color={claimMode === 'history' ? '#2563eb' : '#000000'} strokeWidth={2.2} />
+              <Text style={[styles.actionOutlineText, claimMode === 'history' && { color: '#2563eb' }]}>Lịch sử</Text>
             </Pressable>
-          </View>
+          </ScrollView>
         ) : null}
       </View>
 
       {mainTab === 'claims' ? (
         <View style={styles.claimsPane}>
           <View style={styles.searchWrap}>
-            <Search size={18} color="#64748b" strokeWidth={2.2} />
-            <TextInput
+            <Input
+              icon={{ iconName: Search, iconDirection: 'left' }}
               placeholder="Lọc trong danh sách..."
               placeholderTextColor="#9ca3af"
               value={claimSearch}
               onChangeText={setClaimSearch}
-              style={styles.searchInput}
+              style={{ height: 50}}
             />
           </View>
           {claimError ? (
@@ -627,7 +627,9 @@ export default function ClaimsRequestsScreen() {
             </View>
           ) : null}
           {claimLoading && claimItems.length === 0 ? (
-            <ActivityIndicator style={{ marginTop: 24 }} />
+            Array.from({ length: 6 }).map((_, index) => (
+            <ManagerClaimItemSkeleton key={index} />
+          ))
           ) : (
             <FlatList
               style={styles.listFlex}
@@ -899,7 +901,7 @@ export default function ClaimsRequestsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
@@ -916,10 +918,10 @@ const styles = StyleSheet.create({
     gap: 6
   },
   kpiCard: {
-    flex: 1,
     minWidth: 0,
+    width: '24%',
     borderRadius: 10,
-    paddingVertical: 6,
+    paddingVertical: 15,
     paddingHorizontal: 3,
     alignItems: 'center',
     justifyContent: 'center',
@@ -940,14 +942,14 @@ const styles = StyleSheet.create({
     lineHeight: 11
   },
   actionGrid: { paddingHorizontal: 16, marginTop: 12, gap: 8 },
-  actionRow: { flexDirection: 'row', gap: 8 },
+  actionRow: { flexDirection: 'row', gap: 10 },
   actionPrimary: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#003366',
     paddingVertical: 12,
     borderRadius: 12
   },
@@ -961,39 +963,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#93c5fd'
+    borderWidth: 1,
+    borderColor: '#003366'
   },
   actionOutlineOn: { backgroundColor: '#eff6ff', borderColor: '#2563eb' },
-  actionOutlineText: { color: '#2563eb', fontWeight: '700', fontSize: 14 },
+  actionOutlineText: { color: '#000000', fontWeight: '700', fontSize: 14 },
   actionFilter: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#fff7ed',
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fed7aa'
   },
   actionFilterOn: { backgroundColor: '#ffedd5', borderColor: '#fb923c' },
-  actionFilterText: { color: '#64748b', fontWeight: '700', fontSize: 14 },
+  actionFilterText: { color: '#000000', fontWeight: '700', fontSize: 14 },
   actionFilterTextOn: { color: '#c2410c' },
   claimsPane: { flex: 1, marginTop: 8 },
   searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
     marginHorizontal: 16,
     marginBottom: 8,
-    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#93c5fd',
-    backgroundColor: '#fff'
   },
   searchInput: { flex: 1, fontSize: 15, color: '#0f172a', paddingVertical: 0 },
   listFlex: { flex: 1 },
