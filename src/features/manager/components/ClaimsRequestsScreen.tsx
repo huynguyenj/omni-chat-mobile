@@ -576,7 +576,9 @@ export default function ClaimsRequestsScreen() {
             onPress={() => setMainTab('changeTasks')}
           >
             <ArrowLeftRight size={18} color={mainTab === 'changeTasks' ? '#fff' : '#000000'} strokeWidth={2.2} />
-            <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>Đổi task</Text>
+            <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>
+              Đơn đổi người
+            </Text>
           </Pressable>
         </View>
         {mainTab === 'claims' ? (
