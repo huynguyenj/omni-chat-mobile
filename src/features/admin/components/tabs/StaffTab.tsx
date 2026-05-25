@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import { Picker } from '@react-native-picker/picker'
 import { ChevronDown, ChevronUp, Edit3, Plus, Trash2 } from 'lucide-react-native'
 import Card from '@/components/ui/cards/Card'
 import { IntentTypeApi, type IntentTypeItem } from '../../api/intent-type-api'
@@ -145,6 +144,95 @@ function getDuplicateEditFieldErrors(
   if (emailTaken) errors.email = 'Email đã được đăng ký cho tài khoản khác.'
   if (phoneTaken) errors.phone = 'Số điện thoại đã được đăng ký cho tài khoản khác.'
   return errors
+}
+
+function RoleSelectDropdown({
+  roles,
+  loading,
+  value,
+  onChange,
+  error
+}: {
+  roles: RoleItem[]
+  loading: boolean
+  value: string
+  onChange: (roleId: string) => void
+  error?: string
+}) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  const triggerLabel = useMemo(() => {
+    if (loading) return 'Đang tải danh sách...'
+    if (roles.length === 0) return 'Chưa có vai trò'
+    if (!value) return '-- Chọn vai trò --'
+    return roles.find((r) => r.id === value)?.name ?? '-- Chọn vai trò --'
+  }, [roles, loading, value])
+
+  const canOpen = !loading && roles.length > 0
+
+  const selectRole = (roleId: string) => {
+    onChange(roleId)
+    setDropdownOpen(false)
+  }
+
+  return (
+    <>
+      <Text style={styles.inputLabel}>Vai trò</Text>
+      <TouchableOpacity
+        style={[
+          styles.intentTrigger,
+          dropdownOpen && styles.intentTriggerOpen,
+          !canOpen && styles.intentTriggerDisabled,
+          error ? styles.inputErrorBorder : null
+        ]}
+        onPress={() => canOpen && setDropdownOpen((o) => !o)}
+        activeOpacity={0.8}
+        disabled={!canOpen}
+      >
+        <Text style={[styles.intentTriggerText, !value && styles.intentTriggerPlaceholder]} numberOfLines={1}>
+          {triggerLabel}
+        </Text>
+        {loading ? (
+          <ActivityIndicator color="#3366CC" size="small" />
+        ) : dropdownOpen ? (
+          <ChevronUp size={20} color="#64748b" strokeWidth={2.2} />
+        ) : (
+          <ChevronDown size={20} color="#64748b" strokeWidth={2.2} />
+        )}
+      </TouchableOpacity>
+
+      {roles.length === 0 && !loading ? (
+        <Text style={styles.pickerEmpty}>Chưa có dữ liệu vai trò. Thử tải lại trang.</Text>
+      ) : null}
+
+      {dropdownOpen && canOpen ? (
+        <View style={styles.intentDropdown}>
+          <ScrollView style={styles.intentDropdownScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {roles.map((role, index) => {
+              const selected = value === role.id
+              return (
+                <TouchableOpacity
+                  key={role.id}
+                  style={[styles.intentItem, index === 0 && styles.intentItemFirst]}
+                  onPress={() => selectRole(role.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.intentCheckbox, selected && styles.intentCheckboxChecked]}>
+                    {selected ? <Text style={styles.intentCheckMark}>✓</Text> : null}
+                  </View>
+                  <View style={styles.intentItemText}>
+                    <Text style={styles.intentTypeName}>{role.name}</Text>
+                  </View>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </>
+  )
 }
 
 function IntentTypeMultiSelect({
@@ -573,27 +661,16 @@ export default function StaffTab() {
               />
               {formErrors.phone ? <Text style={styles.errorText}>{formErrors.phone}</Text> : null}
 
-              {modalMode === 'create' && (
-                <>
-                  <Text style={styles.inputLabel}>Vai trò</Text>
-                  <View style={[styles.pickerWrap, formErrors.role && styles.inputErrorBorder]}>
-                    {rolesLoading ? (
-                      <ActivityIndicator color="#3366CC" />
-                    ) : (
-                      <Picker
-                        selectedValue={form.roleId}
-                        onValueChange={(value) => setForm((prev) => ({ ...prev, roleId: String(value) }))}
-                      >
-                        <Picker.Item label="-- Chọn vai trò --" value="" />
-                        {roles.map((role) => (
-                          <Picker.Item key={role.id} label={role.name} value={role.id} />
-                        ))}
-                      </Picker>
-                    )}
-                  </View>
-                  {formErrors.role ? <Text style={styles.errorText}>{formErrors.role}</Text> : null}
-                </>
-              )}
+              {modalMode === 'create' ? (
+                <RoleSelectDropdown
+                  key={modalVisible ? `role-${selectedStaff?.id ?? 'create'}` : 'role-closed'}
+                  roles={roles}
+                  loading={rolesLoading}
+                  value={form.roleId}
+                  onChange={(roleId) => setForm((prev) => ({ ...prev, roleId }))}
+                  error={formErrors.role}
+                />
+              ) : null}
 
               <IntentTypeMultiSelect
                 key={modalVisible ? `${modalMode}-${selectedStaff?.id ?? 'create'}` : 'closed'}
@@ -710,13 +787,6 @@ const styles = StyleSheet.create({
   inputError: { borderColor: '#F87171' },
   inputErrorBorder: { borderColor: '#F87171' },
   errorText: { color: '#DC2626', fontSize: 12, marginTop: 4 },
-  pickerWrap: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#fff'
-  },
   pickerEmpty: { color: '#B45309', fontSize: 13, marginTop: 6 },
   intentTrigger: {
     flexDirection: 'row',
