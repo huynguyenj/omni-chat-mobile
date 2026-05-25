@@ -11,7 +11,7 @@ import {
   View
 } from 'react-native'
 import { Picker } from '@react-native-picker/picker'
-import { Edit3, Plus, Shield, Trash2 } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, Edit3, Plus, Trash2 } from 'lucide-react-native'
 import Card from '@/components/ui/cards/Card'
 import { IntentTypeApi, type IntentTypeItem } from '../../api/intent-type-api'
 import { RolesApi, type RoleItem } from '../../api/roles-api'
@@ -147,7 +147,7 @@ function getDuplicateEditFieldErrors(
   return errors
 }
 
-function IntentTypeChecklist({
+function IntentTypeMultiSelect({
   intentTypes,
   loading,
   selectedIds,
@@ -158,83 +158,79 @@ function IntentTypeChecklist({
   selectedIds: string[]
   onChange: (next: string[]) => void
 }) {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+
   const toggle = (id: string) => {
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
   }
 
-  if (loading) {
-    return <Text style={checklistStyles.hint}>Đang tải danh sách loại chức năng...</Text>
-  }
-  if (intentTypes.length === 0) {
-    return <Text style={checklistStyles.warn}>Chưa có dữ liệu loại chức năng. Thử tải lại trang.</Text>
-  }
+  const triggerLabel = useMemo(() => {
+    if (loading) return 'Đang tải danh sách...'
+    if (intentTypes.length === 0) return 'Chưa có loại chức năng'
+    if (selectedIds.length === 0) return '-- Chọn loại chức năng --'
+    const names = intentTypes.filter((it) => selectedIds.includes(it.id)).map((it) => it.typeName)
+    if (names.length <= 2) return names.join(', ')
+    return `${names.length} loại đã chọn`
+  }, [intentTypes, loading, selectedIds])
+
+  const canOpen = !loading && intentTypes.length > 0
 
   return (
-    <View style={checklistStyles.wrap}>
-      <View style={checklistStyles.titleRow}>
-        <Shield size={16} color="#3366CC" />
-        <View style={checklistStyles.titleTextWrap}>
-          <Text style={checklistStyles.title}>Loại chức năng</Text>
-          <Text style={checklistStyles.subtitle}>Chọn một hoặc nhiều; hệ thống gửi UUID tương ứng.</Text>
+    <>
+      <Text style={styles.inputLabel}>Loại chức năng</Text>
+      <TouchableOpacity
+        style={[styles.intentTrigger, dropdownOpen && styles.intentTriggerOpen, !canOpen && styles.intentTriggerDisabled]}
+        onPress={() => canOpen && setDropdownOpen((o) => !o)}
+        activeOpacity={0.8}
+        disabled={!canOpen}
+      >
+        <Text
+          style={[styles.intentTriggerText, selectedIds.length === 0 && styles.intentTriggerPlaceholder]}
+          numberOfLines={1}
+        >
+          {triggerLabel}
+        </Text>
+        {loading ? (
+          <ActivityIndicator color="#3366CC" size="small" />
+        ) : dropdownOpen ? (
+          <ChevronUp size={20} color="#64748b" strokeWidth={2.2} />
+        ) : (
+          <ChevronDown size={20} color="#64748b" strokeWidth={2.2} />
+        )}
+      </TouchableOpacity>
+
+      {intentTypes.length === 0 && !loading ? (
+        <Text style={styles.pickerEmpty}>Chưa có dữ liệu loại chức năng. Thử tải lại trang.</Text>
+      ) : null}
+
+      {dropdownOpen && canOpen ? (
+        <View style={styles.intentDropdown}>
+          <ScrollView style={styles.intentDropdownScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {intentTypes.map((it, index) => {
+              const checked = selectedIds.includes(it.id)
+              return (
+                <TouchableOpacity
+                  key={it.id}
+                  style={[styles.intentItem, index === 0 && styles.intentItemFirst]}
+                  onPress={() => toggle(it.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.intentCheckbox, checked && styles.intentCheckboxChecked]}>
+                    {checked ? <Text style={styles.intentCheckMark}>✓</Text> : null}
+                  </View>
+                  <View style={styles.intentItemText}>
+                    <Text style={styles.intentTypeName}>{it.typeName}</Text>
+                    {it.description ? <Text style={styles.intentDesc}>{it.description}</Text> : null}
+                  </View>
+                </TouchableOpacity>
+              )
+            })}
+          </ScrollView>
         </View>
-      </View>
-      {intentTypes.map((it) => {
-        const checked = selectedIds.includes(it.id)
-        return (
-          <TouchableOpacity key={it.id} style={checklistStyles.item} onPress={() => toggle(it.id)}>
-            <View style={[checklistStyles.checkbox, checked && checklistStyles.checkboxChecked]}>
-              {checked ? <Text style={checklistStyles.checkMark}>✓</Text> : null}
-            </View>
-            <View style={checklistStyles.itemText}>
-              <Text style={checklistStyles.typeName}>{it.typeName}</Text>
-              {it.description ? <Text style={checklistStyles.desc}>{it.description}</Text> : null}
-            </View>
-          </TouchableOpacity>
-        )
-      })}
-    </View>
+      ) : null}
+    </>
   )
 }
-
-const checklistStyles = StyleSheet.create({
-  wrap: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: '#F8FAFC',
-    marginTop: 8
-  },
-  titleRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  titleTextWrap: { flex: 1 },
-  title: { fontSize: 13, fontWeight: '700', color: '#003366' },
-  subtitle: { fontSize: 11, color: '#6B7280', marginTop: 2 },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6'
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2
-  },
-  checkboxChecked: { backgroundColor: '#3366CC', borderColor: '#3366CC' },
-  checkMark: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  itemText: { flex: 1 },
-  typeName: { fontWeight: '700', color: '#111827', fontSize: 13 },
-  desc: { color: '#6B7280', fontSize: 11, marginTop: 2 },
-  hint: { color: '#6B7280', fontSize: 13, marginTop: 8 },
-  warn: { color: '#B45309', fontSize: 13, marginTop: 8 }
-})
 
 export default function StaffTab() {
   const [loading, setLoading] = useState(false)
@@ -599,7 +595,8 @@ export default function StaffTab() {
                 </>
               )}
 
-              <IntentTypeChecklist
+              <IntentTypeMultiSelect
+                key={modalVisible ? `${modalMode}-${selectedStaff?.id ?? 'create'}` : 'closed'}
                 intentTypes={intentTypes}
                 loading={intentTypesLoading}
                 selectedIds={form.intentTypeIds}
@@ -697,10 +694,10 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   pagerText: { color: '#fff', fontWeight: '600' },
   pageText: { color: '#6B7280', fontSize: 12 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 16 },
-  modalCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, maxHeight: '86%' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 14 },
+  modalCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, maxHeight: '96%', width: '100%' },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#003366', marginBottom: 10 },
-  formWrap: { maxHeight: 420 },
+  formWrap: { maxHeight: 680 },
   inputLabel: { color: '#374151', fontWeight: '600', marginTop: 8, marginBottom: 4 },
   input: {
     borderWidth: 1,
@@ -720,6 +717,63 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#fff'
   },
+  pickerEmpty: { color: '#B45309', fontSize: 13, marginTop: 6 },
+  intentTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    minHeight: 42,
+    paddingHorizontal: 10,
+    paddingVertical: 8
+  },
+  intentTriggerOpen: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0
+  },
+  intentTriggerDisabled: { opacity: 0.7 },
+  intentTriggerText: { flex: 1, fontSize: 14, color: '#111827', fontWeight: '500' },
+  intentTriggerPlaceholder: { color: '#9CA3AF', fontWeight: '400' },
+  intentDropdown: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: '#D1D5DB',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: '#fff',
+    overflow: 'hidden'
+  },
+  intentDropdownScroll: { maxHeight: 260 },
+  intentItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6'
+  },
+  intentItemFirst: { borderTopWidth: 0 },
+  intentCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    backgroundColor: '#fff'
+  },
+  intentCheckboxChecked: { backgroundColor: '#3366CC', borderColor: '#3366CC' },
+  intentCheckMark: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  intentItemText: { flex: 1, minWidth: 0 },
+  intentTypeName: { fontWeight: '700', color: '#003366', fontSize: 14 },
+  intentDesc: { color: '#6B7280', fontSize: 12, marginTop: 2 },
   modalActions: { flexDirection: 'row', gap: 8, marginTop: 12 },
   cancelBtn: {
     flex: 1,
