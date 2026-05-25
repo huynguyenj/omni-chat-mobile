@@ -25,6 +25,7 @@ import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 import ImagePicker from '@/components/ui/inputs/ImagePicker'
 import useDeleteProduct from '../hooks/useDeleteProduct'
 import ProductBatchItemSkeleton from './ui/skeleton/ProductBatchItemSkeleton'
+import NoDataCard from '@/components/ui/cards/NodataCard'
 
 export default function ProductManagementItem({ item, onRefresh }: { item: ProductDetailType, onRefresh: () => void }) {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
@@ -119,145 +120,159 @@ export default function ProductManagementItem({ item, onRefresh }: { item: Produ
         />
       </View>
       <ModalCustom isOpen={isDetailOpen} onClose={handleDetailOpen}>
+        <FlatList
+          data={productBatchList?.items ?? []}
+          keyExtractor={(batch) => String(batch.id)}
+          renderItem={({ item }) => <ProductBatchItem item={item} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.1}
+          onRefresh={handleRefresh}
+          refreshing={loading}
+          ListHeaderComponent={
+            <>
+              {/* HEADER */}
+              <View style={styles.modalHeader}>
+                <Image
+                  source={
+                    item.imageUrl
+                      ? { uri: item.imageUrl }
+                      : require('@assets/product-unavailable.png')
+                  }
+                  style={styles.modalImage}
+                />
 
-          {/* HEADER */}
-          <View style={styles.modalHeader}>
-            <Image
-              source={
-                item.imageUrl
-                  ? { uri: item.imageUrl }
-                  : require('@assets/product-unavailable.png')
-              }
-              style={styles.modalImage}
-            />
+                <View style={styles.modalHeaderContent}>
+                  <Text style={styles.modalProductName}>{item.name}</Text>
 
-            <View style={styles.modalHeaderContent}>
-              <Text style={styles.modalProductName}>{item.name}</Text>
-              <Tag style={styles.codeTag}>
-                <Text style={styles.codeText}>#{item.code}</Text>
-              </Tag>
-            </View>
-          </View>
+                  <Tag style={styles.codeTag}>
+                    <Text style={styles.codeText}>#{item.code}</Text>
+                  </Tag>
+                </View>
+              </View>
 
-          {/* PRICE + STOCK */}
-          <View style={styles.summaryContainer}>
-            <Card variant="primary" style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>GIÁ BÁN</Text>
-              <Text style={styles.summaryPrice}>
-                {item.price.toLocaleString()}đ
-              </Text>
-            </Card>
+              {/* PRICE + STOCK */}
+              <View style={styles.summaryContainer}>
+                <Card variant="primary" style={styles.summaryCard}>
+                  <Text style={styles.summaryLabel}>GIÁ BÁN</Text>
+                  <Text style={styles.summaryPrice}>
+                    {item.price.toLocaleString()}đ
+                  </Text>
+                </Card>
 
-            <Card variant='lightGrey' style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>TỒN KHO</Text>
-              <Text style={styles.summaryStock}>
-                {item.quantity.toLocaleString()} hộp
-              </Text>
-            </Card>
-          </View>
+                <Card variant="lightGrey" style={styles.summaryCard}>
+                  <Text style={styles.summaryLabel}>TỒN KHO</Text>
+                  <Text style={styles.summaryStock}>
+                    {item.quantity.toLocaleString()} hộp
+                  </Text>
+                </Card>
+              </View>
 
-          {/* INFO */}
-          <Card style={styles.infoCard}>
-            <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
+              {/* INFO */}
+              <Card style={styles.infoCard}>
+                <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Hãng</Text>
-              <Text style={styles.infoValue}>{item.brand}</Text>
-            </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Hãng</Text>
+                  <Text style={styles.infoValue}>{item.brand}</Text>
+                </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Loại sữa</Text>
-              <Text style={styles.infoValue}>
-                {PRODUCT_TYPE[item.productKind].name}
-              </Text>
-            </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Loại sữa</Text>
+                  <Text style={styles.infoValue}>
+                    {PRODUCT_TYPE[item.productKind].name}
+                  </Text>
+                </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Loại hộp</Text>
-              <Text style={styles.infoValue}>
-                {PRODUCT_PACKAGE_TYPE[item.productPackagingType].name}
-              </Text>
-            </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Loại hộp</Text>
+                  <Text style={styles.infoValue}>
+                    {PRODUCT_PACKAGE_TYPE[item.productPackagingType].name}
+                  </Text>
+                </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Dung tích</Text>
-              <Text style={styles.infoValue}>{item.volumeMl}ml</Text>
-            </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Dung tích</Text>
+                  <Text style={styles.infoValue}>{item.volumeMl}ml</Text>
+                </View>
 
-            <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
-              <Text style={styles.infoLabel}>Mô tả</Text>
-              <Text style={[styles.infoValue, { maxWidth: 220, textAlign: 'right' }]}>
-                {item.description || 'Chưa có mô tả'}
-              </Text>
-            </View>
-          </Card>
+                <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
+                  <Text style={styles.infoLabel}>Mô tả</Text>
 
-          {/* BATCH */}
-          
-          <View style={styles.batchSection}>
-            <Text style={styles.sectionTitle}>Danh sách lô hàng</Text>
-            { loading ?
-              <ProductBatchItemSkeleton/>
-              :
-              <FlatList
-                data={productBatchList?.items}
-                renderItem={({ item }) => <ProductBatchItem item={item} />}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.1}
-                onRefresh={handleRefresh}
-                refreshing={loading}
-              />
-            }
-          </View>
-      </ModalCustom>
-      {/*Update product info */}
-      <ModalCustom isOpen={isEditOpen} onClose={handleOpenEdit}>
-        <Text style={styles.editTitleModal}>Cập nhật thông tin sản phẩm</Text>
-        <View style={styles.editInputContainer}>
-          <Controller
-            control={controlProductInfo}
-            name='name'
-            render={({ field }) => (
-              <Input label='Tên' value={field.value} placeholder='Sữa long thành' onChangeText={field.onChange} error={errors.name?.message}/>
-            )}
-          />
-          <Controller
-            control={controlProductInfo}
-            name='description'
-            render={({ field }) => (
-              <Input label='Mô tả' value={field.value} placeholder='Sữa long thành được lấy từ...' onChangeText={field.onChange}/>
-            )}
-          />
-          <Controller
-            control={controlProductInfo}
-            name='price'
-            render={({ field }) => (
-              <Input label='Giá' value={String(field.value)} placeholder='10.000' onChangeText={field.onChange} keyboardType='number-pad'/>
-            )}
-          />
-        </View>
-         <View style={styles.btnContainer}>
-              {loadingUpdate ?
-                  <LoadingCircle/>
-                  :
-                  <>
-                        <Button
-                              content="Hủy"
-                              variant="outline"
-                              style={styles.button}
-                              onPress={() => setIsEditOpen(false)}
-                        />
+                  <Text
+                    style={[
+                      styles.infoValue,
+                      { maxWidth: 220, textAlign: 'right' }
+                    ]}
+                  >
+                    {item.description || 'Chưa có mô tả'}
+                  </Text>
+                </View>
+              </Card>
 
-                        <Button
-                              content="Lưu"
-                              variant="secondary"
-                              icon={{ iconName: Pencil, iconDirection: 'left' }}
-                              style={styles.button}
-                              onPress={handleSubmitProductInfo(onProductInfoSubmit)}
-                        />
-                  </>
-              }
-            </View>
+              {/* SECTION TITLE */}
+              <View style={styles.batchSection}>
+                <Text style={styles.sectionTitle}>Danh sách lô hàng</Text>
+              </View>
+
+              {loading ? <ProductBatchItemSkeleton /> : null}
+            </>
+          }
+          ListEmptyComponent={
+            !loading ? (
+              <NoDataCard title='Sản phẩm này chưa có lô hàng'/>
+            ) : null
+          }
+      
+        />
+            </ModalCustom>
+            {/*Update product info */}
+            <ModalCustom isOpen={isEditOpen} onClose={handleOpenEdit}>
+              <Text style={styles.editTitleModal}>Cập nhật thông tin sản phẩm</Text>
+              <View style={styles.editInputContainer}>
+                <Controller
+                  control={controlProductInfo}
+                  name='name'
+                  render={({ field }) => (
+                    <Input label='Tên' value={field.value} placeholder='Sữa long thành' onChangeText={field.onChange} error={errors.name?.message}/>
+                  )}
+                />
+                <Controller
+                  control={controlProductInfo}
+                  name='description'
+                  render={({ field }) => (
+                    <Input label='Mô tả' value={field.value} placeholder='Sữa long thành được lấy từ...' onChangeText={field.onChange}/>
+                  )}
+                />
+                <Controller
+                  control={controlProductInfo}
+                  name='price'
+                  render={({ field }) => (
+                    <Input label='Giá' value={String(field.value)} placeholder='10.000' onChangeText={field.onChange} keyboardType='number-pad'/>
+                  )}
+                />
+              </View>
+              <View style={styles.btnContainer}>
+                    {loadingUpdate ?
+                        <LoadingCircle/>
+                        :
+                        <>
+                              <Button
+                                    content="Hủy"
+                                    variant="outline"
+                                    style={styles.button}
+                                    onPress={() => setIsEditOpen(false)}
+                              />
+
+                              <Button
+                                    content="Lưu"
+                                    variant="secondary"
+                                    icon={{ iconName: Pencil, iconDirection: 'left' }}
+                                    style={styles.button}
+                                    onPress={handleSubmitProductInfo(onProductInfoSubmit)}
+                              />
+                        </>
+                    }
+                  </View>
       </ModalCustom>
       {/*Update product image */}
       <ModalCustom isOpen={isEditImageOpen} onClose={handleOpenEditImage}>
@@ -519,7 +534,7 @@ infoValue: {
 
 batchSection: {
     marginTop: 5,
-    maxHeight: 160,
+    maxHeight: 200,
 },
 editTitleModal: {
     fontSize: 16,
