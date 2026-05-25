@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react-native'
 import {
   ActivityIndicator,
+  Dimensions,
   Linking,
   Modal,
   ScrollView,
@@ -457,6 +458,18 @@ const detailStyles = StyleSheet.create({
   productsEmpty: { color: '#9CA3AF', fontSize: 13, textAlign: 'center', paddingVertical: 12 }
 })
 
+const CHART_SLOT_MIN = 28
+const CHART_SLOT_FIT_MIN = 24
+const CHART_PLOT_PADDING = 80
+
+function shortMonthLabel(month: string, index: number): string {
+  const trimmed = month.trim()
+  const mm = /^(\d{1,2})\/\d{4}$/.exec(trimmed)
+  if (mm) return mm[1].padStart(2, '0')
+  if (trimmed.length <= 5) return trimmed
+  return `T${index + 1}`
+}
+
 function MonthlyLineChart({
   data,
   color,
@@ -466,8 +479,21 @@ function MonthlyLineChart({
   color: string
   loading: boolean
 }) {
-  const max = Math.max(...data.map((d) => d.totalAmount), 1)
   const chartHeight = 140
+  const plotLayout = useMemo(() => {
+    const available = Dimensions.get('window').width - CHART_PLOT_PADDING
+    const count = Math.max(data.length, 1)
+    const fitSlot = available / count
+    const scroll = fitSlot < CHART_SLOT_FIT_MIN
+    return {
+      scroll,
+      useFlex: !scroll,
+      contentWidth: scroll ? count * CHART_SLOT_MIN : undefined,
+      slotWidth: scroll ? CHART_SLOT_MIN : undefined
+    }
+  }, [data.length])
+
+  const max = Math.max(...data.map((d) => d.totalAmount), 1)
 
   if (loading) {
     return <ActivityIndicator color={color} style={{ marginVertical: 16 }} />
@@ -476,22 +502,49 @@ function MonthlyLineChart({
     return <Text style={chartStyles.empty}>Chưa có dữ liệu biểu đồ.</Text>
   }
 
+  const plotBars = (
+    <View
+      style={[
+        chartStyles.plot,
+        { height: chartHeight },
+        plotLayout.contentWidth != null ? { width: plotLayout.contentWidth } : { width: '100%' }
+      ]}
+    >
+      {data.map((point, index) => {
+        const barH = Math.max(4, (point.totalAmount / max) * (chartHeight - 28))
+        return (
+          <View
+            key={`${point.month}-${index}`}
+            style={[
+              chartStyles.barCol,
+              plotLayout.useFlex ? chartStyles.barColFlex : { width: plotLayout.slotWidth }
+            ]}
+          >
+            <View style={[chartStyles.bar, { height: barH, backgroundColor: color }]} />
+            <Text style={chartStyles.monthLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {shortMonthLabel(point.month, index)}
+            </Text>
+          </View>
+        )
+      })}
+    </View>
+  )
+
   return (
-    <View>
-      <View style={[chartStyles.plot, { height: chartHeight }]}>
-        {data.map((point, index) => {
-          const barH = Math.max(4, (point.totalAmount / max) * (chartHeight - 24))
-          return (
-            <View key={`${point.month}-${index}`} style={chartStyles.barCol}>
-              <View style={[chartStyles.bar, { height: barH, backgroundColor: color }]} />
-              <Text style={chartStyles.monthLabel} numberOfLines={1}>
-                {point.month || `T${index + 1}`}
-              </Text>
-            </View>
-          )
-        })}
-      </View>
-      <ScrollView style={chartStyles.tableWrap}>
+    <View style={chartStyles.chartWrap}>
+      {plotLayout.scroll ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+          style={[chartStyles.plotScroll, { height: chartHeight + 22 }]}
+          contentContainerStyle={chartStyles.plotScrollContent}
+        >
+          {plotBars}
+        </ScrollView>
+      ) : (
+        <View style={chartStyles.plotClip}>{plotBars}</View>
+      )}
+      <ScrollView style={chartStyles.tableWrap} nestedScrollEnabled>
         {data.map((point, index) => (
           <View key={`row-${index}`} style={chartStyles.tableRow}>
             <Text style={chartStyles.tableMonth}>{point.month}</Text>
@@ -504,18 +557,34 @@ function MonthlyLineChart({
 }
 
 const chartStyles = StyleSheet.create({
+  chartWrap: { width: '100%', overflow: 'hidden' },
+  plotClip: { width: '100%', overflow: 'hidden', marginBottom: 8 },
+  plotScroll: { width: '100%', marginBottom: 8 },
+  plotScrollContent: { flexGrow: 1 },
   plot: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-around',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     paddingBottom: 4,
-    marginBottom: 8
+    paddingHorizontal: 6
   },
-  barCol: { alignItems: 'center', flex: 1, minWidth: 36 },
-  bar: { width: 12, borderTopLeftRadius: 4, borderTopRightRadius: 4, marginBottom: 4 },
-  monthLabel: { fontSize: 9, color: '#6B7280', maxWidth: 48, textAlign: 'center' },
+  barCol: { alignItems: 'center', justifyContent: 'flex-end', minWidth: 0 },
+  barColFlex: { flex: 1 },
+  bar: {
+    width: 8,
+    maxWidth: '65%',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    marginBottom: 4
+  },
+  monthLabel: {
+    fontSize: 8,
+    color: '#6B7280',
+    width: '100%',
+    textAlign: 'center',
+    paddingHorizontal: 1
+  },
   tableWrap: { maxHeight: 120 },
   tableRow: {
     flexDirection: 'row',
