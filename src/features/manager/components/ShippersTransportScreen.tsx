@@ -481,7 +481,7 @@ export default function ShippersTransportScreen() {
                   <Text style={styles.pickName}>{item.fullName}</Text>
                   <Text style={styles.pickMeta}>
                     {shipperActivityPill(item).label}
-                    {item.phone ? ` · ${item.phone}` : ''}
+                    {itemnp.phone ? ` · ${item.phone}` : ''}
                   </Text>
                 </Pressable>
               )}

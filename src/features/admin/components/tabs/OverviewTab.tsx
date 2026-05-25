@@ -101,56 +101,97 @@ function DashboardTable({
   rows: Array<Record<string, string | number>>
   totalRow: Record<string, number>
 }) {
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator>
-      <View>
-        <View style={tableStyles.headerRow}>
-          <Text style={[tableStyles.th, tableStyles.thFirst]}>Tháng</Text>
-          {columns.map((col) => (
-            <Text key={col} style={tableStyles.th}>
-              {col}
-            </Text>
-          ))}
-          <Text style={tableStyles.th}>Tổng</Text>
-        </View>
-        {rows.map((row) => (
-          <View key={String(row.monthLabel)} style={tableStyles.dataRow}>
-            <Text style={[tableStyles.td, tableStyles.tdFirst]}>{String(row.monthLabel)}</Text>
-            {columns.map((col) => (
-              <Text key={col} style={tableStyles.td}>
-                {Number(row[col] ?? 0).toLocaleString('vi-VN')}
-              </Text>
-            ))}
-            <Text style={[tableStyles.td, tableStyles.tdBold]}>
-              {Number(row.total ?? 0).toLocaleString('vi-VN')}
-            </Text>
-          </View>
+  const fillWidth = columns.length <= 4
+
+  const table = (
+    <View style={fillWidth ? tableStyles.tableFull : undefined}>
+      <View style={tableStyles.headerRow}>
+        <Text style={[tableStyles.th, tableStyles.thFirst, fillWidth && tableStyles.colFlexFirst]}>Tháng</Text>
+        {columns.map((col) => (
+          <Text key={col} style={[tableStyles.th, fillWidth && tableStyles.colFlex]}>
+            {col}
+          </Text>
         ))}
-        <View style={tableStyles.totalRow}>
-          <Text style={[tableStyles.td, tableStyles.tdFirst, tableStyles.tdBold]}>Tổng kỳ</Text>
+        <Text style={[tableStyles.th, fillWidth && tableStyles.colFlex]}>Tổng</Text>
+      </View>
+      {rows.map((row) => (
+        <View key={String(row.monthLabel)} style={tableStyles.dataRow}>
+          <Text style={[tableStyles.td, tableStyles.tdFirst, fillWidth && tableStyles.colFlexFirst]}>
+            {String(row.monthLabel)}
+          </Text>
           {columns.map((col) => (
-            <Text key={col} style={[tableStyles.td, tableStyles.tdBold]}>
-              {(totalRow[col] ?? 0).toLocaleString('vi-VN')}
+            <Text key={col} style={[tableStyles.td, fillWidth && tableStyles.colFlex]}>
+              {Number(row[col] ?? 0).toLocaleString('vi-VN')}
             </Text>
           ))}
-          <Text style={[tableStyles.td, tableStyles.tdBold]}>
-            {Object.values(totalRow).reduce((a, b) => a + b, 0).toLocaleString('vi-VN')}
+          <Text style={[tableStyles.td, tableStyles.tdBold, fillWidth && tableStyles.colFlex]}>
+            {Number(row.total ?? 0).toLocaleString('vi-VN')}
           </Text>
         </View>
+      ))}
+      <View style={tableStyles.totalRow}>
+        <Text style={[tableStyles.td, tableStyles.tdFirst, tableStyles.tdBold, fillWidth && tableStyles.colFlexFirst]}>
+          Tổng kỳ
+        </Text>
+        {columns.map((col) => (
+          <Text key={col} style={[tableStyles.td, tableStyles.tdBold, fillWidth && tableStyles.colFlex]}>
+            {(totalRow[col] ?? 0).toLocaleString('vi-VN')}
+          </Text>
+        ))}
+        <Text style={[tableStyles.td, tableStyles.tdBold, fillWidth && tableStyles.colFlex]}>
+          {Object.values(totalRow).reduce((a, b) => a + b, 0).toLocaleString('vi-VN')}
+        </Text>
       </View>
+    </View>
+  )
+
+  if (fillWidth) return table
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator>
+      {table}
     </ScrollView>
   )
 }
 
 const tableStyles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', backgroundColor: '#F5F7FA', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
-  th: { paddingHorizontal: 10, paddingVertical: 8, minWidth: 88, fontSize: 11, fontWeight: '700', color: '#003366' },
-  thFirst: { minWidth: 72 },
-  dataRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-  totalRow: { flexDirection: 'row', borderTopWidth: 2, borderTopColor: '#00336633', backgroundColor: '#EBF1FF66' },
-  td: { paddingHorizontal: 10, paddingVertical: 8, minWidth: 88, fontSize: 12, color: '#374151' },
-  tdFirst: { minWidth: 72, fontWeight: '600', color: '#003366' },
-  tdBold: { fontWeight: '700', color: '#003366' }
+  tableFull: { width: '100%', alignSelf: 'stretch' },
+  headerRow: {
+    flexDirection: 'row',
+    width: '100%',
+    backgroundColor: '#F5F7FA',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8
+  },
+  th: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 88,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#003366',
+    textAlign: 'center'
+  },
+  thFirst: { minWidth: 72, textAlign: 'left' },
+  dataRow: { flexDirection: 'row', width: '100%', borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  totalRow: {
+    flexDirection: 'row',
+    width: '100%',
+    borderTopWidth: 2,
+    borderTopColor: '#00336633',
+    backgroundColor: '#EBF1FF66'
+  },
+  td: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 88,
+    fontSize: 12,
+    color: '#374151',
+    textAlign: 'center'
+  },
+  tdFirst: { minWidth: 72, fontWeight: '600', color: '#003366', textAlign: 'left' },
+  tdBold: { fontWeight: '700', color: '#003366' },
+  colFlex: { flex: 1, minWidth: 0, paddingHorizontal: 6 },
+  colFlexFirst: { flex: 1.2, minWidth: 0, paddingHorizontal: 8 }
 })
 
 export default function OverviewTab() {
