@@ -2,13 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -250,6 +253,16 @@ export default function ShippersTransportScreen() {
     ])
   }
 
+  const openPickShipper = useCallback(
+    (orderId: string) => {
+      setPickShipperOrderId(orderId)
+      if (shippers.length === 0 && !shipperLoading) {
+        void reloadShippers().catch(() => undefined)
+      }
+    },
+    [shippers.length, shipperLoading, reloadShippers]
+  )
+
   const assignOne = async (orderId: string) => {
     const sid = selectedShipperByOrder[orderId]
     if (!sid) {
@@ -355,12 +368,18 @@ export default function ShippersTransportScreen() {
           <Text style={styles.orderDate}>{formatDateTime(item.orderDate)}</Text>
         </Pressable>
         <View style={styles.assignRow}>
-          <Pressable style={styles.btnPick} onPress={() => setPickShipperOrderId(item.id)}>
-            <Text style={styles.btnPickText}>{selName ? selName : 'Chọn tài xế'}</Text>
-          </Pressable>
-          <Pressable style={styles.btnPrimarySm} onPress={() => assignOne(item.id)}>
+          <TouchableOpacity
+            style={styles.btnPick}
+            activeOpacity={0.7}
+            onPress={() => openPickShipper(item.id)}
+          >
+            <Text style={styles.btnPickText} numberOfLines={1}>
+              {selName ? selName : 'Chọn tài xế'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnPrimarySm} activeOpacity={0.85} onPress={() => void assignOne(item.id)}>
             <Text style={styles.btnPrimarySmText}>Gán</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
     )
@@ -461,34 +480,58 @@ export default function ShippersTransportScreen() {
         </>
       )}
 
-      <Modal visible={!!pickShipperOrderId} transparent animationType="fade" onRequestClose={() => setPickShipperOrderId(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setPickShipperOrderId(null)}>
-          <Pressable style={styles.sheetSm} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Chọn tài xế</Text>
-            <FlatList
-              data={shippers}
-              keyExtractor={(s) => s.id}
-              style={{ maxHeight: 360 }}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.pickRow}
-                  onPress={() => {
-                    if (!pickShipperOrderId) return
-                    setSelectedShipperByOrder((prev) => ({ ...prev, [pickShipperOrderId]: item.id }))
-                    setPickShipperOrderId(null)
-                  }}
-                >
-                  <Text style={styles.pickName}>{item.fullName}</Text>
-                  <Text style={styles.pickMeta}>
-                    {shipperActivityPill(item).label}
-                    {itemnp.phone ? ` · ${item.phone}` : ''}
-                  </Text>
-                </Pressable>
-              )}
-              ListEmptyComponent={<Text style={styles.emptySm}>Chưa tải tài xế.</Text>}
-            />
-          </Pressable>
-        </Pressable>
+      <Modal
+        visible={!!pickShipperOrderId}
+        transparent
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        onRequestClose={() => setPickShipperOrderId(null)}
+      >
+        <View style={styles.pickModalRoot}>
+          <Pressable style={styles.pickModalBackdrop} onPress={() => setPickShipperOrderId(null)} />
+          <View style={[styles.sheetSm, { height: Math.round(Dimensions.get('window').height * 0.9) }]}>
+            <View style={styles.pickSheetHeader}>
+              <Text style={styles.sheetTitle}>Chọn tài xế</Text>
+              <TouchableOpacity
+                style={styles.pickCloseBtn}
+                activeOpacity={0.7}
+                onPress={() => setPickShipperOrderId(null)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={styles.pickCloseText}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+            {shipperLoading && shippers.length === 0 ? (
+              <ActivityIndicator style={styles.pickLoader} color="#0369a1" />
+            ) : (
+              <FlatList
+                data={shippers}
+                keyExtractor={(s) => s.id}
+                style={styles.pickList}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.pickRow}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (!pickShipperOrderId) return
+                      setSelectedShipperByOrder((prev) => ({ ...prev, [pickShipperOrderId]: item.id }))
+                      setPickShipperOrderId(null)
+                    }}
+                  >
+                    <Text style={styles.pickName}>{item.fullName}</Text>
+                    <Text style={styles.pickMeta}>
+                      {shipperActivityPill(item).label}
+                      {item.phone ? ` · ${item.phone}` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={styles.emptySm}>Chưa tải tài xế.</Text>}
+              />
+            )}
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={!!detailId} transparent animationType="slide" onRequestClose={closeDetail}>
@@ -670,6 +713,23 @@ const styles = StyleSheet.create({
   emptySm: { textAlign: 'center', color: '#64748b', marginTop: 24 },
   footerPad: { paddingVertical: 16, alignItems: 'center' },
   backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
+  pickModalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(15,23,42,0.45)'
+  },
+  pickModalBackdrop: {
+    ...StyleSheet.absoluteFillObject
+  },
+  pickSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  pickCloseBtn: { paddingVertical: 4, paddingHorizontal: 4 },
+  pickCloseText: { fontSize: 15, fontWeight: '600', color: '#0369a1' },
+  pickLoader: { flex: 1, marginVertical: 32 },
   sheet: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 16,
@@ -681,13 +741,16 @@ const styles = StyleSheet.create({
   },
   sheetSm: {
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 40,
-    borderRadius: 16,
-    padding: 16,
-    maxHeight: '70%'
+    width: '100%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 24,
+    zIndex: 2
   },
-  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
+  pickList: { flex: 1 },
+  sheetTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 0, flex: 1 },
   pickRow: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e2e8f0' },
   pickName: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
   pickMeta: { fontSize: 12, color: '#64748b', marginTop: 4 },
