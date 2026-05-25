@@ -689,9 +689,10 @@ export default function ClaimsRequestsScreen() {
       )}
 
       <Modal visible={!!detailClaim} animationType="slide" transparent onRequestClose={() => setDetailClaim(null)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setDetailClaim(null)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-            <ScrollView>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDetailClaim(null)} />
+          <View style={styles.modalCard}>
+            <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
               <Text style={styles.modalTitle}>Chi tiết yêu cầu</Text>
               {detailClaim ? (
                 <>
@@ -728,20 +729,26 @@ export default function ClaimsRequestsScreen() {
                 </>
               ) : null}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={!!detailTask} animationType="slide" transparent onRequestClose={closeDetailTask}>
-        <Pressable style={styles.modalBackdrop} onPress={closeDetailTask}>
-          <Pressable style={styles.ctModalCard} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeDetailTask} />
+          <View style={styles.ctModalCard}>
             <View style={styles.ctModalHeader}>
               <Text style={styles.ctModalTitle}>Chi tiết yêu cầu đổi task</Text>
               <Pressable style={styles.ctCloseBtn} onPress={closeDetailTask} hitSlop={12}>
                 <X size={18} color="#003366" strokeWidth={2.2} />
               </Pressable>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.ctModalScroll}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.ctModalScroll}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
               {detailTask ? (
                 <>
                   <View style={styles.ctHeroRow}>
@@ -799,7 +806,8 @@ export default function ClaimsRequestsScreen() {
                       <Pressable
                         style={[styles.ctBtnAmber, changeTaskBusy && styles.btnDisabled]}
                         disabled={changeTaskBusy}
-                        onPress={openStaffPicker}
+                        onPress={() => void openStaffPicker()}
+                        hitSlop={8}
                       >
                         <Text style={styles.ctBtnAmberText}>Chọn nhân viên mới</Text>
                       </Pressable>
@@ -832,8 +840,8 @@ export default function ClaimsRequestsScreen() {
                 </>
               ) : null}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal visible={staffPickerOpen} animationType="slide" transparent onRequestClose={() => setStaffPickerOpen(false)}>
@@ -1048,7 +1056,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
-    maxHeight: '80%'
+    maxHeight: '80%',
+    width: '100%',
+    zIndex: 1
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
   modalLabel: { fontSize: 12, color: '#64748b', marginTop: 10 },
@@ -1139,7 +1149,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '92%',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    width: '100%',
+    zIndex: 1
   },
   ctModalHeader: {
     flexDirection: 'row',
