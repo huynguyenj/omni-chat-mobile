@@ -1,7 +1,13 @@
-import { apiPublic } from '@/configs/axios.config'
-import type { ManagerCustomerWalletItem, ManagerWalletPagingQuery, ManagerWalletPagingResponse } from '../types/manager-wallet-type'
-import { assertManagerPublicSuccess, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
-import { normalizeCustomerWallet } from '../utils/managerWalletNormalize'
+import { apiPrivate, apiPublic } from '@/configs/axios.config'
+import type {
+  ManagerCustomerWalletItem,
+  ManagerWalletPagingQuery,
+  ManagerWalletPagingResponse,
+  ManagerWalletPaymentPayload,
+  ManagerWalletResponse
+} from '../types/manager-wallet-type'
+import { assertManagerPublicSuccess, unwrapEnvelopeData, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
+import { normalizeCustomerWallet, normalizeWalletResponse } from '../utils/managerWalletNormalize'
 
 const FETCH_PAGE_SIZE = 100
 
@@ -9,6 +15,19 @@ function resolveCustomerProfilePagingPath() {
   const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
   if (baseUrl.includes('/api/v1')) return '/customer-profile/paging'
   return '/api/v1/customer-profile/paging'
+}
+
+function resolveWalletByCustomerIdPath(customerId: string) {
+  const id = encodeURIComponent(customerId)
+  const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()
+  if (baseUrl.includes('/api/v1')) return `/wallets/${id}`
+  return `/api/v1/wallets/${id}`
+}
+
+function resolveWalletPaymentPath() {
+  const baseUrl = (apiPrivate.defaults.baseURL ?? '').toLowerCase()
+  if (baseUrl.includes('/api/v1')) return '/wallets/payment'
+  return '/api/v1/wallets/payment'
 }
 
 function buildPagingParams(query: ManagerWalletPagingQuery) {
@@ -47,5 +66,20 @@ export const ManagerWalletApi = {
       page += 1
     }
     return Array.from(byId.values())
+  },
+
+  getWalletByCustomerId: async (customerId: string): Promise<ManagerWalletResponse> => {
+    const raw: unknown = await apiPublic.get(resolveWalletByCustomerIdPath(customerId))
+    assertManagerPublicSuccess(raw)
+    const data = unwrapEnvelopeData<unknown>(raw) ?? raw
+    return normalizeWalletResponse(data)
+  },
+
+  payCash: async (payload: ManagerWalletPaymentPayload): Promise<void> => {
+    const raw: unknown = await apiPrivate.post(resolveWalletPaymentPath(), {
+      customerId: payload.customerId,
+      amount: payload.amount
+    })
+    assertManagerPublicSuccess(raw)
   }
 }

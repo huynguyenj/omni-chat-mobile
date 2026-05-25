@@ -29,6 +29,11 @@ export type ManagerCustomerWalletItem = {
   getWalletResponse: ManagerWalletResponse
 }
 
+export type ManagerWalletPaymentPayload = {
+  customerId: string
+  amount: number
+}
+
 export type ManagerWalletPagingQuery = {
   pageNumber?: number
   pageSize?: number

@@ -24,7 +24,7 @@ const managerTabs: TAB_LIST_ITEMS_TYPES[] = [
   { route: 'Nhân viên',  label: 'Nhân viên',  icon: Users,         screen: StaffManagement },
   { route: 'Từ khóa',   label: 'Từ khóa',   icon: Hash,          screen: KeywordManagement },
   { route: 'Sản phẩm',  label: 'Sản phẩm',  icon: ShoppingCart,  screen: ProductManagement },
-  { route: 'Kho hàng',  label: 'Kho hàng',  icon: Archive,       screen: StorageManagement },
+  { route: 'Xuất nhập',  label: 'Xuất nhâpj',  icon: Archive,       screen: StorageManagement },
   { route: 'Mẫu chat', label: 'Mẫu chat', icon: MessageSquareText, screen: ChatTemplateManagement },
   { route: 'Đơn',      label: 'Yêu cầu',    icon: FileText,      screen: ClaimManagement },
   { route: 'Cảnh báo',  label: 'Cảnh báo',  icon: AlertTriangle, screen: AlertManagement },
