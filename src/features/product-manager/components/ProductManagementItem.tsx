@@ -5,41 +5,32 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  FlatList,
-  ScrollView,
 } from 'react-native'
-import { BookImage, ChevronRight, Edit, Pencil, Trash } from 'lucide-react-native'
+import { BookImage, ChevronRight, Edit, Pencil, Plus, Trash } from 'lucide-react-native'
 import { ProductDetailType } from '../types/product-type-manager'
 import { PRODUCT_PACKAGE_TYPE, PRODUCT_TYPE } from '../const/product-type'
 import Card from '@/components/ui/cards/Card'
 import Button from '@/components/ui/buttons/Button'
 import ModalCustom from '@/components/ui/modal/ModalCustom'
-import useGetProductBatchManager from '../hooks/useGetProductBatch'
-import usePagination from '@/hooks/usePagination'
-import ProductBatchItem from './ProductBatchItem'
-import Tag from '@/components/ui/tags/Tag'
 import useUpdateProduct from '../hooks/useUpdateProduct'
 import { Controller } from 'react-hook-form'
 import Input from '@/components/ui/inputs/Input'
 import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 import ImagePicker from '@/components/ui/inputs/ImagePicker'
 import useDeleteProduct from '../hooks/useDeleteProduct'
-import ProductBatchItemSkeleton from './ui/skeleton/ProductBatchItemSkeleton'
-import NoDataCard from '@/components/ui/cards/NodataCard'
+import ProductBatchSection from './ProductBatchSection'
 
 export default function ProductManagementItem({ item, onRefresh }: { item: ProductDetailType, onRefresh: () => void }) {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isEditImageOpen, setIsEditImageOpen] = useState(false)
-  const { batchCurrentPage, handleRefresh, loading, productBatchList, setBatchCurrentPage, setProductForBatchId } = useGetProductBatchManager()
-  const { loadMore } = usePagination({ currentPage: batchCurrentPage, setPage: setBatchCurrentPage, loading: loading, totalPage: productBatchList?.meta.total_items ?? 0 })
+
   const { controlProductInfo, errors, image, loading: loadingUpdate, pickImage, handleSubmitProductInfo, onProductImageSubmit, onProductInfoSubmit, resetProductInfo, setImage } = useUpdateProduct({ onRefresh, productId: item.id })
   const { handleDelete, loading: deleteLoading } = useDeleteProduct({ onRefresh, onCloseModalDelete: setIsDeleteOpen })
 
   const handleDetailOpen = () => {
     setIsDetailOpen(prevState => !prevState)
-    setProductForBatchId(item.id)
   }
   const handleOpenEdit = () => {
     resetProductInfo({
@@ -119,111 +110,8 @@ export default function ProductManagementItem({ item, onRefresh }: { item: Produ
           icon={{ iconName: Trash, iconDirection: 'center' }}
         />
       </View>
-      <ModalCustom isOpen={isDetailOpen} onClose={handleDetailOpen}>
-        <FlatList
-          data={productBatchList?.items ?? []}
-          keyExtractor={(batch) => String(batch.id)}
-          renderItem={({ item }) => <ProductBatchItem item={item} />}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.1}
-          onRefresh={handleRefresh}
-          refreshing={loading}
-          ListHeaderComponent={
-            <>
-              {/* HEADER */}
-              <View style={styles.modalHeader}>
-                <Image
-                  source={
-                    item.imageUrl
-                      ? { uri: item.imageUrl }
-                      : require('@assets/product-unavailable.png')
-                  }
-                  style={styles.modalImage}
-                />
-
-                <View style={styles.modalHeaderContent}>
-                  <Text style={styles.modalProductName}>{item.name}</Text>
-
-                  <Tag style={styles.codeTag}>
-                    <Text style={styles.codeText}>#{item.code}</Text>
-                  </Tag>
-                </View>
-              </View>
-
-              {/* PRICE + STOCK */}
-              <View style={styles.summaryContainer}>
-                <Card variant="primary" style={styles.summaryCard}>
-                  <Text style={styles.summaryLabel}>GIÁ BÁN</Text>
-                  <Text style={styles.summaryPrice}>
-                    {item.price.toLocaleString()}đ
-                  </Text>
-                </Card>
-
-                <Card variant="lightGrey" style={styles.summaryCard}>
-                  <Text style={styles.summaryLabel}>TỒN KHO</Text>
-                  <Text style={styles.summaryStock}>
-                    {item.quantity.toLocaleString()} hộp
-                  </Text>
-                </Card>
-              </View>
-
-              {/* INFO */}
-              <Card style={styles.infoCard}>
-                <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Hãng</Text>
-                  <Text style={styles.infoValue}>{item.brand}</Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Loại sữa</Text>
-                  <Text style={styles.infoValue}>
-                    {PRODUCT_TYPE[item.productKind].name}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Loại hộp</Text>
-                  <Text style={styles.infoValue}>
-                    {PRODUCT_PACKAGE_TYPE[item.productPackagingType].name}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Dung tích</Text>
-                  <Text style={styles.infoValue}>{item.volumeMl}ml</Text>
-                </View>
-
-                <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
-                  <Text style={styles.infoLabel}>Mô tả</Text>
-
-                  <Text
-                    style={[
-                      styles.infoValue,
-                      { maxWidth: 220, textAlign: 'right' }
-                    ]}
-                  >
-                    {item.description || 'Chưa có mô tả'}
-                  </Text>
-                </View>
-              </Card>
-
-              {/* SECTION TITLE */}
-              <View style={styles.batchSection}>
-                <Text style={styles.sectionTitle}>Danh sách lô hàng</Text>
-              </View>
-
-              {loading ? <ProductBatchItemSkeleton /> : null}
-            </>
-          }
-          ListEmptyComponent={
-            !loading ? (
-              <NoDataCard title='Sản phẩm này chưa có lô hàng'/>
-            ) : null
-          }
-      
-        />
+            <ModalCustom isOpen={isDetailOpen} onClose={handleDetailOpen}>
+              <ProductBatchSection item={item}/>
             </ModalCustom>
             {/*Update product info */}
             <ModalCustom isOpen={isEditOpen} onClose={handleOpenEdit}>
@@ -313,7 +201,7 @@ export default function ProductManagementItem({ item, onRefresh }: { item: Produ
               }
             </View>
       </ModalCustom>
-      <ModalCustom isOpen={isDeleteOpen} onClose={handleDetailOpen}>
+      <ModalCustom isOpen={isDeleteOpen} onClose={handleOpenDelete}>
         <Text style={styles.editTitleModal}>Xác nhận</Text>
         <Text>Bạn có chắc chắn muốn xóa sản phẩm {item.name} không ?</Text>
          <View style={styles.btnContainer}>
@@ -445,96 +333,6 @@ modalImage: {
     height: 90,
     borderRadius: 18,
     backgroundColor: '#F3F4F6',
-},
-
-modalHeaderContent: {
-    flex: 1,
-},
-
-modalProductName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
-    lineHeight: 28,
-},
-
-codeTag: {
-    marginTop: 10,
-    backgroundColor: '#EEF4FF',
-    paddingHorizontal: 12,
-},
-
-codeText: {
-    color: '#3366CC',
-    fontWeight: '700',
-    fontSize: 13,
-},
-
-summaryContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-},
-
-summaryCard: {
-    flex: 1,
-},
-
-summaryLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '700',
-    marginBottom: 8,
-},
-
-summaryPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#3366CC',
-},
-
-summaryStock: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#003366',
-},
-
-infoCard: {
-    marginBottom: 18,
-    width: '99%',
-    marginHorizontal: 'auto'
-},
-
-sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 14,
-},
-
-infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-},
-
-infoLabel: {
-    color: '#6B7280',
-    fontSize: 14,
-    fontWeight: '600',
-},
-
-infoValue: {
-    fontSize: 14,
-    fontWeight: '700',
-},
-
-batchSection: {
-    marginTop: 5,
-    maxHeight: 200,
 },
 editTitleModal: {
     fontSize: 16,

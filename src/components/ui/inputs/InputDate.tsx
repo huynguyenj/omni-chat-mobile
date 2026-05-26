@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    color: '#000'
+    color: '#000000'
   },
 
   placeholder: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
 
   pickerWrapper: {
     marginTop: 10,
-    backgroundColor: '#E0E3E6',
+    backgroundColor: '#64686d',
     borderRadius: 10,
     padding: 10,
     elevation: 3

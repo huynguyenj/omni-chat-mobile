@@ -37,3 +37,13 @@ export type ProductStorageType = {
   totalProduct: number
   productKinds: ProductKind[]
 }
+
+export type BatchItemType = {
+   manuFactureDate: Date
+   quantity: number
+}
+
+export type BatchCreateType = {
+  productId: string
+  productBatch: BatchItemType[]
+}

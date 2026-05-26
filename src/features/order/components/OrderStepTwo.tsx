@@ -38,7 +38,7 @@ export default function OrderStepTwo() {
   }
   return (
     <View style={styles.container}>
-      <View style={styles.listContainer}>
+      <View style={[styles.listContainer, !listBatch && { flex: 1 }]}>
         <FlatList
           data={listProductChose}
           renderItem={({ item }) => <ProductItemV2 item={item} setProductId={setProductIdChosen}/>}
@@ -66,13 +66,11 @@ export default function OrderStepTwo() {
                 />
               </View>
               { batchChosen &&
-              <>
+              <View>
                 <Text style={styles.textBatch}>Số lượng</Text>
                 <CounterCard value={batchQuantity} setValue={setBatchQuantity} max={batchChosen.quantity} min={1}/>
-                <View>
-                  <Button content='Xác nhận' onPress={handleAgreeBatch}/>
-                </View>
-              </>
+                <Button content='Xác nhận' onPress={handleAgreeBatch}/>
+              </View>
               }
             
             </>
@@ -96,8 +94,8 @@ const styles = StyleSheet.create({
             flex: 1,
       },
       listContainer: {
-            paddingVertical: 14,
-            flex: 0.3,
+            paddingVertical: 8,
+            flex: 0.4,
       },
       textBatchContainer: {
             flexDirection: 'row',
@@ -129,7 +127,7 @@ const styles = StyleSheet.create({
             flexDirection: 'row',
             gap: 10,
             justifyContent:'center',
-            alignItems: 'center'
+            alignItems: 'center',
       },
       btnRight: {
         width: 220,
