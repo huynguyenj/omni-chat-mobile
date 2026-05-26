@@ -9,7 +9,7 @@ export default function useGetListKeywords() {
   const [keyWordList, setKeyWordList] = useState<PaginationStructure<KeywordDetailType>>()
   const [filterIntent, setFilterIntent] = useState('')
   const [sortBy, setSortBy] = useState('createdate')
-  const [sortType, setSortType] = useState('true')
+  const [sortType, setSortType] = useState(true)
   const { execute, loading } = useApiCall<PaginationStructure<KeywordDetailType>>()
   const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
@@ -54,10 +54,23 @@ export default function useGetListKeywords() {
   const handleRefreshKeywordList = async () => {
       setKeyWordList(undefined)
       setSortBy('createdate')
-      setSortType('false')
+      setSortType(true)
       setSearchText('')
       setCurrentPage(1)
       setRefreshKey(prevKey => prevKey + 1)
   }
-  return { setCurrentPage, setSearchText, keyWordList, loading, currentPage, setSortType, sortType, filterIntent, handleSelectIntent, setSortBy, sortBy, handleRefreshKeywordList, searchText }
+    const handleSortBy = (sortByValue: string) => {
+      setCurrentPage(1)
+      setSortBy(sortByValue)
+  }
+
+  const handleSortType = (sortTypeValue: boolean) => {
+      setCurrentPage(1)
+      setSortType(sortTypeValue)
+  }
+  const handleFilterByIntentTypeName = (intentTypeName: string) => {
+      setCurrentPage(1)
+      setFilterIntent(intentTypeName)
+  }
+  return { setCurrentPage, setSearchText, keyWordList, loading, currentPage, setSortType, sortType, filterIntent, handleSelectIntent, setSortBy, sortBy, handleRefreshKeywordList, searchText, handleSortBy, handleSortType, handleFilterByIntentTypeName }
 }

@@ -66,7 +66,9 @@ const styles = StyleSheet.create({
    tagContainer: {
       flexDirection: 'row',
       gap: 5,
-      alignItems: 'center' 
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      maxWidth: 245,
    },
    price: {
       color: '#2ECC71',
