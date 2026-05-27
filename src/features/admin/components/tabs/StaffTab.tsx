@@ -18,6 +18,7 @@ import { StaffApi } from '../../api/staff-api'
 import type { StaffItem } from '../../types/staff-type'
 import { extractArrayFromResponse } from '../../utils/api-helpers'
 import { notifyError, notifyInfo, notifySuccess } from '../../utils/notify'
+import Input from '@/components/ui/inputs/Input'
 
 type StaffModalMode = 'create' | 'edit'
 
@@ -388,7 +389,7 @@ export default function StaffTab() {
   const uiStaffs = useMemo(() => {
     return apiStaffs.map((staff) => ({
       ...staff,
-      uiRole: staff.staffIntentTypes.length > 0 ? 'Staff' : 'Manager',
+      uiRole: staff.roleName,
       department:
         staff.staffIntentTypes.length > 0
           ? staff.staffIntentTypes.map((i) => i.intentTypeName).join(', ')
@@ -467,7 +468,6 @@ export default function StaffTab() {
     setFormErrors(errors)
 
     if (Object.keys(errors).length > 0) {
-      notifyError('Vui lòng kiểm tra lại thông tin đã nhập.')
       return false
     }
     return true
@@ -629,28 +629,27 @@ export default function StaffTab() {
             </Text>
 
             <ScrollView style={styles.formWrap}>
-              <Text style={styles.inputLabel}>Họ và tên</Text>
-              <TextInput
+              <Input
                 value={form.name}
                 onChangeText={(value) => setForm((prev) => ({ ...prev, name: value }))}
                 style={[styles.input, formErrors.name && styles.inputError]}
                 placeholder="Nhập họ và tên"
+                label='Họ và tên'
               />
               {formErrors.name ? <Text style={styles.errorText}>{formErrors.name}</Text> : null}
 
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
+              <Input
                 value={form.email}
                 onChangeText={(value) => setForm((prev) => ({ ...prev, email: value }))}
                 style={[styles.input, formErrors.email && styles.inputError]}
                 placeholder="example@omnichat.com"
                 autoCapitalize="none"
                 keyboardType="email-address"
+                label='Email'
               />
               {formErrors.email ? <Text style={styles.errorText}>{formErrors.email}</Text> : null}
 
-              <Text style={styles.inputLabel}>Số điện thoại</Text>
-              <TextInput
+              <Input
                 value={form.phone}
                 onChangeText={(value) =>
                   setForm((prev) => ({ ...prev, phone: digitsOnly(value).slice(0, VN_PHONE_LEN_MAX) }))
@@ -658,6 +657,7 @@ export default function StaffTab() {
                 style={[styles.input, formErrors.phone && styles.inputError]}
                 placeholder="0912345678"
                 keyboardType="phone-pad"
+                label='Số điện thoại'
               />
               {formErrors.phone ? <Text style={styles.errorText}>{formErrors.phone}</Text> : null}
 
@@ -781,8 +781,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 10,
-    height: 42,
-    backgroundColor: '#fff'
+    height: 50,
+    marginVertical: 5
   },
   inputError: { borderColor: '#F87171' },
   inputErrorBorder: { borderColor: '#F87171' },
