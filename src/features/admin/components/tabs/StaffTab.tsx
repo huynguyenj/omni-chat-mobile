@@ -341,8 +341,8 @@ export default function StaffTab() {
   const fetchStaffs = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await StaffApi.getStaffs(1, 200)
-      setApiStaffs(extractArrayFromResponse(response) as StaffItem[])
+      const data = await StaffApi.getStaffs({ pageNumber: 1, pageSize: 100, descending: false })
+      setApiStaffs(Array.isArray(data.items) ? data.items : (extractArrayFromResponse(data) as StaffItem[]))
     } catch {
       notifyError('Không tải được danh sách nhân viên.')
     } finally {
@@ -388,7 +388,7 @@ export default function StaffTab() {
   const uiStaffs = useMemo(() => {
     return apiStaffs.map((staff) => ({
       ...staff,
-      uiRole: staff.staffIntentTypes.length > 0 ? 'Staff' : 'Manager',
+      uiRole: staff.roleName?.trim() || (staff.staffIntentTypes.length > 0 ? 'Staff' : 'Manager'),
       department:
         staff.staffIntentTypes.length > 0
           ? staff.staffIntentTypes.map((i) => i.intentTypeName).join(', ')
@@ -407,7 +407,9 @@ export default function StaffTab() {
   const mapStaffToIntentIds = (staff: StaffItem, types: IntentTypeItem[]) => {
     if (!staff.staffIntentTypes?.length || types.length === 0) return []
     return types
-      .filter((it) => staff.staffIntentTypes.some((s) => s.intentTypeName === it.typeName))
+      .filter((it) =>
+        staff.staffIntentTypes.some((s) => s.id === it.id || s.intentTypeName === it.typeName)
+      )
       .map((it) => it.id)
   }
 
@@ -420,14 +422,15 @@ export default function StaffTab() {
   }
 
   const openEditModal = (staff: StaffItem) => {
+    const matchedStaff = apiStaffs.find((s) => s.id === staff.id)
     setModalMode('edit')
     setSelectedStaff(staff)
     setForm({
       name: staff.name,
       email: staff.email,
-      phone: staff.phone,
-      roleId: '',
-      intentTypeIds: mapStaffToIntentIds(staff, intentTypes)
+      phone: digitsOnly(matchedStaff?.phone ?? staff.phone ?? ''),
+      roleId: matchedStaff?.roleId ?? staff.roleId ?? '',
+      intentTypeIds: mapStaffToIntentIds(matchedStaff ?? staff, intentTypes)
     })
     setFormErrors({})
     setModalVisible(true)

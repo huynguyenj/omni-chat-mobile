@@ -1,4 +1,5 @@
 export type StaffIntentType = {
+  id: string
   intentTypeName: string
 }
 
@@ -9,6 +10,9 @@ export type StaffItem = {
   name: string
   email: string
   phone: string
+  avatarUrl: string | null
+  roleId: string
+  roleName: string
   status: StaffStatus
   staffIntentTypes: StaffIntentType[]
 }
