@@ -52,7 +52,8 @@ const styles = StyleSheet.create({
             flexDirection: 'row',
             gap: 5,
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            marginVertical: 5
       },
       cardChosen: {
             borderWidth: 2

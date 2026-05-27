@@ -4,17 +4,16 @@ import { PaginationStructure } from '@/types/api.response'
 import { useEffect, useState } from 'react'
 import Toast from 'react-native-toast-message'
 
-export default function useGetProductBatchManager() {
-  const [productForBatchId, setProductForBatchId] = useState('')
+export default function useGetProductBatchManager({ productId }: { productId: string }) {
   const { execute, loading } = useApiCall<PaginationStructure<BatchType>>()
   const [productBatchList, setProductBatchList] = useState<PaginationStructure<BatchType>>()
   const [batchCurrentPage, setBatchCurrentPage] = useState(1)
   const [refreshKey, setRefreshKey] = useState(1)
   useEffect(() => {
-    if (!productForBatchId) return
+    if (!productId) return
     const fetchProductBatch = async () => {
       const apiData = await execute({
-        apiUrl: `/products/${productForBatchId}/batches?pageNumber=${batchCurrentPage}&pageSize=5`,
+        apiUrl: `/products/${productId}/batches?pageNumber=${batchCurrentPage}&pageSize=5`,
         method: 'get',
         type: 'private'
       })
@@ -35,11 +34,11 @@ export default function useGetProductBatchManager() {
       })
     }
     fetchProductBatch()
-  }, [productForBatchId, batchCurrentPage, refreshKey])
+  }, [productId, batchCurrentPage, refreshKey])
     const handleRefresh = () => {
       setBatchCurrentPage(1)
       setRefreshKey(prevKey => prevKey + 1)
   }
 
-  return { productBatchList, setBatchCurrentPage, setProductForBatchId, loading, productForBatchId, batchCurrentPage, handleRefresh }
+  return { productBatchList, setBatchCurrentPage, loading, batchCurrentPage, handleRefresh }
 }

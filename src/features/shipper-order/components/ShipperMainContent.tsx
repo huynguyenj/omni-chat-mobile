@@ -10,7 +10,7 @@ export default function ShipperMainContent() {
   const { loadMore } = usePagination({ currentPage: currentPage, loading: loading, setPage: setCurrentPage, totalPage: orderShipperList?.meta.total_pages ?? 1 })
   return (
     <View style={styles.wrapper}>
-            <OrderShipperHeader totalItems={orderShipperList?.meta.total_items}/>
+            <OrderShipperHeader totalItems={orderShipperList?.meta.total_items} onRefresh={handleRefresh}/>
             <View style={styles.listContainer}>
                { orderShipperList && 
                   <FlatList

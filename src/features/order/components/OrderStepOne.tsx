@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
       select: {
             height: 50,
             width: 182,
-            marginRight: 5
+            marginRight: 2
       },
       productText: {
             color: '#003366',
