@@ -10,6 +10,7 @@ export type StaffItem = {
   email: string
   phone: string
   status: StaffStatus
+  roleName: string
   staffIntentTypes: StaffIntentType[]
 }
 
