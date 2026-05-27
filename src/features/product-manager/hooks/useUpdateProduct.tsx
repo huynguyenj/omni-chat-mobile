@@ -10,7 +10,7 @@ import usePickImage from '@/hooks/usePickImage'
 const updateProductSchema = z.object({
   name: z.string({ error: 'Tên không được để trống' }),
   description: z.string().optional(),
-  price: z.number().min(0)
+  price: z.number({ error: 'Giá tiền không được để trống' }).min(0)
 })
 
 
