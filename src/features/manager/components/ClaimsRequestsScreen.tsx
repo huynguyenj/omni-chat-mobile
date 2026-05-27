@@ -593,7 +593,7 @@ export default function ClaimsRequestsScreen() {
           >
             <ArrowLeftRight size={18} color={mainTab === 'changeTasks' ? '#fff' : '#000000'} strokeWidth={2.2} />
             <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>
-              Đơn đổi người
+              Đơn khiếu nại
             </Text>
           </Pressable>
         </View>
