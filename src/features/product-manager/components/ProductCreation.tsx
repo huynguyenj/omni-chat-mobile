@@ -293,7 +293,6 @@ const styles = StyleSheet.create({
   },
 
   selectOuterContainer: {
-      flexDirection: 'row',
       gap: 5
   },
 

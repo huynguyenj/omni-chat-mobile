@@ -118,9 +118,9 @@ const styles = StyleSheet.create({
             height: '100%',
       },
       errorText: {
-            color: '#BA1A1A',
-            fontWeight: 600,
-            textAlign:'left'
+            color: '#DC2626', 
+            fontSize: 12, 
+            marginTop: 4
       },
       optionContainer: {
             position: 'absolute',
