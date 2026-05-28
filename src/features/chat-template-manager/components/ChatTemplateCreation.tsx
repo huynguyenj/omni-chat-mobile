@@ -30,7 +30,7 @@ export default function ChatTemplateCreation({ onRefresh }: ChatTemplateCreation
                onPress={handleOpenCreateChatTemplate}
             />
    <ModalCustom isOpen={isCreateChatTemplateOpen} onClose={handleOpenCreateChatTemplate}>
-      <Text style={styles.modalTitle}>Tạo từ khóa</Text>
+      <Text style={styles.modalTitle}>Tạo từ mẫu</Text>
       <View style={styles.inputContainer}>
             <Controller
                   control={control}

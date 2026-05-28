@@ -536,7 +536,7 @@ export default function OrdersManagementScreen() {
           onPress={() => setMainTab('refund')}
         >
           <RotateCcw size={16} color={mainTab === 'refund' ? '#0f172a' : '#64748b'} strokeWidth={2.2} />
-          <Text style={[styles.mainTabText, mainTab === 'refund' && styles.mainTabTextOn]}>Hoàn tiền</Text>
+          <Text style={[styles.mainTabText, mainTab === 'refund' && styles.mainTabTextOn]}>Hoàn trả</Text>
         </Pressable>
       </View>
 

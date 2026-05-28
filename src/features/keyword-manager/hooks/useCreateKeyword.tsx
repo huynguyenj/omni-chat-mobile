@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form'
 import z from 'zod'
 
 const keywordSchema = z.object({
-  intentTypeId: z.string({ error: 'Hãy chọn chức năng' }),
-  weight: z.number({ error: 'Hãy điền mức độ ưu tiên' }),
-  keywordText: z.string({ error: 'Hãy điền từ keyword' })
+  intentTypeId: z.string().min(1, { error: 'Hãy chọn chức năng' }),
+  weight: z.number({error: 'Độ ưu tiên không được để trống'}),
+  keywordText: z.string().min(1, { error: 'Hãy điền từ keyword' })
 })
 
 type KeywordFormType = z.infer<typeof keywordSchema>
@@ -32,6 +32,7 @@ export default function useCreateKeyword({ onRefresh }: UseCreateKeywordProps) {
     }
 //     toast.success('Tạo keyword thành công')
     onRefresh()
+    reset()
   }
   return { loading, control, errors, register, handleSubmit, onSubmit, reset }
 }

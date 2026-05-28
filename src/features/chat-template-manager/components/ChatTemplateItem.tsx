@@ -15,7 +15,7 @@ export default function ChatTemplateItem({ item, onRefresh }: { item: ChatTempla
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const { handleDelete, loading: deleteLoading } = useDeleteChatTemplate({ onRefresh: onRefresh, onCloseModalDelete: setIsAlertOpen })
-  const { handleSubmit, loading: updateLoading, onSubmit, control, reset } = useUpdateChatTemplate({ onRefresh: onRefresh, id: item.id })
+  const { handleSubmit, loading: updateLoading, onSubmit, control, reset, errors } = useUpdateChatTemplate({ onRefresh: onRefresh, id: item.id })
 
   const handleOpenEdit = () => {
     setIsEditOpen((prev) => !prev)
@@ -62,7 +62,7 @@ export default function ChatTemplateItem({ item, onRefresh }: { item: ChatTempla
         />
       </View>
       <ModalCustom isOpen={isEditOpen} onClose={() => setIsEditOpen(false)}>
-            <Text>Cập nhật từ khóa</Text>
+            <Text style={styles.titleModal}>Cập nhật từ mẫu</Text>
             <Controller
                   control={control}
                   name='code'
@@ -73,6 +73,7 @@ export default function ChatTemplateItem({ item, onRefresh }: { item: ChatTempla
                               onBlur={onBlur}
                               placeholder="H02"
                               label="Mã mẫu"
+                              error={errors.code?.message}
                         />
                   ) 
             }
@@ -87,6 +88,7 @@ export default function ChatTemplateItem({ item, onRefresh }: { item: ChatTempla
                               onBlur={onBlur}
                               placeholder="H02"
                               label="Nội dung"
+                              error={errors.content?.message}
                         />
                   ) 
             }
@@ -192,6 +194,7 @@ const styles = StyleSheet.create({
       fontSize: 16,
       fontWeight:600,
       marginVertical: 10,
-      textAlign: 'center'
+      textAlign: 'center',
+      color:'#003366'
   },
 })
