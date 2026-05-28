@@ -17,8 +17,8 @@ export const actionConfig: Record<string, ActionConfigType> = {
       icon: PackagePlus,
       description: 'Đã tăng số lượng tồn kho',
     },
-    Adjust: {
-      label: 'Xóa',
+    Remove: {
+      label: 'Xóa kho',
       icon: RotateCcw,
       description: 'Đã thay đổi số lượng tồn kho',
     },
