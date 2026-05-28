@@ -22,7 +22,7 @@ export default function KeywordItem({ data, onRefresh }: KeywordItemProps) {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const { handleDelete, loading: deleteLoading, setKeywordId } = useDeleteKeyword({ onRefresh: onRefresh, onCloseModalDelete: setIsAlertOpen })
-  const { handleSubmit, loading: updateLoading, onSubmit, control, reset, setKeywordSelected } = useUpdateKeyword({ onRefresh: onRefresh })
+  const { handleSubmit, loading: updateLoading, onSubmit, control, reset, setKeywordSelected, errors } = useUpdateKeyword({ onRefresh: onRefresh })
   const color = getColorByWeight(data.weight)
 
   const handleOpenEdit = (keyword: KeywordDetailType) => {
@@ -89,17 +89,14 @@ export default function KeywordItem({ data, onRefresh }: KeywordItemProps) {
             <Controller
             control={control}
             name='weight'
-            render={({ field: { onChange, onBlur, value } }) => (
+            render={({ field }) => (
                   <Input
-                        value={String(value)}
-                        onChangeText={(text) => {
-                              const numberValue = Number(text)
-                              onChange(isNaN(numberValue) ? undefined : numberValue)
-                        }}
-                        onBlur={onBlur}
-                        placeholder="2"
-                        label="Độ ưu tiên"
-                        keyboardType="number-pad"
+                              value={field.value ? String(field.value) : ''}
+                              onChangeText={(value) => field.onChange(Number(value))}
+                              placeholder="Nhập mức độ ưu tiên"
+                              label="Độ ưu tiên"
+                              error={errors.weight?.message}
+                              keyboardType="number-pad"
                   />
             ) 
             

@@ -6,8 +6,8 @@ import z from 'zod'
 
 
 const chatTemplateSchema = z.object({
-  code: z.string({ error: 'Code không được để trống' }),
-  content: z.string({ error: 'Nội dung không được để trống' })
+  code: z.string().min(1, { error: 'Code không được để trống' }),
+  content: z.string().min(1, { error: 'Nội dung không được để trống' })
 })
 
 type UseUpdateChatTemplateProps = {

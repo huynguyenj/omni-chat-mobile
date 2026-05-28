@@ -20,11 +20,6 @@ export default function CreateSection({ onRefresh }: CreateSectionProps) {
   const { control, errors, handleSubmit, loading, onSubmit, reset } = useCreateKeyword({ onRefresh: onRefresh })
   const handleOpenCreateKeyword = () => {
     setIsCreateKeywordOpen(prev => !prev)
-    reset({
-      intentTypeId: '',
-      keywordText: '',
-      weight: 0
-    })
   }
   return (
    <View style={styles.btnContainer}>
@@ -53,14 +48,10 @@ export default function CreateSection({ onRefresh }: CreateSectionProps) {
             <Controller
                   control={control}
                   name="weight"
-                  render={({ field: { onChange, onBlur, value } }) => (
+                  render={({ field }) => (
                         <Input
-                              value={value ? String(value) : ''}
-                              onChangeText={(text) => {
-                              const numberValue = Number(text)
-                              onChange(isNaN(numberValue) ? undefined : numberValue)
-                              }}
-                              onBlur={onBlur}
+                              value={field.value ? String(field.value) : ''}
+                              onChangeText={(value) => field.onChange(Number(value))}
                               placeholder="Nhập mức độ ưu tiên"
                               label="Độ ưu tiên"
                               error={errors.weight?.message}
@@ -79,6 +70,7 @@ export default function CreateSection({ onRefresh }: CreateSectionProps) {
                   options={intentType?.map((c) => ({ label: c.typeName, value: c.id })) || []}
                   placeHolder="Chọn loại đơn"
                   label="Loại đơn"
+                  error={errors.intentTypeId?.message}
                  />
             )}
             />

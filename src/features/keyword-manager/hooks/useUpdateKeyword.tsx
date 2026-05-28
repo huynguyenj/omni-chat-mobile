@@ -6,7 +6,7 @@ import z from 'zod'
 import { KeywordDetailType } from '../types/keyword-types'
 
 const updateKeywordInfoSchema = z.object({
-  weight: z.number()
+  weight: z.number({error: 'Độ ưu tiên không được để trống'})
 })
 
 type UpdateKeywordFormType = z.infer<typeof updateKeywordInfoSchema>
@@ -17,7 +17,7 @@ type UseUpdateKeywordProps = {
 
 export default function useUpdateKeyword({ onRefresh }: UseUpdateKeywordProps) {
   const { execute, loading } = useApiCall<null>()
-  const { handleSubmit, reset, control } = useForm<UpdateKeywordFormType>({ resolver: zodResolver(updateKeywordInfoSchema) })
+  const { handleSubmit, reset, formState: { errors }, control } = useForm<UpdateKeywordFormType>({ resolver: zodResolver(updateKeywordInfoSchema) })
   const [keywordSelected, setKeywordSelected] = useState<KeywordDetailType>()
 
   const onSubmit = async (formData: UpdateKeywordFormType) => {
@@ -35,5 +35,5 @@ export default function useUpdateKeyword({ onRefresh }: UseUpdateKeywordProps) {
 //     toast.success('Cập nhật keyword thành công')
     onRefresh()
   }
-  return { handleSubmit, control, onSubmit, setKeywordSelected, reset, loading }
+  return { handleSubmit, control, onSubmit, setKeywordSelected, reset, loading, errors }
 }
