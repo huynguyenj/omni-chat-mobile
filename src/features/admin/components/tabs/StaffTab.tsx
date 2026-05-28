@@ -62,6 +62,16 @@ function staffIntentPayloadFromIds(ids: string[]) {
   return ids.map((intentId) => ({ intentId }))
 }
 
+const EXCLUDED_ADD_ROLE_NAMES = new Set(['admin'])
+
+function isRoleExcludedFromAdd(roleName: string) {
+  return EXCLUDED_ADD_ROLE_NAMES.has(roleName.trim().toLowerCase())
+}
+
+function isStaffRoleName(roleName: string) {
+  return roleName.trim().toLowerCase() === 'staff'
+}
+
 function validateStaffName(raw: string): { ok: true; value: string } | { ok: false; message: string } {
   const trimmed = raw.trim()
   if (!trimmed) return { ok: false, message: 'Họ và tên không được để trống.' }
@@ -342,8 +352,8 @@ export default function StaffTab() {
   const fetchStaffs = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await StaffApi.getStaffs(1, 200)
-      setApiStaffs(extractArrayFromResponse(response) as StaffItem[])
+      const data = await StaffApi.getStaffs({ pageNumber: 1, pageSize: 100, descending: false })
+      setApiStaffs(Array.isArray(data.items) ? data.items : (extractArrayFromResponse(data) as StaffItem[]))
     } catch {
       notifyError('Không tải được danh sách nhân viên.')
     } finally {
@@ -389,7 +399,7 @@ export default function StaffTab() {
   const uiStaffs = useMemo(() => {
     return apiStaffs.map((staff) => ({
       ...staff,
-      uiRole: staff.roleName,
+      uiRole: staff.roleName?.trim() || (staff.staffIntentTypes.length > 0 ? 'Staff' : 'Manager'),
       department:
         staff.staffIntentTypes.length > 0
           ? staff.staffIntentTypes.map((i) => i.intentTypeName).join(', ')
@@ -397,6 +407,21 @@ export default function StaffTab() {
       statusLabel: staff.status.toLowerCase() === 'online' ? 'Hoạt động' : 'Nghỉ'
     }))
   }, [apiStaffs])
+
+  const addableRoles = useMemo(
+    () => roles.filter((r) => !isRoleExcludedFromAdd(r.name)),
+    [roles]
+  )
+
+  const selectedCreateRoleName = useMemo(
+    () => addableRoles.find((r) => r.id === form.roleId)?.name ?? '',
+    [addableRoles, form.roleId]
+  )
+
+  // Show intent picker only when role is "staff"
+  const showIntentPicker = modalMode === 'create'
+    ? isStaffRoleName(selectedCreateRoleName)
+    : isStaffRoleName(selectedStaff?.roleName ?? '')
 
   const totalStaffPages = Math.max(1, Math.ceil(uiStaffs.length / STAFFS_PER_PAGE))
   const effectiveStaffPage = Math.min(staffPage, totalStaffPages)
@@ -408,7 +433,9 @@ export default function StaffTab() {
   const mapStaffToIntentIds = (staff: StaffItem, types: IntentTypeItem[]) => {
     if (!staff.staffIntentTypes?.length || types.length === 0) return []
     return types
-      .filter((it) => staff.staffIntentTypes.some((s) => s.intentTypeName === it.typeName))
+      .filter((it) =>
+        staff.staffIntentTypes.some((s) => s.id === it.id || s.intentTypeName === it.typeName)
+      )
       .map((it) => it.id)
   }
 
@@ -421,14 +448,15 @@ export default function StaffTab() {
   }
 
   const openEditModal = (staff: StaffItem) => {
+    const matchedStaff = apiStaffs.find((s) => s.id === staff.id)
     setModalMode('edit')
     setSelectedStaff(staff)
     setForm({
       name: staff.name,
       email: staff.email,
-      phone: staff.phone,
-      roleId: '',
-      intentTypeIds: mapStaffToIntentIds(staff, intentTypes)
+      phone: digitsOnly(matchedStaff?.phone ?? staff.phone ?? ''),
+      roleId: matchedStaff?.roleId ?? staff.roleId ?? '',
+      intentTypeIds: mapStaffToIntentIds(matchedStaff ?? staff, intentTypes)
     })
     setFormErrors({})
     setModalVisible(true)
@@ -483,13 +511,14 @@ export default function StaffTab() {
 
     setSubmitting(true)
     try {
+      const intentPayload = showIntentPicker ? staffIntentPayloadFromIds(form.intentTypeIds) : []
       if (modalMode === 'create') {
         await StaffApi.createStaff({
           name: nameResult.value,
           email: emailResult.value,
           phone: phoneResult.value,
           roleId: form.roleId,
-          staffIntentTypes: staffIntentPayloadFromIds(form.intentTypeIds)
+          staffIntentTypes: intentPayload
         })
         notifySuccess('Thêm tài khoản thành công')
       } else if (selectedStaff) {
@@ -497,7 +526,7 @@ export default function StaffTab() {
           name: nameResult.value,
           email: emailResult.value,
           phone: phoneResult.value,
-          staffIntentTypes: staffIntentPayloadFromIds(form.intentTypeIds)
+          staffIntentTypes: intentPayload
         })
         notifySuccess('Cập nhật thành công')
       }
@@ -581,10 +610,14 @@ export default function StaffTab() {
                 </View>
               </View>
 
-              <Text style={styles.departmentLabel}>Phòng ban</Text>
-              <Text style={styles.departmentValue} numberOfLines={2}>
-                {staff.department}
-              </Text>
+              {isStaffRoleName(staff.roleName ?? staff.uiRole ?? '') ? (
+                <>
+                  <Text style={styles.departmentLabel}>Phòng ban</Text>
+                  <Text style={styles.departmentValue} numberOfLines={2}>
+                    {staff.department}
+                  </Text>
+                </>
+              ) : null}
 
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(staff)}>
@@ -664,21 +697,23 @@ export default function StaffTab() {
               {modalMode === 'create' ? (
                 <RoleSelectDropdown
                   key={modalVisible ? `role-${selectedStaff?.id ?? 'create'}` : 'role-closed'}
-                  roles={roles}
+                  roles={addableRoles}
                   loading={rolesLoading}
                   value={form.roleId}
-                  onChange={(roleId) => setForm((prev) => ({ ...prev, roleId }))}
+                  onChange={(roleId) => setForm((prev) => ({ ...prev, roleId, intentTypeIds: [] }))}
                   error={formErrors.role}
                 />
               ) : null}
 
-              <IntentTypeMultiSelect
-                key={modalVisible ? `${modalMode}-${selectedStaff?.id ?? 'create'}` : 'closed'}
-                intentTypes={intentTypes}
-                loading={intentTypesLoading}
-                selectedIds={form.intentTypeIds}
-                onChange={(intentTypeIds) => setForm((prev) => ({ ...prev, intentTypeIds }))}
-              />
+              {showIntentPicker ? (
+                <IntentTypeMultiSelect
+                  key={modalVisible ? `${modalMode}-${selectedStaff?.id ?? 'create'}` : 'closed'}
+                  intentTypes={intentTypes}
+                  loading={intentTypesLoading}
+                  selectedIds={form.intentTypeIds}
+                  onChange={(intentTypeIds) => setForm((prev) => ({ ...prev, intentTypeIds }))}
+                />
+              ) : null}
             </ScrollView>
 
             <View style={styles.modalActions}>

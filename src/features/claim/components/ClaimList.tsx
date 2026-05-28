@@ -38,7 +38,7 @@ export default function ClaimList({ currentPage, loading, setCurrentPage, totalP
                         <FlatList
                               data={listClaims.items}
                               keyExtractor={(item) => item.id}
-                              renderItem={({ item }) => <ClaimItem claim={item}/>}
+                              renderItem={({ item }) => <ClaimItem claim={item} onRefresh={onRefresh}/>}
                               onEndReached={loadMore}
                               onEndReachedThreshold={0.1}
                               refreshing={loading}
