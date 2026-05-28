@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form'
 import Toast from 'react-native-toast-message'
 import { z } from 'zod'
 const updateCustomerInfoSchema = z.object({
-  customerName: z.string({ error: 'Tên khách hàng không được để trống' }),
-  address: z.string({ error: 'Địa chỉ khách hàng không được để trống' }),
-  email: z.string({ error: 'Email khách hàng không được để trống' }),
-  phoneNumber: z.string({ error: 'Số điện thoại khách hàng không được để trống' }),
+  customerName: z.string().min(1, { error: 'Tên khách hàng không được để trống' }),
+  address: z.string().min(1, { error: 'Địa chỉ khách hàng không được để trống' }),
+  email: z.email({ error: 'Email khách hàng không được để trống hoặc sai định dạng' }),
+  phoneNumber: z.string().regex(/^0\d{9,10}$/, { error: 'Số điện thoại không hợp lệ'}).min(10, { error: "Số điện thoại ít nhất 10 số" }),
   avatarUrl: z.string().optional()
 })
 

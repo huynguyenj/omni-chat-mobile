@@ -83,7 +83,11 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
                   </Tag>
             <View style={styles.btnContainer}>
                   <Button variant='outline' content='Chi tiết' style={styles.detailBtn} icon={{ iconName: Eye, iconDirection: 'left' }} onPress={handleOpenDetailOrder}/>
-                  <Button variant='danger' content='Trả hàng' style={styles.detailBtn} icon={{ iconName: RotateCcw, iconDirection: 'left' }} onPress={handleOpenRefund}/>
+                  { item.status === 'Completed' || item.status === 'Shipped' ?
+                  <Button variant='danger' content='Hoàn trả' style={styles.detailBtn} icon={{ iconName: RotateCcw, iconDirection: 'left' }} onPress={handleOpenRefund}/>
+                  :
+                  <></>
+                  }
             </View>
       </View>
       <ModalCustom isOpen={isDetailOrderOpen} onClose={handleOpenDetailOrder}>

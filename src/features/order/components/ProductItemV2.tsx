@@ -41,6 +41,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+      marginVertical: 5
    },
    cardActive: {
       borderLeftWidth: 5,
