@@ -20,7 +20,6 @@ type ClaimCreateProps = {
 
 export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isChangeTaskSelected, setIsChangeTaskSelected] = useState(false)
 
   const { claimCategories } = useGetAllClaimType()
   const {
@@ -29,7 +28,11 @@ export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
     setConversationId,
     conversationId,
     loading,
-    control
+    control,
+    errors, 
+    isChangeTaskSelected,
+    messageError, 
+    setIsChangeTaskSelected
   } = useCreateClaim({onRefresh})
 
   const {
@@ -42,9 +45,7 @@ export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
 
 
   const handleOpenModal = () => setIsModalOpen((prev) => !prev)
-  const handleCloseModal = () => setIsModalOpen(false)
-
-  console.log(isChangeTaskSelected);
+  const handleCloseModal = () => setIsModalOpen(false)  
   
   return (
     <View style={styles.container}>
@@ -83,7 +84,7 @@ export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
           />
             )}
           />
-         
+          {errors && <Text style={styles.errorText}>{errors.claimTypeId?.message}</Text>}
         <Controller
           control={control}
           name="description"
@@ -113,7 +114,6 @@ export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
           />
         )}
       />
-
          {isChangeTaskSelected && (
               <View>
                 <Text style={{ fontWeight: '600', marginBottom: 5 }}>
@@ -142,6 +142,7 @@ export default function ClaimCreate({ onRefresh }: ClaimCreateProps) {
                         ))}
                       </ScrollView>
                     </View>
+                    {messageError && <Text style={styles.errorText}>{messageError}</Text>}
                       <PaginationBar
                         currentPage={currentPage}
                         setPage={setCurrentPage}
@@ -219,5 +220,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 10,
   },
-  
+    errorText: {
+            color: '#DC2626', 
+            fontSize: 12, 
+            marginTop: 4
+      }
 })

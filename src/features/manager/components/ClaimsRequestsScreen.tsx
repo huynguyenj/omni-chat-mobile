@@ -116,7 +116,7 @@ function IntentChips({ intents }: { intents: ManagerChangeTaskClaimItem['staffIn
 }
 
 export default function ClaimsRequestsScreen() {
-  const [mainTab, setMainTab] = useState<MainTab>('claims')
+  const [mainTab, setMainTab] = useState<MainTab>('changeTasks')
   const [claimMode, setClaimMode] = useState<ClaimMode>('pending')
 
   const [dashboard, setDashboard] = useState<ManagerClaimDashboardData | null>(null)
@@ -576,18 +576,18 @@ export default function ClaimsRequestsScreen() {
   return (
     <View style={styles.safe}>
       {dashboardErr ? <Text style={styles.warn}>{dashboardErr}</Text> : null}
-      {renderKpi()}
+      {/* {renderKpi()} */}
 
       <View style={styles.actionGrid}>
         <View style={styles.actionRow}>
-          <Pressable
+          {/* <Pressable
             style={mainTab === 'claims' ? styles.actionPrimary : styles.actionOutline}
             onPress={() => setMainTab('claims')}
           >
             <FileText size={18} color={mainTab === 'claims' ? '#fff' : '#000000'} strokeWidth={2.2} />
             <Text style={mainTab === 'claims' ? styles.actionPrimaryText : styles.actionOutlineText}>Yêu cầu</Text>
-          </Pressable>
-          <Pressable
+          </Pressable> */}
+          {/* <Pressable
             style={mainTab === 'changeTasks' ? styles.actionPrimary : styles.actionOutline}
             onPress={() => setMainTab('changeTasks')}
           >
@@ -595,7 +595,7 @@ export default function ClaimsRequestsScreen() {
             <Text style={mainTab === 'changeTasks' ? styles.actionPrimaryText : styles.actionOutlineText}>
               Đổi yêu cầu
             </Text>
-          </Pressable>
+          </Pressable> */}
         </View>
         {mainTab === 'claims' ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ width: 500}}>
