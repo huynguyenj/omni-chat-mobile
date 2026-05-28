@@ -25,7 +25,7 @@ export default function ClaimItem ({ claim, onRefresh }:{ claim: ClaimType, onRe
       }
       return (
             <>
-            <TouchableOpacity onPress={handleOpenUpdate}>
+            <TouchableOpacity onPress={handleOpenUpdate} disabled={ claim.status === 'Pending' ? false : true }>
                   <Card variant='lightGrey' key={claim.id} style={{ marginVertical: 10 }}>
                         <View style={styles.itemHeader}>
                               <View style={styles.itemTitleContainer}>
