@@ -11,7 +11,7 @@ import CustomerOrderScreen from '@/screens/staff/CustomerOrderScreen'
 
 export type ChatStackParamList = {
   ChatScreen: undefined
-  ChatDetail: { id: string }
+  ChatDetail: { id: string, providerName: string }
   OrderSectionScreen: { customerId: string }
   CustomerInfoScreen: { conversationId: string }
   ConversationTaskScreen: { conversationId: string }

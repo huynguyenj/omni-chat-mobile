@@ -15,7 +15,7 @@ export default function useCompleteConversation() {
        Toast.show({ type: 'error', text1: error })
        return
     }
-      Toast.show({ type: 'error', text1: 'Hoàn thành cuộc trò chuyện' })
+      Toast.show({ type: 'success', text1: 'Hoàn thành cuộc trò chuyện' })
   }
   return { handleCompleteConversation, loading }
 }

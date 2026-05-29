@@ -13,7 +13,7 @@ export default function useGetOrderCustomer({ customerId }: UseGetListOrderCusto
   const [listOrders, setListOrders] = useState<PaginationStructure<OrderType>>()
   const [currentPage, setCurrentPage] = useState(1)
   const [status, setStatus] = useState('')
-  const [newest, setNewest] = useState(false)
+  const [newest, setNewest] = useState(true)
   const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
     if (!customerId) {

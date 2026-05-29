@@ -41,19 +41,24 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
   const handleAddQuantity = (orderItemId: string, maxQuantity: number) => {
       let targetOrderItemQuantity = listRefund.get(orderItemId)
       if (!targetOrderItemQuantity) return
+      if (targetOrderItemQuantity.number >= maxQuantity) return
       targetOrderItemQuantity.number += 1
-      if (targetOrderItemQuantity.number > maxQuantity) return
       const newOrderItemMap = new Map(listRefund)
-      newOrderItemMap.set(orderItemId, targetOrderItemQuantity)
+      newOrderItemMap.set(orderItemId, {
+         ...targetOrderItemQuantity,
+         number: targetOrderItemQuantity.number + 1
+      })
       setListRefund(newOrderItemMap)
   }
     const handleMinusQuantity = (orderItemId: string) => {
       let targetOrderItemQuantity = listRefund.get(orderItemId)
       if (!targetOrderItemQuantity) return
-      targetOrderItemQuantity.number -= 1
-      if (targetOrderItemQuantity.number < 1) return
+      if (targetOrderItemQuantity.number <= 1) return
       const newOrderItemMap = new Map(listRefund)
-      newOrderItemMap.set(orderItemId, targetOrderItemQuantity)
+      newOrderItemMap.set(orderItemId, {
+         ...targetOrderItemQuantity,
+         number: targetOrderItemQuantity.number - 1
+      })
       setListRefund(newOrderItemMap)
   }
   const totalRefundAmount = useMemo(() => {
@@ -63,6 +68,8 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
     }, 0)
    }, [listRefund])
   const orderStatus = getOrderStatusDisplay(item.status)
+  console.log(listRefund);
+  
   return (
     <Card style={styles.cardContainer}>
       <Card variant='primary' style={styles.illustrationContainer}>
@@ -95,7 +102,7 @@ export default function CustomerOrderItem({ item }: { item: OrderType }) {
         <View style={styles.listContainer}>
             <ScrollView>
                   { item.orderItems.map((item) => (
-                        <Card key={item.id} variant='lightGrey'>
+                        <Card key={item.id} variant='lightGrey' style={{ marginVertical: 5 }}>
                           <Text style={styles.itemName}>Sản phẩm: {item.productName}</Text>
                           <View style={styles.itemPriceContentContainer}>
                               <Text style={styles.quantityText}>Số lượng:{item.quantity}</Text>
