@@ -17,6 +17,7 @@ import { Controller } from 'react-hook-form'
 import InputDate from '@/components/ui/inputs/InputDate'
 import Input from '@/components/ui/inputs/Input'
 import { formatDate } from '@/utils/format'
+import LoadingCircle from '@/components/ui/loading/LoadingCircle'
 
 type ProductBatchSectionProps = {
       item: ProductDetailType
@@ -175,6 +176,10 @@ export default function ProductBatchSection({ item }: ProductBatchSectionProps) 
           </ScrollView>
           { listBatchItems.length > 0 &&
             <View style={styles.btnContainer}>
+              { loadingCreateBatch ? 
+                <LoadingCircle/>
+                :
+                <>
                   <Button
                         content='Hủy'
                         variant='outline'
@@ -186,6 +191,8 @@ export default function ProductBatchSection({ item }: ProductBatchSectionProps) 
                         style={styles.createModalBtn}
                         onPress={handleCreateBatch}
                   />
+                </>
+              }
             </View>
           }
         </ModalCustom>

@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 
 type ChatDetailMainPartProp = {
       conversation: ConversationDetail
+      providerName: string
 }
 
 type NavigationProp = NativeStackNavigationProp<
@@ -24,13 +25,13 @@ type NavigationProp = NativeStackNavigationProp<
 export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPartProp }) {
   const staffId = useAuthStore((s) => s.staffId)
   
-  const { providerName } = useContextValid(SelectionMessageContext)
   const { connectionRef, messages, setMessages } = useConnectChatTwoWay({ conversationId: props.conversation.id, conversationMessages: props.conversation.messages })
   const flatListRef = useRef<FlatList>(null)
   const [text, setText] = useState('')
 
   const [isSettingOpen, setIsSettingOpen] = useState(false)
   const navigation = useNavigation<NavigationProp>()
+  
   const handleSendMessage = async () => {
       
       setText('')
@@ -52,7 +53,8 @@ export default function ChatDetailMainPart({ props }: { props: ChatDetailMainPar
                   SupportConversationId: props.conversation.id
             }
             setMessages((prevMessages) => [...prevMessages, newMessage])
-            await connection.invoke('StaffSendMessage', providerName, finalMessageSending)
+            
+            await connection.invoke('StaffSendMessage', props.providerName, finalMessageSending)
          } catch (error) {
             console.log('Sending message error', error);            
          }

@@ -9,6 +9,8 @@ import { ChatStackParamList } from '@/navigation/role-navigator/StaffNavigator'
 import useCompleteConversation from '../hooks/useCompleteConveration'
 import ModalCustom from '@/components/ui/modal/ModalCustom'
 import Button from '@/components/ui/buttons/Button'
+import useContextValid from '@/hooks/useContextValid'
+import SelectionMessageContext from '../context/ChatProvider'
 
 type NavigationProp = NativeStackNavigationProp<
   ChatStackParamList,
@@ -19,11 +21,12 @@ export function ChatItem({ item }: { item: ResolveMessageType }) {
   const navigation = useNavigation<NavigationProp>()
   const { handleCompleteConversation, loading } = useCompleteConversation()
   const [alert, setAlert] = useState(false)
+  const { providerName } = useContextValid(SelectionMessageContext)
   const handleOpenAlert = () => {
     setAlert(prevState => !prevState)
   }
   const handleNavigate = () => {
-    navigation.navigate('ChatDetail', { id: item.conversationId })
+    navigation.navigate('ChatDetail', { id: item.conversationId, providerName })
   }
   return (
     <TouchableOpacity 

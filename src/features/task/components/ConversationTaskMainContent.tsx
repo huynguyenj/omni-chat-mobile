@@ -14,6 +14,15 @@ type ConversationTaskMainContentProps = {
 
 export default function ConversationTaskMainContent({ conversationId }: ConversationTaskMainContentProps) {
   const { conversationTasks, handleUpdateTask, loading } = useGetConversationTask({ conversationId })
+  const disableButton = (status: string) => {
+     if (status === 'InProgress') {
+      return false
+     }
+     if (status === 'Reassign') {
+      return false
+     }
+     return true
+  }
   return (
     <View style={styles.container}>
       { loading ?
@@ -32,7 +41,7 @@ export default function ConversationTaskMainContent({ conversationId }: Conversa
                         <View style={styles.listContainer}>
                               <ScrollView>
                               {conversationTasks.map((task) => (
-                                    <TouchableOpacity key={task.id} delayLongPress={400} disabled={task.status !== 'InProgress' ? true : false} onLongPress={() => handleUpdateTask(task.id)}>
+                                    <TouchableOpacity key={task.id} delayLongPress={400} disabled={disableButton(task.status)} onLongPress={() => handleUpdateTask(task.id)}>
                                           <Card style={[styles.taskCard, task.status === 'Done' && styles.completedCard]}>
                                           <View style={styles.taskContentContainer}>
                                                 <View>
