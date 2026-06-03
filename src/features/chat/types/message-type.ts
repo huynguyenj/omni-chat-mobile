@@ -36,3 +36,8 @@ export type ConversationDetail = {
   providerId: string
   messages: MessageType[]
 }
+
+export type TotalConversationNav = {
+  providerName: string
+  total: number
+}
