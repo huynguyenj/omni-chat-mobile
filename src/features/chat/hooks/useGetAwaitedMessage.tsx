@@ -44,8 +44,14 @@ export default function useGetAwaitedMessage() {
       newConnection.start().then(() => {
         console.log('connected')
         newConnection.on('SidebarUpdated', (data: ResolveMessageType[]) => {
-          console.log('Data sidebar: ', data);
-          setResolveMessageTab(data)
+          console.log(data)
+          if (data.length === 0) {
+            setResolveMessageTab([])
+            return
+          }
+          if (data[0].providerName === context?.providerName) {
+            setResolveMessageTab(data)
+          }
         })
       })
         .catch(err => console.log('Signalr connected fail', err))
