@@ -12,8 +12,8 @@ export const createProductSchema = z.object({
   volumeMl: z.string({ error: 'Dung tích không được để trống' }),
   description: z.string().optional(),
   brandId: z.string({ error: 'Hãng sữa không được để trống' }),
-  price: z.number({ error: 'Giá tiền không được để trống' }).min(0),
-  lifeSpan: z.number({ error: 'Hạn sử dụng không được để trống' }).min(0),
+  price: z.number({ error: 'Giá tiền không được để trống' }).min(1, { error: 'Giá không được âm hoăc bằng 0'  }),
+  lifeSpan: z.number({ error: 'Hạn sử dụng không được để trống' }).min(1, { error: 'Hạn sử dụng không được âm hoăc bằng 0'  }),
   image: z.object({
     uri: z.string(),
     name: z.string(),

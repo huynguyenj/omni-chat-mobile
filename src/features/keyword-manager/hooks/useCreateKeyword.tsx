@@ -5,7 +5,7 @@ import z from 'zod'
 
 const keywordSchema = z.object({
   intentTypeId: z.string().min(1, { error: 'Hãy chọn chức năng' }),
-  weight: z.number({error: 'Độ ưu tiên không được để trống'}),
+  weight: z.number({error: 'Độ ưu tiên không được để trống'}).min(0.1, { error: 'Độ ưu tiên lớn hơn 0'  }),
   keywordText: z.string().min(1, { error: 'Hãy điền từ keyword' })
 })
 
