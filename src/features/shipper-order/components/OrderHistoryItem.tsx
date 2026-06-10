@@ -18,6 +18,8 @@ export default function OrderHistoryItem({ data }: OrderShipperItemProps) {
     const handleOpenModal = () => {
       setIsModalOpen(prev => !prev)
     }
+    console.log(data);
+    
   return (
    <Card style={styles.container}>
          <View style={styles.orderHeaderContainer}>
