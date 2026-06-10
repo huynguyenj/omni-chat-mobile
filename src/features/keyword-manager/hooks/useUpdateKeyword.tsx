@@ -6,7 +6,7 @@ import z from 'zod'
 import { KeywordDetailType } from '../types/keyword-types'
 
 const updateKeywordInfoSchema = z.object({
-  weight: z.number({error: 'Độ ưu tiên không được để trống'})
+  weight: z.number({error: 'Độ ưu tiên không được để trống'}).min(0.1, { error: 'Độ ưu tiên lớn hơn 0'  })
 })
 
 type UpdateKeywordFormType = z.infer<typeof updateKeywordInfoSchema>
