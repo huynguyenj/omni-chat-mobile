@@ -42,6 +42,7 @@ const styles = StyleSheet.create({
             flex:1
       },
       listContainer: {
-            flex: 0.7,
+            flex: 0.9,
+            marginTop: 10     
       }
 })
