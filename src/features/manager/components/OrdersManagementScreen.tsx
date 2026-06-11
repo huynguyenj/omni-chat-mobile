@@ -694,15 +694,10 @@ export default function OrdersManagementScreen() {
                       </View>
                       <Text style={[styles.th, styles.thProduct]}>Dòng hàng</Text>
                       <Text style={[styles.th, styles.thQty]}>SL</Text>
-                      <Text style={[styles.th, styles.thPrice]}>Giá</Text>
-                      <Text style={[styles.th, styles.thTotal]}>Thành tiền</Text>
+                      <Text style={[styles.th, styles.thPrice]}>Đơn giá</Text>
                     </View>
                     {(detail.orderItems ?? []).map((li) => {
-                      const unit = li.itemsPrice != null ? `${li.itemsPrice.toLocaleString('vi-VN')}đ` : '—'
-                      const lineTot =
-                        li.itemsPrice != null
-                          ? `${(li.quantity * li.itemsPrice).toLocaleString('vi-VN')} đ`
-                          : '—'
+                      const unit = li.itemsPrice != null ? `${li.itemsPrice.toLocaleString('vi-VN')} đ` : '—'
                       return (
                         <View key={li.id} style={styles.tableRow}>
                           <View style={styles.tableIconCell} />
@@ -711,7 +706,6 @@ export default function OrdersManagementScreen() {
                           </Text>
                           <Text style={[styles.td, styles.thQty]}>{li.quantity}</Text>
                           <Text style={[styles.td, styles.thPrice]}>{unit}</Text>
-                          <Text style={[styles.td, styles.thTotal, styles.tdStrong]}>{lineTot}</Text>
                         </View>
                       )
                     })}
@@ -923,8 +917,7 @@ const styles = StyleSheet.create({
   th: { fontSize: 11, fontWeight: '700', color: '#64748b' },
   thProduct: { flex: 2.2, minWidth: 0 },
   thQty: { width: 34, textAlign: 'center' },
-  thPrice: { flex: 1, minWidth: 0, textAlign: 'right' },
-  thTotal: { flex: 1.1, minWidth: 0, textAlign: 'right' },
+  thPrice: { flex: 1.2, minWidth: 0, textAlign: 'right' },
   tableRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f1f5f9' },
   td: { fontSize: 12, color: '#334155' },
   tdStrong: { fontWeight: '800', color: '#0f172a' },
