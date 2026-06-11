@@ -9,7 +9,10 @@ export default function ProductBatchItem({ item }: {item: BatchType}) {
     <Card style={styles.card}>
       <Text style={styles.codeText}>#{item.code}</Text>
       <View style={styles.subTextContainer}>
+        <View>
+            <Text style={styles.subText}>NSX: {formatDate(item.manuFactureDate)}</Text>
             <Text style={styles.subText}>HSD: {formatDate(item.expiryDate)}</Text>
+        </View>
             <Text style={styles.subText}>x{item.quantity}</Text>
       </View>
     </Card>
