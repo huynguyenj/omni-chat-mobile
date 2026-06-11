@@ -168,7 +168,7 @@ export default function ProductCreation({ onRefresh }: ProductCreationProps) {
             />
 
             {/* LIFE SPAN */}
-            <Controller
+            {/* <Controller
               control={control}
               name="lifeSpan"
               render={({ field }) => (
@@ -182,7 +182,7 @@ export default function ProductCreation({ onRefresh }: ProductCreationProps) {
                   style={styles.inputContainer}
                 />
               )}
-            />
+            /> */}
 
             {/* DESCRIPTION */}
             <Controller
