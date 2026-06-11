@@ -27,7 +27,7 @@ type ProductBatchSectionProps = {
 export default function ProductBatchSection({ item }: ProductBatchSectionProps) {
   const { batchCurrentPage, handleRefresh, loading, productBatchList, setBatchCurrentPage } = useGetProductBatchManager({ productId: item.id })
   const { loadMore } = usePagination({ currentPage: batchCurrentPage, setPage: setBatchCurrentPage, loading: loading, totalPage: productBatchList?.meta.total_items ?? 0 })
-  const { handleCreateBatch, listBatchItems, loading: loadingCreateBatch, setListBatchItems, setProductChoseForBatch, handleAddBatch, handleDeleteBatch, manuFactureDate, quantity, setManuFactureDate, setQuantity } = useCreateBatchProduct({ onRefresh: handleRefresh })
+  const { handleCreateBatch, listBatchItems, loading: loadingCreateBatch, setListBatchItems, setProductChoseForBatch, handleAddBatch, handleDeleteBatch, manuFactureDate, quantity, setManuFactureDate, setQuantity, expiryDate, setExpiryDate } = useCreateBatchProduct({ onRefresh: handleRefresh })
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const handleOpenCreate = () => {
       setProductChoseForBatch(item.id)
@@ -148,6 +148,7 @@ export default function ProductBatchSection({ item }: ProductBatchSectionProps) 
             <Text style={styles.createModalTitle}>Tạo lô cho sản phẩm</Text>
             <View style={styles.inputContainer}>
                         <InputDate label='Ngày sản xuất' onChange={setManuFactureDate} value={manuFactureDate}/>
+                        <InputDate label='Ngày hết hạn' onChange={setExpiryDate} value={expiryDate}/>
                         <Input 
                               keyboardType="numeric"
                               value={quantity ? String(quantity) : ''} 
@@ -164,6 +165,7 @@ export default function ProductBatchSection({ item }: ProductBatchSectionProps) 
                         <View>
                               <Text>Lô #{i+1}</Text>
                               <Text>Ngày sản xuất: {formatDate(item.manuFactureDate)}</Text>
+                              <Text>Ngày hết hạn: {formatDate(item.expiryDate)}</Text>
                         </View>
                         <Button
                               icon={{ iconName: Trash, iconDirection: 'center' }}

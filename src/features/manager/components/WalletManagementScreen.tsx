@@ -283,7 +283,7 @@ export default function WalletManagementScreen() {
 
   const fixedHeader = (
     <View style={styles.fixedTop}>
-      <View style={styles.kpiRow}>
+      {/* <View style={styles.kpiRow}>
         <View style={[styles.kpiCard, styles.kpiCardWallet]}>
           <View style={styles.kpiCardTop}>
             <Wallet size={18} color="#1d4ed8" strokeWidth={2.2} />
@@ -306,7 +306,7 @@ export default function WalletManagementScreen() {
             {formatWalletMoney(kpi.totalDebt)} đ
           </Text>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.searchWrap}>
         <Input

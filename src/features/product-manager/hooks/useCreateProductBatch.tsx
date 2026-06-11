@@ -10,6 +10,7 @@ export default function useCreateBatchProduct({ onRefresh }: { onRefresh: () => 
   const [productId, setProductChoseForBatch] = useState('')
   const { execute, loading } = useApiCall<null>()
   const [manuFactureDate, setManuFactureDate] = useState<Date | null>(null) 
+  const [expiryDate, setExpiryDate] = useState<Date | null>(null) 
   const [quantity, setQuantity] = useState(1)
   const handleCreateBatch = async () => {
     if (!productId) return
@@ -39,17 +40,19 @@ export default function useCreateBatchProduct({ onRefresh }: { onRefresh: () => 
     onRefresh()
   }
   const handleAddBatch = () => {
-    if (manuFactureDate) {
-      setListBatchItems(prev => [...prev, { manuFactureDate: manuFactureDate, quantity: quantity }])
+    if (manuFactureDate && expiryDate) {
+      setListBatchItems(prev => [...prev, { manuFactureDate: manuFactureDate, expiryDate: expiryDate, quantity: quantity }])
     }
     setManuFactureDate(null)
+    setExpiryDate(null)
     setQuantity(1)
   }
   const handleDeleteBatch = (batchItem: BatchItemType) => {
     const updateListBatch = listBatchItems.filter((batch) => batch !== batchItem)
     setListBatchItems(updateListBatch)
     setManuFactureDate(null)
+    setExpiryDate(null)
     setQuantity(1)
   }
-  return { handleCreateBatch, setListBatchItems, listBatchItems, setProductChoseForBatch, loading, handleAddBatch, handleDeleteBatch, setManuFactureDate, setQuantity, quantity, manuFactureDate }
+  return { handleCreateBatch, setListBatchItems, listBatchItems, setProductChoseForBatch, loading, handleAddBatch, handleDeleteBatch, setManuFactureDate, setQuantity, quantity, manuFactureDate, expiryDate, setExpiryDate }
 }
