@@ -23,7 +23,7 @@ export default function useUpdateTask({ onRefresh }: UseUpdateTaskProps) {
   const onSubmit = async (formData: UpdateTaskInfoForm) => {
       const apiData = await execute({
             apiUrl: `/support-task/${taskId}/update-intent-type`,
-            method: 'put',
+            method: 'patch',
             type: 'private',
             body: formData
       })
