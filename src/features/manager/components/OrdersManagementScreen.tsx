@@ -43,6 +43,7 @@ import {
 import Input from '@/components/ui/inputs/Input'
 import ManagerOrderCardSkeletonV2 from './ui/ManagerOrderItemSkeletonV2'
 import ManagerPostSaleItemSkeleton from './ui/ManagerPostSaleItemSkeleton'
+import { formatMoney } from '@/utils/format'
 
 const ORDER_PAGE = 6
 const PSR_PAGE = 9
@@ -545,7 +546,7 @@ export default function OrdersManagementScreen() {
           <View style={styles.searchWrap}>
             <Input
               icon={{ iconName: Search, iconDirection: 'left' }}
-              placeholder="Tìm đơn…"
+              placeholder="Tìm đơn theo mã đơn, tên khách hàng"
               placeholderTextColor="#9ca3af"
               value={search}
               onChangeText={setSearch}
@@ -693,25 +694,22 @@ export default function OrdersManagementScreen() {
                         <List size={15} color="#64748b" strokeWidth={2} />
                       </View>
                       <Text style={[styles.th, styles.thProduct]}>Dòng hàng</Text>
+                      <Text style={[styles.th, styles.thQty]}>Đơn giá</Text>
                       <Text style={[styles.th, styles.thQty]}>SL</Text>
-                      <Text style={[styles.th, styles.thPrice]}>Giá</Text>
                       <Text style={[styles.th, styles.thTotal]}>Thành tiền</Text>
                     </View>
                     {(detail.orderItems ?? []).map((li) => {
                       const unit = li.itemsPrice != null ? `${li.itemsPrice.toLocaleString('vi-VN')}đ` : '—'
-                      const lineTot =
-                        li.itemsPrice != null
-                          ? `${(li.quantity * li.itemsPrice).toLocaleString('vi-VN')} đ`
-                          : '—'
+                      const unitPrice = li.itemsPrice ? li.itemsPrice / li.quantity : 0
                       return (
                         <View key={li.id} style={styles.tableRow}>
                           <View style={styles.tableIconCell} />
                           <Text style={[styles.td, styles.thProduct]} numberOfLines={2}>
                             {li.productName}
                           </Text>
+                          <Text style={[styles.td, styles.thQty]}>{formatMoney(unitPrice)}</Text>
                           <Text style={[styles.td, styles.thQty]}>{li.quantity}</Text>
                           <Text style={[styles.td, styles.thPrice]}>{unit}</Text>
-                          <Text style={[styles.td, styles.thTotal, styles.tdStrong]}>{lineTot}</Text>
                         </View>
                       )
                     })}
@@ -921,10 +919,10 @@ const styles = StyleSheet.create({
   tableHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   tableIconCell: { width: 26, alignItems: 'center', justifyContent: 'center' },
   th: { fontSize: 11, fontWeight: '700', color: '#64748b' },
-  thProduct: { flex: 2.2, minWidth: 0 },
-  thQty: { width: 34, textAlign: 'center' },
-  thPrice: { flex: 1, minWidth: 0, textAlign: 'right' },
-  thTotal: { flex: 1.1, minWidth: 0, textAlign: 'right' },
+  thProduct: { flex: 1, minWidth: 0 },
+  thQty: { flex: 0.5, textAlign: 'center' },
+  thPrice: { flex: 0.6, minWidth: 0, textAlign: 'right' },
+  thTotal: { flex: 0.8, minWidth: 0, textAlign: 'right' },
   tableRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#f1f5f9' },
   td: { fontSize: 12, color: '#334155' },
   tdStrong: { fontWeight: '800', color: '#0f172a' },

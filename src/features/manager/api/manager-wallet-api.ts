@@ -9,7 +9,7 @@ import type {
 import { assertManagerPublicSuccess, unwrapEnvelopeData, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
 import { normalizeCustomerWallet, normalizeWalletResponse } from '../utils/managerWalletNormalize'
 
-const FETCH_PAGE_SIZE = 100
+const FETCH_PAGE_SIZE = 10
 
 function resolveCustomerProfilePagingPath() {
   const baseUrl = (apiPublic.defaults.baseURL ?? '').toLowerCase()

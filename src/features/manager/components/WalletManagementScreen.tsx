@@ -74,7 +74,7 @@ function WalletAvatar({ name, url }: { name: string; url: string }) {
 export default function WalletManagementScreen() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [allCustomers, setAllCustomers] = useState<ManagerCustomerWalletItem[]>([])
+  const [customers, setCustomers] = useState<ManagerCustomerWalletItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
@@ -85,16 +85,25 @@ export default function WalletManagementScreen() {
   const [topUpCustomer, setTopUpCustomer] = useState<ManagerCustomerWalletItem | null>(null)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topUpSubmitting, setTopUpSubmitting] = useState(false)
-  const [uiPage, setUiPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400)
     return () => clearTimeout(t)
   }, [search])
 
-  const loadAll = useCallback(async () => {
-    const merged = await ManagerWalletApi.fetchAllCustomerWallets()
-    setAllCustomers(merged)
+  const loadPage = useCallback(async (pageNumber: number, searchQuery: string) => {
+    const res = await ManagerWalletApi.getCustomerWalletPaging({
+      pageNumber,
+      pageSize: WALLET_PAGE_SIZE,
+      customerName: searchQuery || undefined
+    })
+    setCustomers(res.items)
+    setTotalPages(res.meta.total_pages)
+    setTotalItems(res.meta.total_items)
+    setCurrentPage(res.meta.current_page)
   }, [])
 
   useEffect(() => {
@@ -103,7 +112,7 @@ export default function WalletManagementScreen() {
     setListError(null)
     ;(async () => {
       try {
-        await loadAll()
+        await loadPage(1, debouncedSearch)
       } catch (e) {
         if (!cancelled) {
           const msg = typeof e === 'string' ? e : 'Không tải được ví khách hàng.'
@@ -117,24 +126,24 @@ export default function WalletManagementScreen() {
     return () => {
       cancelled = true
     }
-  }, [loadAll])
+  }, [loadPage, debouncedSearch])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     setListError(null)
     try {
-      await loadAll()
+      await loadPage(currentPage, debouncedSearch)
     } catch (e) {
       const msg = typeof e === 'string' ? e : 'Làm mới thất bại.'
       Toast.show({ type: 'error', text1: msg })
     } finally {
       setRefreshing(false)
     }
-  }, [loadAll])
+  }, [loadPage, currentPage, debouncedSearch])
 
   const refreshCustomerWallet = useCallback(async (customerId: string) => {
     const wallet = await ManagerWalletApi.getWalletByCustomerId(customerId)
-    setAllCustomers((prev) =>
+    setCustomers((prev) =>
       prev.map((c) => (c.id === customerId ? { ...c, getWalletResponse: wallet } : c))
     )
     return wallet
@@ -202,35 +211,19 @@ export default function WalletManagementScreen() {
   }, [topUpAmount, topUpCustomer, refreshCustomerWallet])
 
   const filtered = useMemo(() => {
-    const q = debouncedSearch.toLowerCase()
-    if (!q) return allCustomers
-    return allCustomers.filter((c) => {
-      const fields = [c.customerName, c.id, c.email, c.phoneNumber].map((x) => (x || '').toLowerCase())
-      return fields.some((f) => f.includes(q))
-    })
-  }, [allCustomers, debouncedSearch])
-
-  useEffect(() => {
-    setUiPage(1)
-  }, [debouncedSearch])
-
-  const totalUiPages = Math.max(1, Math.ceil(filtered.length / WALLET_PAGE_SIZE))
-  const pageSlice = useMemo(() => {
-    const page = Math.min(uiPage, totalUiPages)
-    const start = (page - 1) * WALLET_PAGE_SIZE
-    return filtered.slice(start, start + WALLET_PAGE_SIZE)
-  }, [filtered, uiPage, totalUiPages])
+    return customers
+  }, [customers])
 
   const kpi = useMemo(() => {
     let totalWalletAmount = 0
     let totalDebt = 0
-    for (const c of filtered) {
+    for (const c of customers) {
       const w = c.getWalletResponse
       totalWalletAmount += w.amount
       totalDebt += w.totalDebt
     }
     return { totalWalletAmount, totalDebt }
-  }, [filtered])
+  }, [customers])
 
   const renderTx = ({ item }: { item: ManagerWalletTransaction }) => (
     <View style={styles.txCard}>
@@ -345,7 +338,7 @@ export default function WalletManagementScreen() {
         ) : (
           <FlatList
             style={styles.list}
-            data={pageSlice}
+            data={filtered}
             keyExtractor={(item, index) => item.id || `w-${index}`}
             renderItem={renderCustomer}
             ListEmptyComponent={
@@ -360,24 +353,52 @@ export default function WalletManagementScreen() {
       {!loading || refreshing ? (
         <View style={styles.pagerFixed}>
           <Text style={styles.footerMeta}>
-            {filtered.length} khách · Trang {Math.min(uiPage, totalUiPages)}/{totalUiPages}
+            {totalItems} khách · Trang {currentPage}/{totalPages}
           </Text>
           <View style={styles.pager}>
             <Pressable
-              style={[styles.pageBtn, uiPage <= 1 && styles.pageBtnDisabled]}
-              disabled={uiPage <= 1}
-              onPress={() => setUiPage((p) => Math.max(1, p - 1))}
+              style={[styles.pageBtn, currentPage <= 1 && styles.pageBtnDisabled]}
+              disabled={currentPage <= 1 || loading}
+              onPress={async () => {
+                if (currentPage > 1) {
+                  setLoading(true)
+                  try {
+                    await loadPage(currentPage - 1, debouncedSearch)
+                  } catch (e) {
+                    Toast.show({
+                      type: 'error',
+                      text1: typeof e === 'string' ? e : 'Không thể tải trang trước.'
+                    })
+                  } finally {
+                    setLoading(false)
+                  }
+                }
+              }}
             >
-              <ChevronLeft size={18} color={uiPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
-              <Text style={[styles.pageBtnText, uiPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
+              <ChevronLeft size={18} color={currentPage <= 1 ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+              <Text style={[styles.pageBtnText, currentPage <= 1 && styles.pageBtnTextDisabled]}>Trước</Text>
             </Pressable>
             <Pressable
-              style={[styles.pageBtn, uiPage >= totalUiPages && styles.pageBtnDisabled]}
-              disabled={uiPage >= totalUiPages}
-              onPress={() => setUiPage((p) => Math.min(totalUiPages, p + 1))}
+              style={[styles.pageBtn, currentPage >= totalPages && styles.pageBtnDisabled]}
+              disabled={currentPage >= totalPages || loading}
+              onPress={async () => {
+                if (currentPage < totalPages) {
+                  setLoading(true)
+                  try {
+                    await loadPage(currentPage + 1, debouncedSearch)
+                  } catch (e) {
+                    Toast.show({
+                      type: 'error',
+                      text1: typeof e === 'string' ? e : 'Không thể tải trang sau.'
+                    })
+                  } finally {
+                    setLoading(false)
+                  }
+                }
+              }}
             >
-              <Text style={[styles.pageBtnText, uiPage >= totalUiPages && styles.pageBtnTextDisabled]}>Sau</Text>
-              <ChevronRight size={18} color={uiPage >= totalUiPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
+              <Text style={[styles.pageBtnText, currentPage >= totalPages && styles.pageBtnTextDisabled]}>Sau</Text>
+              <ChevronRight size={18} color={currentPage >= totalPages ? '#94a3b8' : '#0f172a'} strokeWidth={2.2} />
             </Pressable>
           </View>
         </View>
