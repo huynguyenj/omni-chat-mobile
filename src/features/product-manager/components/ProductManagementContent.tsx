@@ -41,7 +41,7 @@ export default function ProductManagementContent() {
         <OverviewProductManagementCard totalItems={listProducts?.meta.total_items ?? 0}/>
       }
       <View style={styles.searchContainer}>
-            <Input style={styles.searchInput} onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên,...'/>
+            <Input style={styles.searchInput} onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên, mã lô'/>
             <Button style={styles.btn} icon={{ iconName: ListFilterPlus, iconDirection: 'center' }} onPress={handleSortOpen}/>
             <Button style={styles.btn} icon={{ iconName: Funnel, iconDirection: 'center' }} onPress={handleOpenFilter}/>
       </View>
