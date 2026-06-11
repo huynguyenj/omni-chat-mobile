@@ -13,7 +13,7 @@ export const createProductSchema = z.object({
   description: z.string().optional(),
   brandId: z.string({ error: 'Hãng sữa không được để trống' }),
   price: z.number({ error: 'Giá tiền không được để trống' }).min(1, { error: 'Giá không được âm hoăc bằng 0'  }),
-  lifeSpan: z.number({ error: 'Hạn sử dụng không được để trống' }).min(1, { error: 'Hạn sử dụng không được âm hoăc bằng 0'  }),
+  // lifeSpan: z.number({ error: 'Hạn sử dụng không được để trống' }).min(1, { error: 'Hạn sử dụng không được âm hoăc bằng 0'  }),
   image: z.object({
     uri: z.string(),
     name: z.string(),
@@ -49,7 +49,7 @@ export default function useCreateProduct({ onRefresh }: UseCreateProduct) {
     form.append('Description', formData.description || '')
     form.append('BrandId', formData.brandId)
     form.append('Price', String(formData.price))
-    form.append('LifeSpan', String(formData.lifeSpan))
+    // form.append('LifeSpan', String(formData.lifeSpan))
     if (image) {
       form.append('Image', {
             uri: image.uri,
