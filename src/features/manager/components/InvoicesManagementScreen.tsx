@@ -265,7 +265,7 @@ export default function InvoicesManagementScreen() {
   const fixedHeader = (
     <View style={styles.fixedTop}>
       <View style={styles.kpiPrimaryRow}>
-        <View style={styles.kpiCardMain}>
+        {/* <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={styles.kpiIconBg}>
               <CircleDollarSign size={16} color="#0369a1" strokeWidth={2.2} />
@@ -273,8 +273,8 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Tổng tiền</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.totalAll)} đ</Text>
-        </View>
-        <View style={styles.kpiCardMain}>
+        </View> */}
+        {/* <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={[styles.kpiIconBg, styles.kpiIconBgGreen]}>
               <Wallet size={16} color="#15803d" strokeWidth={2.2} />
@@ -282,8 +282,8 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Đã thanh toán</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.paidCompleted)} đ</Text>
-        </View>
-        <View style={styles.kpiCardMain}>
+        </View> */}
+        {/* <View style={styles.kpiCardMain}>
           <View style={styles.kpiCardHead}>
             <View style={[styles.kpiIconBg, styles.kpiIconBgAmber]}>
               <Clock size={16} color="#b45309" strokeWidth={2.2} />
@@ -291,10 +291,10 @@ export default function InvoicesManagementScreen() {
             <Text style={styles.kpiLabel}>Chờ thanh toán</Text>
           </View>
           <Text style={styles.kpiVal}>{formatKpiMoney(kpi.pendingSum)} đ</Text>
-        </View>
+        </View> */}
       </View>
 
-      <View style={styles.kpiSecondaryRow}>
+      {/* <View style={styles.kpiSecondaryRow}>
         <View style={styles.kpiCardSmall}>
           <View style={styles.kpiCardHead}>
             <AlertTriangle size={15} color="#c2410c" strokeWidth={2} />
@@ -309,7 +309,7 @@ export default function InvoicesManagementScreen() {
           </View>
           <Text style={styles.kpiValSm}>{formatKpiMoney(kpi.refundedSum)} đ</Text>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.searchWrap}>
         <Input

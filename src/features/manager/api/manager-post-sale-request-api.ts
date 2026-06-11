@@ -23,6 +23,7 @@ export const ManagerPostSaleRequestApi = {
   getRequests: async (
     pageNumber = 1,
     pageSize = 9,
+    search = '',
     opts?: { sortBy?: string; descending?: boolean }
   ): Promise<ManagerPostSaleRequestListResponse> => {
     const page = Math.max(1, pageNumber)
@@ -30,6 +31,7 @@ export const ManagerPostSaleRequestApi = {
     const params: Record<string, unknown> = {
       pageNumber: page,
       pageSize: size,
+      search: search,
       sortBy: opts?.sortBy?.trim() || 'requestedTime'
     }
     if (typeof opts?.descending === 'boolean') {

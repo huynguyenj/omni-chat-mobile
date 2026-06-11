@@ -7,23 +7,28 @@ import OverviewCardAudit from './OverviewCardAudit'
 import Button from '@/components/ui/buttons/Button'
 import { LIST_FILTER_ACTION } from '../const/filter-action'
 import { LIST_SORT_AUDIT_BY } from '../const/sort-by'
-import { ArrowDownNarrowWide, ArrowDownWideNarrow } from 'lucide-react-native'
+import { ArrowDownNarrowWide, ArrowDownWideNarrow, Search } from 'lucide-react-native'
 import ProductAuditItem from './ProductBatchAuditItem'
 import ProductAuditItemSkeleton from './ui/skeleton/ProductAuditItemSkeleton'
 import NoDataCard from '@/components/ui/cards/NodataCard'
+import useDebounce from '@/hooks/useDebounce'
+import Input from '@/components/ui/inputs/Input'
 
 export default function BatchAuditMainContent() {
-  const { listBatchAudit, loading, isDescending, sortBy, filterAction, currentPage, setCurrentPage, handleFilterAction, handleRefresh, handleSortBy, handleSortDescending } = useGetProductBatchAudit()
+  const { listBatchAudit, loading, isDescending, sortBy, filterAction, currentPage, setCurrentPage, handleFilterAction, handleRefresh, handleSortBy, handleSortDescending, handleSearch } = useGetProductBatchAudit()
   const { loadMore } = usePagination({ currentPage: currentPage, setPage: setCurrentPage, loading: loading, totalPage: listBatchAudit?.meta.total_pages ?? 0 })
 
+  const debounce = useDebounce(handleSearch, 400)
   return (
     <View style={styles.container}>
+      
       { loading && !listBatchAudit ?
         <OverviewCardAuditSkeleton/>
         :
         <OverviewCardAudit totalItems={listBatchAudit?.meta.total_items ?? 0}/>
       }
       <View>
+        <Input style={styles.searchInput} onChangeText={debounce} icon={{ iconName: Search, iconDirection: 'left' }} placeholder='Tìm kiếm theo tên sản phẩm, mã lô'/>
         <View style={styles.filterContainer}>
           <Text style={styles.filterTitle}>Hành động:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -110,6 +115,10 @@ const styles = StyleSheet.create({
             textTransform: 'uppercase',
             fontWeight: 700,
             fontSize: 12
+      },
+      searchInput: {
+            height: 50,
+            
       },
       filterBtn: {
             marginHorizontal: 5,

@@ -40,6 +40,7 @@ export type ProductStorageType = {
 
 export type BatchItemType = {
    manuFactureDate: Date
+   expiryDate: Date
    quantity: number
 }
 

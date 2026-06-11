@@ -44,6 +44,7 @@ import Input from '@/components/ui/inputs/Input'
 import ManagerOrderCardSkeletonV2 from './ui/ManagerOrderItemSkeletonV2'
 import ManagerPostSaleItemSkeleton from './ui/ManagerPostSaleItemSkeleton'
 import { formatMoney } from '@/utils/format'
+import useDebounce from '@/hooks/useDebounce'
 
 const ORDER_PAGE = 6
 const PSR_PAGE = 9
@@ -111,6 +112,7 @@ function DetailField({
 export default function OrdersManagementScreen() {
   const [mainTab, setMainTab] = useState<MainTab>('orders')
   const [search, setSearch] = useState('')
+  const [searchPost, setSearchPost] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ManagerOrderStatusFilter>('all')
   const [psrStatusFilter, setPsrStatusFilter] = useState<PostSaleFilterStatus>('all')
@@ -202,7 +204,7 @@ export default function OrdersManagementScreen() {
   const fetchPsrPage = useCallback(async (pageNumber: number, reset: boolean) => {
     logRefund('UI fetchPsrPage →', { pageNumber, pageSize: PSR_PAGE, reset, statusFilter: psrStatusFilter })
     try {
-      const res = await ManagerPostSaleRequestApi.getRequests(pageNumber, PSR_PAGE)
+      const res = await ManagerPostSaleRequestApi.getRequests(pageNumber, PSR_PAGE, searchPost)
       const m = res.meta
       setPsrMeta({ total_pages: m.total_pages ?? 1, current_page: m.current_page ?? pageNumber })
       setPsrItems((prev) => {
@@ -219,7 +221,7 @@ export default function OrdersManagementScreen() {
       logRefundError('UI fetchPsrPage failed', error)
       throw error
     }
-  }, [])
+  }, [searchPost])
 
   useEffect(() => {
     if (mainTab !== 'refund') return
@@ -413,7 +415,10 @@ export default function OrdersManagementScreen() {
       }
     ])
   }
-
+  const handleSearchPost = (text: string) => {
+    setSearchPost(text)
+  }
+  const debouncePost = useDebounce(handleSearchPost, 400)
   const renderOrderCard = ({ item }: { item: ManagerOrderItem }) => {
     const st = orderStatusPill(item.status)
     const dv = deliveryStatusPill(item.deliveryStatus)
@@ -602,6 +607,15 @@ export default function OrdersManagementScreen() {
         </View>
       ) : (
         <View style={styles.tabPane}>
+          <View style={styles.searchWrap}>
+            <Input
+              icon={{ iconName: Search, iconDirection: 'left' }}
+              placeholder="Tìm đơn theo mã đơn, tên khách hàng"
+              placeholderTextColor="#9ca3af"
+              onChangeText={debouncePost}
+              style={styles.searchInput}
+            />
+          </View>
           <View style={styles.psrFilterRow}>
             {PSR_STATUS_FILTERS.map((f) => {
               const on = psrStatusFilter === f.value
