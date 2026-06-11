@@ -36,12 +36,10 @@ export default function ProductAuditItem({ item }: ProductBatchAuditItemProps) {
       <View style={styles.header}>
         <View style={styles.staffContainer}>
           <Text style={styles.staffLabel}>Nhân viên thao tác</Text>
-
           <Text style={styles.staffName}>
             {item.staffName}
           </Text>
         </View>
-
         <Tag>
           <View style={styles.tagContent}>
             <ActionIcon
@@ -56,7 +54,10 @@ export default function ProductAuditItem({ item }: ProductBatchAuditItemProps) {
           </View>
         </Tag>
       </View>
-
+      <View>
+         <Text style={styles.batchCode}>Mã lô: {item.batchCode}</Text>
+         <Text style={styles.productName}>Sản phẩm: {item.productName}</Text>
+      </View>
       <View style={styles.quantityWrapper}>
         <View style={styles.oldValueBox}>
           <Text style={styles.quantityLabel}>
@@ -175,6 +176,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
   },
+
+  productName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+
+  batchCode: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#003366',
+  },
+
 
   tagContent: {
     flexDirection: 'row',

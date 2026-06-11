@@ -38,3 +38,6 @@ export const normalizeDate = (date: Date) => {
       d.setHours(0, 0, 0, 0)
       return d.toISOString()
 }
+export function formatMoney(n: number) {
+  return `${n.toLocaleString('vi-VN')}đ`
+}
