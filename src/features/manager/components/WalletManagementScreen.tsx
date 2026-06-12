@@ -17,8 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Eye,
   Search,
-  Tag,
   User,
   Wallet,
   X
@@ -27,7 +27,8 @@ import { ManagerWalletApi } from '../api/manager-wallet-api'
 import type {
   ManagerCustomerWalletItem,
   ManagerWalletResponse,
-  ManagerWalletTransaction
+  ManagerWalletTransaction,
+  PaycheckTransactionSummary
 } from '../types/manager-wallet-type'
 import {
   customerInitial,
@@ -38,6 +39,11 @@ import {
 } from '../utils/managerWalletNormalize'
 import Input from '@/components/ui/inputs/Input'
 import CustomerWalletItemSkeleton from './ui/CustomerWalletItemSkeleton'
+import useGetInvoiceById from '../hooks/useGetInvoiceId'
+import ModalCustom from '@/components/ui/modal/ModalCustom'
+import Button from '@/components/ui/buttons/Button'
+import { formatDate, formatMoney } from '@/utils/format'
+import Tag from '@/components/ui/tags/Tag'
 
 const PRIMARY = '#3b6ea5'
 const WALLET_PAGE_SIZE = 6
@@ -71,6 +77,258 @@ function WalletAvatar({ name, url }: { name: string; url: string }) {
   )
 }
 
+  function TransactionItem ({ item }: { item: ManagerWalletTransaction }) {
+    const { handleGetPayInvoiceId, invoice } = useGetInvoiceById()
+    
+    const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
+    const handleOpenInvoice = () => {
+      setIsInvoiceOpen(prevState => !prevState)
+      if (item.invoiceId) handleGetPayInvoiceId(item.invoiceId)
+    }
+      const payCheckStatus = (status?: string) => {
+      switch (status) {
+      case 'Pending': return 'Đang chờ thanh toán'
+      case 'Refunded': return 'Hoàn tiền'
+      case 'Completed': return 'Hoàn thành'
+      case 'Cancelled': return 'Hủy'
+      default: return status
+      }
+    }
+    console.log(invoice);
+    
+    return (
+      <>
+        <View style={styles.txCard}>
+          <Text style={styles.txType}>{transactionTypeLabel(item.transactionType)}</Text>
+          <View style={styles.txMeta}>
+            <Clock size={14} color="#64748b" strokeWidth={2} />
+            <Text style={styles.txDate}>{formatWalletTxDateTime(item.createDate)}</Text>
+          </View>
+          <Text style={[styles.txAmount, { color: transactionAmountColor(item.transactionType) }]}>
+            {item.transactionType.toLowerCase() !== 'deposit' ? '-' : '+'} {formatWalletMoney(item.amount)} đ
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+            { item.invoiceId !== null &&
+            <Button icon={{ iconName: Eye, iconDirection: 'center' }} onPress={handleOpenInvoice} style={{ width: 40, height: 40, borderRadius: 100 }}/>
+            }
+          </View>
+        </View>
+      
+          <ModalCustom isOpen={isInvoiceOpen} onClose={() => setIsInvoiceOpen(false)}>
+            <View style={ {
+                  padding: 16,
+                  backgroundColor: '#FFFFFF',
+                }}>
+            {/* Header */}
+            <View style={{ marginBottom: 24,}}>
+              <Text style={ {
+                      fontSize: 20,
+                      fontWeight: '700',
+                      color: '#003366',
+                    }}>Chi tiết hóa đơn</Text>
+              <Text style={{    
+                      marginTop: 4,
+                      color: '#6B7280',
+                      fontSize: 14,}}>
+                Mã hóa đơn: {invoice?.id}
+              </Text>
+            </View>
+
+            {/* Customer & Invoice Info */}
+            <View style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      gap: 16,
+                    }}>
+              {/* Customer */}
+              <View style={{flex: 1}}>
+                <Text style={ {
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: '#003366',
+                      marginBottom: 12,
+                    }}>
+                  Thông tin khách hàng
+                </Text>
+
+                <View style={{ gap: 8 }}>
+                  <Text style={{
+                      fontSize: 14,
+                      color: '#111827',
+                      lineHeight: 22,
+                    }}>
+                    <Text style={{fontWeight: '600'}}>Họ tên: </Text>
+                    {invoice?.customerName}
+                  </Text>
+
+                  <Text style={{
+                      fontSize: 14,
+                      color: '#111827',
+                      lineHeight: 22,
+                    }}>
+                    <Text style={{ fontWeight: '600'}}>Số điện thoại: </Text>
+                    {invoice?.customerPhoneNumber}
+                  </Text>
+
+                  <Text style={{
+                        fontSize: 14,
+                        color: '#111827',
+                        lineHeight: 22,
+                      }}>
+                    <Text style={{ fontWeight: '600'}}>Email: </Text>
+                    {invoice?.customerEmail}
+                  </Text>
+
+                  <Text style={{
+                          fontSize: 14,
+                          color: '#111827',
+                          lineHeight: 22,
+                        }}>
+                    <Text style={{ fontWeight: '600'}}>Địa chỉ: </Text>
+                    {invoice?.customerAddress}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Invoice */}
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#003366',
+                    marginBottom: 12,
+                  }}>
+                  Thông tin hóa đơn
+                </Text>
+
+                <View style={{ gap: 1 }}>
+                  <Text style={ {
+                        fontSize: 14,
+                        color: '#111827',
+                        lineHeight: 22,
+                      }}>
+                    <Text style={{ fontWeight: '600'}}>Ngày bắt đầu: </Text>
+                    {invoice?.startedDate
+                      ? formatDate(invoice.startedDate)
+                      : 'N/A'}
+                  </Text>
+
+                  <Text style={ {
+                        fontSize: 14,
+                        color: '#111827',
+                        lineHeight: 22,
+                      }}>
+                    <Text style={{ fontWeight: '600'}}>Ngày kết thúc: </Text>
+                    {invoice?.endedDate
+                      ? formatDate(invoice.endedDate)
+                      : 'N/A'}
+                  </Text>
+
+                  <Text style={
+                     {
+                        fontSize: 14,
+                        color: '#111827',
+                        lineHeight: 22,
+                      }
+                  }>
+                    <Text style={{ fontWeight: '600'}}>Phương thức: </Text>
+                    {invoice?.invoiceMethod}
+                  </Text>
+
+                  <View style={ {
+                      gap: 8,
+                    }}>
+                    <Text style={{ fontWeight: '600'}}>Trạng thái: </Text>
+
+                    <Tag
+                      variant={
+                        invoice?.invoiceStatus === 'Completed'
+                          ? 'success'
+                          : invoice?.invoiceStatus === 'Pending'
+                            ? 'warning'
+                            : 'danger'
+                      }
+                    >
+                      <Text>
+                        {payCheckStatus(invoice?.invoiceStatus)}
+                      </Text>
+                    </Tag>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Divider */}
+            <View style={{
+                height: 1,
+                backgroundColor: '#E5E7EB',
+                marginVertical: 24,
+              }} />
+
+            {/* Payment Info */}
+            <View>
+              <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#003366',
+                  marginBottom: 12,
+                }}>
+                Thông tin thanh toán
+              </Text>
+
+              <View style={{
+                  gap: 12,
+                  marginTop: 12,
+                }}>
+                  <View style={ {
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                    <Text>Tổng tiền hóa đơn</Text>
+                  <Text style={ {
+                      fontWeight: '600',
+                      color: '#111827',
+                    }}>
+                    {formatMoney(invoice?.total ?? 0)}
+                  </Text>
+                </View>
+
+                <View style={ {
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                  <Text>Đã thanh toán</Text>
+                  <Text style={ {
+                      fontWeight: '600',
+                      color: '#16A34A',
+                    }}>
+                    {formatMoney(invoice?.paidAmount ?? 0)}
+                  </Text>
+                </View>
+
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  <Text>Khấu trừ ví</Text>
+                  <Text style={ {
+                    fontWeight: '600',
+                    color: '#2563EB',
+                  }}>
+                    {formatMoney(invoice?.deductedAmount ?? 0)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          </ModalCustom>
+      </>
+    )
+  } 
+
 export default function WalletManagementScreen() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -79,7 +337,7 @@ export default function WalletManagementScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
   const [historyCustomer, setHistoryCustomer] = useState<ManagerCustomerWalletItem | null>(null)
-  const [historyWallet, setHistoryWallet] = useState<ManagerWalletResponse | null>(null)
+  const [historyWallet, setHistoryWallet] = useState<PaycheckTransactionSummary | null>(null)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [topUpCustomer, setTopUpCustomer] = useState<ManagerCustomerWalletItem | null>(null)
@@ -225,18 +483,9 @@ export default function WalletManagementScreen() {
     return { totalWalletAmount, totalDebt }
   }, [customers])
 
-  const renderTx = ({ item }: { item: ManagerWalletTransaction }) => (
-    <View style={styles.txCard}>
-      <Text style={styles.txType}>{transactionTypeLabel(item.transactionType)}</Text>
-      <View style={styles.txMeta}>
-        <Clock size={14} color="#64748b" strokeWidth={2} />
-        <Text style={styles.txDate}>{formatWalletTxDateTime(item.createDate)}</Text>
-      </View>
-      <Text style={[styles.txAmount, { color: transactionAmountColor(item.transactionType) }]}>
-        {formatWalletMoney(item.amount)} đ
-      </Text>
-    </View>
-  )
+
+
+
 
   const renderCustomer = ({ item }: { item: ManagerCustomerWalletItem }) => {
     return (
@@ -324,7 +573,7 @@ export default function WalletManagementScreen() {
   )
 
   const historyWalletData = historyWallet ?? historyCustomer?.getWalletResponse ?? null
-  const txList = historyWalletData?.transactions ?? []
+  const txList = historyWalletData?.customerTransactions ?? []
 
   return (
     <View style={styles.safe}>
@@ -487,7 +736,9 @@ export default function WalletManagementScreen() {
             <FlatList
               data={txList}
               keyExtractor={(t, i) => t.id || `tx-${i}`}
-              renderItem={renderTx}
+                renderItem={({ item }) => (
+                <TransactionItem item={item} />
+              )}
               contentContainerStyle={styles.txListContent}
             />
           )}

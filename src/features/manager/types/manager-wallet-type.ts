@@ -3,6 +3,7 @@ export type ManagerWalletTransaction = {
   amount: number
   createDate: string
   transactionType: string
+  invoiceId?: string
 }
 
 export type ManagerWalletResponse = {
@@ -26,7 +27,7 @@ export type ManagerCustomerWalletItem = {
   totalOrder: number
   totalPayment: number
   customerDate: string
-  getWalletResponse: ManagerWalletResponse
+  getWalletResponse: PaycheckTransactionSummary
 }
 
 export type ManagerWalletPaymentPayload = {
@@ -48,4 +49,22 @@ export type ManagerWalletPagingResponse = {
     current_page: number
     page_size: number
   }
+}
+
+
+export interface PaycheckTransaction {
+  id: string;
+  amount: number;
+  createDate: string;
+  transactionType: string;
+  paymentStatus: string
+  invoiceId: string
+}
+
+export interface PaycheckTransactionSummary {
+  id: string
+  amount: number;
+  totalDebt: number;
+  netAmount: number;
+  customerTransactions: PaycheckTransaction[];
 }
