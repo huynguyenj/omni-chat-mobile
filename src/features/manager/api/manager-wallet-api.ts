@@ -4,10 +4,12 @@ import type {
   ManagerWalletPagingQuery,
   ManagerWalletPagingResponse,
   ManagerWalletPaymentPayload,
-  ManagerWalletResponse
+  ManagerWalletResponse,
+  PaycheckTransactionSummary
 } from '../types/manager-wallet-type'
 import { assertManagerPublicSuccess, unwrapEnvelopeData, unwrapItemsMeta } from '../utils/managerPagedUnwrap'
 import { normalizeCustomerWallet, normalizeWalletResponse } from '../utils/managerWalletNormalize'
+import { ApiResponseStructure } from '@/types/api.response'
 
 const FETCH_PAGE_SIZE = 10
 
@@ -68,11 +70,10 @@ export const ManagerWalletApi = {
     return Array.from(byId.values())
   },
 
-  getWalletByCustomerId: async (customerId: string): Promise<ManagerWalletResponse> => {
-    const raw: unknown = await apiPublic.get(resolveWalletByCustomerIdPath(customerId))
+  getWalletByCustomerId: async (customerId: string): Promise<PaycheckTransactionSummary> => {
+    const raw: ApiResponseStructure<PaycheckTransactionSummary> = await apiPrivate.get(`/wallets/wallet/${customerId}`)
     assertManagerPublicSuccess(raw)
-    const data = unwrapEnvelopeData<unknown>(raw) ?? raw
-    return normalizeWalletResponse(data)
+    return raw.data
   },
 
   payCash: async (payload: ManagerWalletPaymentPayload): Promise<void> => {

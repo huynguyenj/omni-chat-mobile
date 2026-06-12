@@ -1,4 +1,4 @@
-import type { ManagerCustomerWalletItem, ManagerWalletResponse, ManagerWalletTransaction } from '../types/manager-wallet-type'
+import type { ManagerCustomerWalletItem, ManagerWalletResponse, ManagerWalletTransaction, PaycheckTransactionSummary } from '../types/manager-wallet-type'
 import { formatKpiMoney } from './managerInvoicesNormalize'
 import { walletTransactionTypeLabelVi } from './manager-ui-labels'
 
@@ -23,6 +23,32 @@ export function normalizeTransaction(raw: unknown): ManagerWalletTransaction {
   }
 }
 
+function normalizePaycheckTransactionSummary(
+  raw: unknown
+): PaycheckTransactionSummary {
+  const r =
+    raw && typeof raw === 'object'
+      ? (raw as Record<string, unknown>)
+      : {}
+
+  return {
+    id: pickStr(r.id),
+    amount: pickNum(r.amount),
+    totalDebt: pickNum(r.totalDebt),
+    netAmount: pickNum(r.netAmount),
+    customerTransactions: Array.isArray(r.customerTransactions)
+      ? r.customerTransactions.map((t) => ({
+          id: pickStr((t as any).id),
+          amount: pickNum((t as any).amount),
+          createDate: pickStr((t as any).createDate),
+          transactionType: pickStr((t as any).transactionType),
+          paymentStatus: pickStr((t as any).paymentStatus),
+          invoiceId: pickStr((t as any).invoiceId)
+        }))
+      : []
+  }
+}
+
 export function normalizeWalletResponse(raw: unknown): ManagerWalletResponse {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const txRaw = r.transactions ?? r.transactionList ?? r.transaction_list
@@ -43,7 +69,8 @@ export function normalizeCustomerWallet(raw: unknown): ManagerCustomerWalletItem
     r.walletResponse ??
     r.wallet ??
     r.customerWallet ??
-    r.customer_wallet
+    r.customer_wallet ??
+    r.customerTransactions
 
   return {
     id: pickStr(r.id ?? r.customerId ?? r.customer_id),
@@ -63,7 +90,7 @@ export function normalizeCustomerWallet(raw: unknown): ManagerCustomerWalletItem
     totalOrder: pickNum(r.totalOrder ?? r.total_order ?? r.orderCount),
     totalPayment: pickNum(r.totalPayment ?? r.total_payment ?? r.paymentTotal),
     customerDate: pickStr(r.customerDate ?? r.customer_date ?? r.createdAt ?? r.created_at ?? r.registerDate),
-    getWalletResponse: normalizeWalletResponse(walletRaw ?? {})
+    getWalletResponse: normalizePaycheckTransactionSummary(walletRaw)
   }
 }
 
@@ -74,8 +101,13 @@ export function customerInitial(name: string): string {
   return ch.toLocaleUpperCase('vi-VN')
 }
 
-export function transactionTypeLabel(type: string): string {
-  return walletTransactionTypeLabelVi(type)
+export function transactionTypeLabel(type: string) {
+  const key = String(type).trim().toLowerCase()
+  if (key === 'deposit') return 'Tiền vào ví'
+  if (key === 'credit') return 'Tiền sử dụng'
+  if (key === 'allocateforinvoice') return 'Tiền thanh toán'
+  if (key === 'debit') return 'Ghi nợ'
+  return type || 'Khác'
 }
 
 export function formatWalletTxDateTime(rawDate: string): string {
@@ -93,8 +125,10 @@ export function formatWalletTxDateTime(rawDate: string): string {
 }
 
 export function transactionAmountColor(type: string): string {
+  
   const t = type.toLowerCase()
-  if (t === 'debit') return '#dc2626'
+  console.log(t);
+  if (t !== 'deposit') return '#dc2626'
   return '#15803d'
 }
 
